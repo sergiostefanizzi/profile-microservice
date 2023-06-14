@@ -1249,9 +1249,14 @@ components:
           format: uri
         is_private:
           type: boolean
+        #TODO: con JWT non uso piu' account_id
+        account_id:
+          type: integer
+          format: int64
       required:
         - profile_name
         - is_private
+        - account_id
     
     FullProfile:
       type: object
