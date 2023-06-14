@@ -1240,11 +1240,13 @@ components:
           type: string
           minLength: 3
           maxLength: 30
+          pattern: '^[a-zA-Z]+$'
         bio:
           type: string
           maxLength: 150
         picture_url:
           type: string
+          format: uri
         is_private:
           type: boolean
       required:
