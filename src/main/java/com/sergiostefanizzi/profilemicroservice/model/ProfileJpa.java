@@ -2,11 +2,7 @@ package com.sergiostefanizzi.profilemicroservice.model;
 
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
-import lombok.Getter;
-
-import lombok.NonNull;
-import lombok.RequiredArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.validator.constraints.URL;
 
 import java.time.LocalDateTime;
@@ -16,6 +12,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @RequiredArgsConstructor
+@NoArgsConstructor(force = true)
 public class ProfileJpa {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -25,8 +22,8 @@ public class ProfileJpa {
     @NotBlank
     @NonNull
     @Column(name = "profile_name", nullable = false, unique = true, length = 30)
-    @Size(min = 3, max = 30)
-    @Pattern(regexp = "^[a-zA-Z]+$")
+    @Size(min = 8, max = 20)
+    @Pattern(regexp = "^(?=.{8,20}$)(?![_.])(?!.*[_.]{2})[a-zA-Z0-9._]+(?<![_.])$")
     private String profileName;
 
     @Column(name = "bio", length = 150)
@@ -45,7 +42,6 @@ public class ProfileJpa {
     @Column(name = "created_at", nullable = false)
     @PastOrPresent
     @NotNull
-    @NonNull
     private LocalDateTime createdAt;
 
     @Column(name = "updated_at")

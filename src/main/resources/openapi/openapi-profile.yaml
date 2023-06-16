@@ -1238,15 +1238,17 @@ components:
           readOnly: true
         profile_name:
           type: string
-          minLength: 3
-          maxLength: 30
-          pattern: '^[a-zA-Z]+$'
+          minLength: 8
+          maxLength: 20
+          pattern: '^(?=.{8,20}$)(?![_.])(?!.*[_.]{2})[a-zA-Z0-9._]+(?<![_.])$'
         bio:
           type: string
           maxLength: 150
+          x-nonnull: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
         picture_url:
           type: string
-          format: uri
+          x-nonnull: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
+          x-url: '@org.hibernate.validator.constraints.URL'
         is_private:
           type: boolean
         #TODO: con JWT non uso piu' account_id
