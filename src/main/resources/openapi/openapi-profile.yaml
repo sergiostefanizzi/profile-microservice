@@ -1248,7 +1248,8 @@ components:
         picture_url:
           type: string
           x-nonnull: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
-          x-url: '@org.hibernate.validator.constraints.URL'
+          #x-url: '@org.hibernate.validator.constraints.URL'
+          x-url: '@MyURL'
         is_private:
           type: boolean
         #TODO: con JWT non uso piu' account_id

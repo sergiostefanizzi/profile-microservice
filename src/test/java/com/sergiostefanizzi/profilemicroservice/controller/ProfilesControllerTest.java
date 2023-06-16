@@ -1,6 +1,8 @@
 package com.sergiostefanizzi.profilemicroservice.controller;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
 import com.sergiostefanizzi.profilemicroservice.service.ProfilesService;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
@@ -14,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
@@ -225,25 +228,74 @@ class ProfilesControllerTest {
         log.info("Errors\n"+resultAsString);
     }
 
-    //TODO:continuare
     @Test
     void testAddProfile_InvalidPictureUrl_Then_400() throws Exception{
-        this.newProfile.setPictureUrl("htt://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg");
+        String error = "pictureUrl must be a valid URL";
+        this.newProfile.setPictureUrl("https://upload.wikimedia.o/ ra-%%$^&& iuyi");
         newAccountJson = this.objectMapper.writeValueAsString(this.newProfile);
+
         when(this.profilesService.save(this.newProfile)).thenReturn(this.savedProfile);
-
-
 
         MvcResult result = this.mockMvc.perform(post("/profiles")
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(newAccountJson))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").isArray()).andReturn();
-        // salvo risposta in result per visualizzarla ma anche per controllare la validita' dell'url
+                .andExpect(jsonPath("$.error").isArray())
+                .andExpect(jsonPath("$.error[0]").value(error)).andReturn();
+
+        // salvo risposta in result solo per visualizzarla
         String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+    }
+
+    @Test
+    void testAddProfile_InvalidIsPrivate_Then_400() throws Exception{
+        JsonNode jsonNode = this.objectMapper.readTree(newAccountJson);
+        ((ObjectNode) jsonNode).put("is_private", "FalseString");
+        newAccountJson = this.objectMapper.writeValueAsString(jsonNode);
+
+        MvcResult result = this.mockMvc.perform(post("/profiles")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(newAccountJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof HttpMessageNotReadableException
+                ))
+                .andExpect(jsonPath("$.error").value("JSON parse error: Cannot deserialize value of type `java.lang.Boolean` from String \"FalseString\": only \"true\" or \"false\" recognized")).andReturn();
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    @Test
+    void testAddProfile_InvalidAccountId_Then_400() throws Exception{
+        JsonNode jsonNode = this.objectMapper.readTree(newAccountJson);
+        ((ObjectNode) jsonNode).put("account_id", "IdNotLong");
+        newAccountJson = this.objectMapper.writeValueAsString(jsonNode);
+
+        MvcResult result = this.mockMvc.perform(post("/profiles")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newAccountJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof HttpMessageNotReadableException
+                ))
+                .andExpect(jsonPath("$.error").value("JSON parse error: Cannot deserialize value of type `java.lang.Long` from String \"IdNotLong\": not a valid `java.lang.Long` value")).andReturn();
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    //TODO: controllo permessi d'accesso account id, JWT
+    /*
+    @Test
+    void testAddProfile_Authentication_AccountId_Then_401() throws Exception{
 
     }
+    */
 
     @Test
     void testAddProfile_ProfileNameExists_Then_409() throws Exception {
