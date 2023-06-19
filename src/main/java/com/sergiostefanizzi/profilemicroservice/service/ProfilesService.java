@@ -5,11 +5,11 @@ import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
 import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfileJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -33,5 +33,23 @@ public class ProfilesService {
         log.info("PROFILEJPA NAME ---> "+savedProfileJpa.getProfileName());
         log.info("PROFILEJPA id ---> "+savedProfileJpa.getId());
         return this.profileToProfileJpaConverter.convertBack(savedProfileJpa);
+    }
+
+    @Transactional
+    public void remove(Long profileId) {
+        if (profileId == null){
+            throw new ProfileNotFoundException("null");
+        }
+
+        // cerco profili che non siano gia' stati eliminati o che non esistano proprio
+        ProfileJpa profileJpa = this.profilesRepository.findById(profileId)
+                .filter(profile-> profile.getDeletedAt() == null)
+                .orElseThrow(() -> new ProfileNotFoundException(profileId));
+
+        //imposto a questo istante la data e l'ora di rimozione del profilo
+        profileJpa.setDeletedAt(LocalDateTime.now());
+        this.profilesRepository.save(profileJpa);
+
+        log.info("Profile Deleted At -> "+profileJpa.getDeletedAt());
     }
 }

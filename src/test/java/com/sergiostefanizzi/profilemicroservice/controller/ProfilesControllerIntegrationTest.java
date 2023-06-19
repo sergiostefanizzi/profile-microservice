@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
+import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
+import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,6 +19,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -32,8 +35,9 @@ class ProfilesControllerIntegrationTest {
     private TestRestTemplate testRestTemplate;
     @Autowired
     private ObjectMapper objectMapper;
+    @Autowired
+    private ProfilesRepository profilesRepository;
     private Profile newProfile;
-    //private Profile savedProfile;
     String profileName = "giuseppe_verdi";
     Boolean isPrivate = false;
     Long accountId = 1L;
@@ -46,12 +50,6 @@ class ProfilesControllerIntegrationTest {
         this.newProfile = new Profile(profileName,isPrivate,accountId);
         this.newProfile.setBio(bio);
         this.newProfile.setPictureUrl(pictureUrl);
-        /*
-        this.savedProfile = new Profile(profileName,isPrivate,accountId);
-        this.savedProfile.setBio(bio);
-        this.savedProfile.setPictureUrl(pictureUrl);
-        this.savedProfile.setId(profileId);
-         */
     }
 
     @AfterEach
@@ -282,7 +280,7 @@ class ProfilesControllerIntegrationTest {
         log.info("Error -> "+node.get("error"));
     }
 
-    //TODO: controllo permessi d'accesso account id, JWT
+    //TODO: In inserimento fare controllo permessi d'accesso account id, JWT
     /*
     @Test
     void testAddProfile_Authentication_AccountId_Then_401() throws Exception{
@@ -312,4 +310,89 @@ class ProfilesControllerIntegrationTest {
         assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
+
+    @Test
+    void testDeleteProfileById_Then_204() throws Exception{
+        // creo un nuovo profilo
+        this.newProfile.setProfileName(profileName+"_2");
+        HttpEntity<Profile> request = new HttpEntity<>(newProfile);
+        ResponseEntity<Profile> responsePost = this.testRestTemplate.exchange(this.baseUrl,
+                HttpMethod.POST,
+                request,
+                Profile.class);
+        // controllo che l'inserimento sia andato a buon fine
+        assertEquals(HttpStatus.CREATED, responsePost.getStatusCode());
+        assertNotNull(responsePost.getBody());
+        assertInstanceOf(Profile.class, responsePost.getBody());
+        Profile savedProfile = responsePost.getBody();
+        assertNotNull(savedProfile.getId());
+        // salvo l'id generato dal profilo inserito
+        Long savedProfileId = savedProfile.getId();
+
+        // elimino il profilo appena inserito
+        ResponseEntity<Void> responseDelete = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+                HttpMethod.DELETE,
+                HttpEntity.EMPTY,
+                Void.class,
+                savedProfileId);
+
+        assertEquals(HttpStatus.NO_CONTENT, responseDelete.getStatusCode());
+        assertNull(responseDelete.getBody());
+
+        // verifico dalla repository del profile che il profilo sia stato effettivamente eliminato
+        // la risorsa e' ancora presente, ma e' eliminata logicamente in quanto il campo
+        // deletedAt e' non nullo
+        Optional<ProfileJpa> deletedProfileJpa = this.profilesRepository.findById(savedProfileId);
+        if (deletedProfileJpa.isPresent()){
+            assertNotNull(deletedProfileJpa.get().getDeletedAt());
+            log.info("Profile with id \n"+savedProfileId+" deleted at -> "+deletedProfileJpa.get().getDeletedAt());
+        }
+    }
+
+    @Test
+    void testDeleteProfileById_Then_400() throws Exception{
+        // messaggio d'errore che mi aspetto d'ottenere
+        String error = "Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"";
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/IdNotLong",
+                HttpMethod.DELETE,
+                HttpEntity.EMPTY,
+                String.class);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    //TODO: In rimozione fare controllo permessi d'accesso account id, JWT
+    /*
+    @Test
+    void testDeleteProfileById_Authentication_AccountId_Then_401() throws Exception{
+
+    }
+    */
+    @Test
+    void testDeleteProfileById_Then_404() throws Exception{
+        Long invalidProfileId = 1000L;
+        // messaggio d'errore che mi aspetto d'ottenere
+        String error = "Profile with id "+invalidProfileId+" not found!";
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+                HttpMethod.DELETE,
+                HttpEntity.EMPTY,
+                String.class,
+                invalidProfileId);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+
 }

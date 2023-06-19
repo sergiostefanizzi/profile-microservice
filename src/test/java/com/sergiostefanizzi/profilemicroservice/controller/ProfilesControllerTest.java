@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
 import com.sergiostefanizzi.profilemicroservice.service.ProfilesService;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.validator.routines.UrlValidator;
 import org.junit.jupiter.api.AfterEach;
@@ -22,6 +23,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +31,8 @@ import java.util.List;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.in;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -278,7 +281,7 @@ class ProfilesControllerTest {
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
 
-    //TODO: controllo permessi d'accesso account id, JWT
+    //TODO: In inserimento fare controllo permessi d'accesso account id, JWT
     /*
     @Test
     void testAddProfile_Authentication_AccountId_Then_401() throws Exception{
@@ -301,6 +304,52 @@ class ProfilesControllerTest {
                         result.getResolvedException() instanceof ProfileAlreadyCreatedException))
                 .andExpect(jsonPath("$.error").value("Conflict! Profile with name "+profileName+" already created!"));
     }
+    @Test
+    void testDeleteProfileById_Then_204() throws Exception{
+        doNothing().when(this.profilesService).remove(profileId);
 
+        this.mockMvc.perform(delete("/profiles/{profileId}",profileId))
+                .andExpect(status().isNoContent());
+   }
+
+    @Test
+    void testDeleteProfileById_Then_400() throws Exception{
+        MvcResult result = this.mockMvc.perform(delete("/profiles/IdNotLong"))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                ))
+                .andExpect(jsonPath("$.error").value("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"")).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    //TODO: In rimozione fare controllo permessi d'accesso account id, JWT
+    /*
+    @Test
+    void testDeleteProfileById_Authentication_AccountId_Then_401() throws Exception{
+
+    }
+    */
+
+    @Test
+    void testDeleteProfileById_Then_404() throws Exception{
+        Long invalidProfileId = 1000L;
+        doThrow(new ProfileNotFoundException(invalidProfileId)).when(this.profilesService).remove(invalidProfileId);
+
+        MvcResult result = this.mockMvc.perform(delete("/profiles/{profileId}",invalidProfileId))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof ProfileNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value("Profile with id "+invalidProfileId+" not found!"))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
 
 }

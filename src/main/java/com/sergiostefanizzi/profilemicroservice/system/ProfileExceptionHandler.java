@@ -1,6 +1,7 @@
 package com.sergiostefanizzi.profilemicroservice.system;
 
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -28,6 +29,14 @@ public class ProfileExceptionHandler extends ResponseEntityExceptionHandler {
         Map<String, String> body = new HashMap<>();
         body.put("error", error);
         return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.CONFLICT, request);
+    }
+
+    @ExceptionHandler(ProfileNotFoundException.class)
+    public ResponseEntity<Object> handleProfileNotFoundException(ProfileNotFoundException ex, WebRequest request){
+        String error = "Profile with id "+ex.getMessage()+" not found!";
+        Map<String, String> body = new HashMap<>();
+        body.put("error", error);
+        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
     }
 
     // INTERNAL SERVER ERROR
