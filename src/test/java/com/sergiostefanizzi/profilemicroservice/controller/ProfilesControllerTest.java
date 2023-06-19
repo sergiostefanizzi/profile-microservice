@@ -23,7 +23,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -90,21 +89,16 @@ class ProfilesControllerTest {
                 .andExpect(jsonPath("$.id").value(this.savedProfile.getId()))
                 .andExpect(jsonPath("$.profile_name").value(this.savedProfile.getProfileName()))
                 .andExpect(jsonPath("$.bio").value(this.savedProfile.getBio()))
-                .andExpect(jsonPath("$.picture_url").value(this.savedProfile.getPictureUrl().toString()))
+                .andExpect(jsonPath("$.picture_url").value(this.savedProfile.getPictureUrl()))
                 .andExpect(jsonPath("$.is_private").value(this.savedProfile.getIsPrivate()))
                 .andExpect(jsonPath("$.account_id").value(this.savedProfile.getAccountId())).andReturn();
         // salvo risposta in result per visualizzarla ma anche per controllare la validita' dell'url
         String resultAsString = result.getResponse().getContentAsString();
         Profile profileResult = this.objectMapper.readValue(resultAsString, Profile.class);
 
-        assertTrue(this.urlValidator.isValid(profileResult.getPictureUrl().toString()));
+        assertTrue(this.urlValidator.isValid(profileResult.getPictureUrl()));
 
-        log.info("Profile Id ---> "+ profileResult.getId());
-        log.info("Profile Name ---> "+ profileResult.getProfileName());
-        log.info("Picture Bio ---> "+ profileResult.getBio());
-        log.info("Profile Picture Url ---> "+ profileResult.getPictureUrl());
-        log.info("Profile Private ---> "+ profileResult.getIsPrivate());
-        log.info("Profile Account Id ---> "+ profileResult.getAccountId());
+        log.info(profileResult.toString());
     }
 
     @Test
@@ -133,17 +127,12 @@ class ProfilesControllerTest {
         String resultAsString = result.getResponse().getContentAsString();
         Profile profileResult = this.objectMapper.readValue(resultAsString, Profile.class);
 
-        log.info("Profile Id ---> "+ profileResult.getId());
-        log.info("Profile Name ---> "+ profileResult.getProfileName());
-        log.info("Picture Bio ---> "+ profileResult.getBio());
-        log.info("Profile Picture Url ---> "+ profileResult.getPictureUrl());
-        log.info("Profile Private ---> "+ profileResult.getIsPrivate());
-        log.info("Profile Account Id ---> "+ profileResult.getAccountId());
+        log.info(profileResult.toString());
     }
 
     @Test
     void testAddProfile_MissingRequired_Then_400() throws Exception{
-        // arrayList contenente i messaggii di errore
+        // arrayList contenente i messaggi di errore
         List<String> errors = new ArrayList<>();
         errors.add("profileName must not be null");
         errors.add("isPrivate must not be null");
