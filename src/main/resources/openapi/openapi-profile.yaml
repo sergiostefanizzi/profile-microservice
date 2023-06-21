@@ -165,7 +165,7 @@ paths:
       tags:
         - profiles
       summary: Search profiles by name
-      description: Seach profiles by name
+      description: Search profiles by name
       operationId: searchProfileByProfileName
       security:
         - bearerAuth: []
@@ -276,7 +276,7 @@ paths:
         - follows
       summary: Accept follow request for private profile
       description: Accept follow request for private profile
-      operationId: accpetFollows
+      operationId: acceptFollows
       security:
         - bearerAuth: []
       parameters:
@@ -954,7 +954,7 @@ paths:
         '200':
           description: List of all profiles found and returned
           content:
-            appication/json:
+            application/json:
               schema:
                 $ref: '#/components/schemas/ProfileList'
         '401':
@@ -1019,7 +1019,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: remmovedAlerts
+        - name: removedAlerts
           in: query
           description: Show or not show removed alerts
           required: true
@@ -1029,7 +1029,7 @@ paths:
         '200':
           description: List of all alerts found and returned
           content:
-            appication/json:
+            application/json:
               schema:
                 $ref: '#/components/schemas/AlertList'
         '401':
@@ -1056,7 +1056,7 @@ paths:
           schema:
             type: integer
             format: int64
-        - name: remmovedAlerts
+        - name: removedAlerts
           in: query
           description: Show or not show removed alerts
           required: true
@@ -1066,7 +1066,7 @@ paths:
         '200':
           description: List of all alerts found and returned
           content:
-            appication/json:
+            application/json:
               schema:
                 $ref: '#/components/schemas/AlertList'
         '400':
@@ -1098,7 +1098,7 @@ paths:
           schema:
             type: integer
             format: int64
-        - name: remmovedAlerts
+        - name: removedAlerts
           in: query
           description: Show or not show removed alerts
           required: true
@@ -1108,7 +1108,7 @@ paths:
         '200':
           description: Alert found and returned
           content:
-            appication/json:
+            application/json:
               schema:
                 $ref: '#/components/schemas/Alert'
         '401':
@@ -1121,8 +1121,8 @@ paths:
     patch:
       tags:
         - admins
-      summary: Assing an alert to and admin
-      description: Assing an alert to and admin
+      summary: Assign an alert to and admin
+      description: Assign an alert to and admin
       operationId: updateAlertById
       security:
         - bearerAuth: []
@@ -1501,7 +1501,7 @@ components:
         error: 
           type: string
           minLength: 3
-          example: Resourse already created!
+          example: Resource already created!
           
     
     InternalServerError:

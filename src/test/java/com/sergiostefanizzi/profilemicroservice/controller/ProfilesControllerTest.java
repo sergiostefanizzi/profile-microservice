@@ -60,7 +60,7 @@ class ProfilesControllerTest {
     String updatedPictureUrl = "https://icons-for-free.com/iconfiles/png/512/avatar+person+profile+user+icon-1320086059654790795.png";
     Long profileId = 12L;
     String newProfileJson;
-    private UrlValidator urlValidator;
+
 
     @BeforeEach
     void setUp() throws Exception{
@@ -74,8 +74,6 @@ class ProfilesControllerTest {
         this.savedProfile.setBio(bio);
         this.savedProfile.setPictureUrl(pictureUrl);
         this.savedProfile.setId(profileId);
-
-        urlValidator = new UrlValidator();
     }
 
     @AfterEach
@@ -342,7 +340,7 @@ class ProfilesControllerTest {
 
     @Test
     void testDeleteProfileById_Then_404() throws Exception{
-        Long invalidProfileId = 1000L;
+        Long invalidProfileId = Long.MAX_VALUE;
         doThrow(new ProfileNotFoundException(invalidProfileId)).when(this.profilesService).remove(invalidProfileId);
 
         MvcResult result = this.mockMvc.perform(delete("/profiles/{profileId}",invalidProfileId))
@@ -400,7 +398,6 @@ class ProfilesControllerTest {
 
     @Test
     void testUpdateProfile_InvalidId_Then_400() throws Exception{
-        Long invalidProfileId = 1000L;
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();
         profilePatch.setBio(updatedBio);
@@ -409,9 +406,8 @@ class ProfilesControllerTest {
 
         String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
 
-        doThrow(new ProfileNotFoundException(invalidProfileId)).when(this.profilesService).update(invalidProfileId, profilePatch);
 
-        MvcResult result = this.mockMvc.perform(patch("/profiles/IdNotLong")
+        MvcResult result = this.mockMvc.perform(delete("/profiles/IdNotLong")
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(profilePatchJson))
@@ -419,9 +415,7 @@ class ProfilesControllerTest {
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof MethodArgumentTypeMismatchException
                 ))
-                .andExpect(jsonPath("$.error").value("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\""))
-                .andReturn();
-
+                .andExpect(jsonPath("$.error").value("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n"+resultAsString);
@@ -505,9 +499,10 @@ class ProfilesControllerTest {
         log.info("Errors\n"+resultAsString);
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
+    //:TODO 401 e 403
     @Test
     void testUpdateProfile_Then_404() throws Exception{
-        Long invalidProfileId = 1000L;
+        Long invalidProfileId = Long.MAX_VALUE;
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();
         profilePatch.setBio(updatedBio);

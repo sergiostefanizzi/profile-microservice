@@ -66,9 +66,9 @@ public class ProfilesService {
                 .filter(profile-> profile.getDeletedAt() == null)
                 .orElseThrow(() -> new ProfileNotFoundException(profileId));
         // modifico solo i campi che devono essere aggiornati
-        if (StringUtils.hasText(profilePatch.getBio())) profileJpa.setBio(profileJpa.getBio());
-        if (StringUtils.hasText(profilePatch.getPictureUrl())) profileJpa.setBio(profileJpa.getPictureUrl());
-        if (profilePatch.getIsPrivate() != null) profileJpa.setBio(profileJpa.getBio());
+        if (StringUtils.hasText(profilePatch.getBio())) profileJpa.setBio(profilePatch.getBio());
+        if (StringUtils.hasText(profilePatch.getPictureUrl())) profileJpa.setPictureUrl(profilePatch.getPictureUrl());
+        if (profilePatch.getIsPrivate() != null) profileJpa.setIsPrivate(profilePatch.getIsPrivate());
 
         //imposto a questo istante la data e l'ora di aggiornamento del profilo
         profileJpa.setUpdatedAt(LocalDateTime.now());

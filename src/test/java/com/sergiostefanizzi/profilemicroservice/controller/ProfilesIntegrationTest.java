@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
 import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
+import com.sergiostefanizzi.profilemicroservice.model.ProfilePatch;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
@@ -40,9 +41,12 @@ class ProfilesIntegrationTest {
     private Profile newProfile;
     String profileName = "giuseppe_verdi";
     Boolean isPrivate = false;
+    Boolean updatedIsPrivate = true;
     Long accountId = 1L;
     String bio = "This is Giuseppe's profile!";
+    String updatedBio = "New Giuseppe's bio";
     String pictureUrl = "https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg";
+    String updatedPictureUrl = "https://icons-for-free.com/iconfiles/png/512/avatar+person+profile+user+icon-1320086059654790795.png";
 
     @BeforeEach
     void setUp() {
@@ -376,7 +380,7 @@ class ProfilesIntegrationTest {
     */
     @Test
     void testDeleteProfileById_Then_404() throws Exception{
-        Long invalidProfileId = 1000L;
+        Long invalidProfileId = Long.MAX_VALUE;
         // messaggio d'errore che mi aspetto d'ottenere
         String error = "Profile with id "+invalidProfileId+" not found!";
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
@@ -392,6 +396,181 @@ class ProfilesIntegrationTest {
         // In questo caso l'errore NON è un array di dimensione 1
         assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
+    void testUpdateProfile_Then_200() throws Exception{
+        // creo un nuovo profilo
+        this.newProfile.setProfileName(profileName+"_3");
+        HttpEntity<Profile> requestPost = new HttpEntity<>(newProfile);
+        ResponseEntity<Profile> responsePost = this.testRestTemplate.exchange(this.baseUrl,
+                HttpMethod.POST,
+                requestPost,
+                Profile.class);
+        // controllo che l'inserimento sia andato a buon fine
+        assertEquals(HttpStatus.CREATED, responsePost.getStatusCode());
+        assertNotNull(responsePost.getBody());
+        assertInstanceOf(Profile.class, responsePost.getBody());
+        Profile savedProfile = responsePost.getBody();
+        assertNotNull(savedProfile.getId());
+        // salvo l'id generato dal profilo inserito
+        Long savedProfileId = savedProfile.getId();
+
+
+        // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
+        ProfilePatch profilePatch = new ProfilePatch();
+        profilePatch.setBio(updatedBio);
+        profilePatch.setPictureUrl(updatedPictureUrl);
+        profilePatch.setIsPrivate(updatedIsPrivate);
+
+        HttpEntity<ProfilePatch> requestPatch = new HttpEntity<>(profilePatch);
+        ResponseEntity<Profile> responsePatch = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+                HttpMethod.PATCH,
+                requestPatch,
+                Profile.class,
+                savedProfileId);
+
+        assertEquals(HttpStatus.OK, responsePatch.getStatusCode());
+        assertNotNull(responsePatch.getBody());
+        assertInstanceOf(Profile.class, responsePatch.getBody());
+        Profile updatedProfile = responsePatch.getBody();
+        assertEquals(savedProfileId, updatedProfile.getId());
+        assertEquals(newProfile.getProfileName(), updatedProfile.getProfileName());
+        assertEquals(profilePatch.getBio() != null ? updatedBio : this.newProfile.getBio(), updatedProfile.getBio());
+        assertEquals(profilePatch.getPictureUrl() != null ? updatedPictureUrl : this.newProfile.getPictureUrl(), updatedProfile.getPictureUrl());
+        assertEquals(profilePatch.getIsPrivate() != null ? updatedIsPrivate : this.newProfile.getIsPrivate(), updatedProfile.getIsPrivate());
+        assertEquals(newProfile.getAccountId(), updatedProfile.getAccountId());
+        // visualizzo il profilo aggiornato
+        log.info(updatedProfile.toString());
+    }
+
+    @Test
+    void testUpdateProfile_InvalidId_Then_400() throws Exception{
+        String error = "Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"";
+    // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
+        ProfilePatch profilePatch = new ProfilePatch();
+
+        HttpEntity<ProfilePatch> requestPatch = new HttpEntity<>(profilePatch);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+                HttpMethod.PATCH,
+                requestPatch,
+                String.class,
+                "IdNotLong");
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
+    void testUpdateProfile_BioLength_Then_400() throws Exception {
+        String error = "bio size must be between 0 and 150";
+
+        // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
+        ProfilePatch profilePatch = new ProfilePatch();
+        profilePatch.setBio("Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient.");
+
+        HttpEntity<ProfilePatch> requestPatch = new HttpEntity<>(profilePatch);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+                HttpMethod.PATCH,
+                requestPatch,
+                String.class,
+                Long.MAX_VALUE);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore e' un array di dimensione 1
+        assertTrue(node.get("error").isArray());
+        assertEquals(1, node.get("error").size());
+        assertEquals(error ,node.get("error").get(0).asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error").get(0));
+    }
+
+    @Test
+    void testUpdateProfile_InvalidPictureUrl_Then_400() throws Exception{
+        String error = "pictureUrl must be a valid URL";
+
+        // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
+        ProfilePatch profilePatch = new ProfilePatch();
+        profilePatch.setPictureUrl("https://upload.wikimedia.o/ ra-%%$^&& iuyi");
+
+
+        HttpEntity<ProfilePatch> requestPatch = new HttpEntity<>(profilePatch);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+                HttpMethod.PATCH,
+                requestPatch,
+                String.class,
+                Long.MAX_VALUE);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore e' un array di dimensione 1
+        assertTrue(node.get("error").isArray());
+        assertEquals(1, node.get("error").size());
+        assertEquals(error ,node.get("error").get(0).asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error").get(0));
+    }
+
+    @Test
+    void testUpdateProfile_InvalidIsPrivate_Then_400() throws Exception{
+        String error = "JSON parse error: Cannot deserialize value of type `java.lang.Boolean` from String \"FalseString\": only \"true\" or \"false\" recognized";
+
+        // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
+        ProfilePatch profilePatch = new ProfilePatch();
+        profilePatch.setIsPrivate(false);
+
+        String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
+
+        JsonNode jsonNode = this.objectMapper.readTree(profilePatchJson);
+        ((ObjectNode) jsonNode).put("is_private", "FalseString");
+        profilePatchJson = this.objectMapper.writeValueAsString(jsonNode);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> requestPatch = new HttpEntity<>(profilePatchJson, headers);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+                HttpMethod.PATCH,
+                requestPatch,
+                String.class,
+                Long.MAX_VALUE);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    //:TODO 401 e 403
+    @Test
+    void testUpdateProfile_Then_404() throws Exception{
+        Long invalidProfileId = Long.MAX_VALUE;
+        String error = "Profile with id "+invalidProfileId+" not found!";
+        // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
+        ProfilePatch profilePatch = new ProfilePatch();
+
+        HttpEntity<ProfilePatch> requestPatch = new HttpEntity<>(profilePatch);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+                HttpMethod.PATCH,
+                requestPatch,
+                String.class,
+                invalidProfileId);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+
     }
 
 
