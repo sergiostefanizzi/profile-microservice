@@ -38,6 +38,11 @@ public class ProfilesController implements ProfilesApi {
     }
 
     @Override
+    public ResponseEntity<Profile> updateProfileById(Long profileId, ProfilePatch profilePatch) {
+        return new ResponseEntity<>(HttpStatus.OK);
+    }
+
+    @Override
     public ResponseEntity<FullProfile> findProfileById(Long profileId) {
         return new ResponseEntity<>(HttpStatus.OK);
     }
@@ -48,8 +53,5 @@ public class ProfilesController implements ProfilesApi {
     }
      */
 
-    @Override
-    public ResponseEntity<Profile> updateProfileById(Long profileId, ProfilePatch profilePatch) {
-        return new ResponseEntity<>(HttpStatus.OK);
-    }
+
 }

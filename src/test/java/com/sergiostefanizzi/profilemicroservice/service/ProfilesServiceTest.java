@@ -120,7 +120,8 @@ class ProfilesServiceTest {
     @Test
     void testRemoveSuccess(){
         when(this.profilesRepository.findById(profileId)).thenReturn(Optional.of(this.oldProfileJpa));
-        doNothing().when(this.profilesRepository).delete(this.oldProfileJpa);
+        when(this.profilesRepository.save(this.oldProfileJpa)).thenReturn(this.oldProfileJpa);
+
         // l'istante di rimozione deve essere nullo prima della rimozione
         assertNull(this.oldProfileJpa.getDeletedAt());
 
@@ -129,7 +130,7 @@ class ProfilesServiceTest {
         // l'istante di rimozione deve essere NON nullo DOPO la rimozione
         assertNotNull(this.oldProfileJpa.getDeletedAt());
         verify(this.profilesRepository, times(1)).findById(profileId);
-        verify(this.profilesRepository, times(1)).delete(this.oldProfileJpa);
+        verify(this.profilesRepository, times(1)).save(this.oldProfileJpa);
     }
 
     @Test

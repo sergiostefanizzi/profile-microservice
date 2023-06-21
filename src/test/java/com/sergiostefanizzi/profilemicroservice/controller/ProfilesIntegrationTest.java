@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Slf4j
-class ProfilesControllerIntegrationTest {
+class ProfilesIntegrationTest {
     @LocalServerPort
     private int port;
 
