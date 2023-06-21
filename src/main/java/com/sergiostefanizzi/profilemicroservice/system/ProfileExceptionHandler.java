@@ -33,7 +33,7 @@ public class ProfileExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ProfileNotFoundException.class)
     public ResponseEntity<Object> handleProfileNotFoundException(ProfileNotFoundException ex, WebRequest request){
-        String error = "Profile with id "+ex.getMessage()+" not found!";
+        String error = "Profile "+ex.getMessage()+" not found!";
         Map<String, String> body = new HashMap<>();
         body.put("error", error);
         return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.NOT_FOUND, request);

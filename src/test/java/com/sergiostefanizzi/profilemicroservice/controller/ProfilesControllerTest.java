@@ -348,7 +348,7 @@ class ProfilesControllerTest {
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof ProfileNotFoundException
                 ))
-                .andExpect(jsonPath("$.error").value("Profile with id "+invalidProfileId+" not found!"))
+                .andExpect(jsonPath("$.error").value("Profile "+invalidProfileId+" not found!"))
                 .andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -521,7 +521,7 @@ class ProfilesControllerTest {
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof ProfileNotFoundException
                 ))
-                .andExpect(jsonPath("$.error").value("Profile with id "+invalidProfileId+" not found!"))
+                .andExpect(jsonPath("$.error").value("Profile "+invalidProfileId+" not found!"))
                 .andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();

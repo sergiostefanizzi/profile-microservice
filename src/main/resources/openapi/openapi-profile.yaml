@@ -126,10 +126,12 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-                
-      
+
+
     delete:
       tags:
         - profiles
@@ -159,7 +161,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-    
+
   /profiles/search:
     get:
       tags:
@@ -189,7 +191,7 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '500':
           $ref: '#/components/responses/InternalServerError'
-    
+
   /profiles/{profileId}/follows/{followsId}:
     post:
       tags:
@@ -232,7 +234,7 @@ paths:
 
         '500':
           $ref: '#/components/responses/InternalServerError'
-                
+
     delete:
       tags:
         - follows
@@ -269,8 +271,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-                
-  /profiles/{profileId}/followedBy/{followerId}:   
+
+  /profiles/{profileId}/followedBy/{followerId}:
     put:
       tags:
         - follows
@@ -307,8 +309,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-        
-        
+
+
     delete:
       tags:
         - follows
@@ -345,7 +347,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-                
+
   /profiles/{profileId}/followedBy:
     get:
       tags:
@@ -378,7 +380,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-                
+
   /profiles/{profileId}/follows:
     get:
       tags:
@@ -411,7 +413,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  
+
   /posts:
     post:
       tags:
@@ -441,7 +443,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalServerError'
-              
+
   /posts/{postId}:
     get:
       tags:
@@ -476,7 +478,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-          
+
     patch:
       tags:
         - posts
@@ -497,7 +499,7 @@ paths:
         content:
           application/json:
             schema:
-               $ref: '#/components/schemas/PostPatch'
+              $ref: '#/components/schemas/PostPatch'
       responses:
         '200':
           description: Post caption updated
@@ -515,11 +517,11 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-          
+
     delete:
       tags:
         - posts
-      summary: Delete post 
+      summary: Delete post
       description: Delete post
       operationId: deletePostById
       security:
@@ -545,7 +547,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  
+
   /posts/feed/{profileId}:
     get:
       tags:
@@ -580,7 +582,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  
+
   /likes/{postId}/by/{profileId}:
     post:
       tags:
@@ -622,7 +624,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-    
+
     delete:
       tags:
         - likes
@@ -693,7 +695,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-                
+
   /comments/{postId}/by/{profileId}:
     post:
       tags:
@@ -785,7 +787,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-                
+
     delete:
       tags:
         - comments
@@ -822,7 +824,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-          
+
   /comments/{postId}:
     get:
       tags:
@@ -857,7 +859,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-                
+
   /alerts/profile:
     post:
       tags:
@@ -895,7 +897,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-                
+
   /alerts/post:
     post:
       tags:
@@ -933,7 +935,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-                
+
   /admins/profiles:
     get:
       tags:
@@ -963,7 +965,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalServerError'
-                
+
   /admins/profiles/{profileId}:
     put:
       tags:
@@ -1006,9 +1008,9 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  
-  
-          
+
+
+
   /admins/alerts:
     get:
       tags:
@@ -1038,7 +1040,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalServerError'
-                
+
   /admin/alerts/{adminId}:
     get:
       tags:
@@ -1079,8 +1081,8 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  
-  
+
+
   /admin/alerts/{alertId}:
     get:
       tags:
@@ -1117,7 +1119,7 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalServerError'
-    
+
     patch:
       tags:
         - admins
@@ -1156,7 +1158,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-                
+
     delete:
       tags:
         - admins
@@ -1185,9 +1187,9 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
-          $ref: '#/components/responses/InternalServerError'   
-          
-            
+          $ref: '#/components/responses/InternalServerError'
+
+
 components:
 
   responses:
@@ -1227,7 +1229,7 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/InternalServerError'
-            
+
   schemas:
     Profile:
       type: object
@@ -1260,7 +1262,7 @@ components:
         - profile_name
         - is_private
         - account_id
-    
+
     FullProfile:
       type: object
       properties:
@@ -1274,7 +1276,7 @@ components:
           minimum: 0
         profile_granted:
           type: boolean
-    
+
     ProfilePatch:
       type: object
       properties:
@@ -1289,7 +1291,7 @@ components:
           x-url: '@MyURL'
         is_private:
           type: boolean
-     
+
     Follows:
       type: object
       properties:
@@ -1308,7 +1310,7 @@ components:
         - follower_id
         - followed_id
         - accepted
-        
+
     Post:
       type: object
       properties:
@@ -1333,7 +1335,7 @@ components:
       required:
         - content_url
         - post_type
-    
+
     PostPatch:
       type: object
       properties:
@@ -1341,7 +1343,7 @@ components:
           type: string
       required:
         - caption
-    
+
     Like:
       type: object
       properties:
@@ -1358,7 +1360,7 @@ components:
       required:
         - profile_id
         - post_id
-    
+
     Comment:
       type: object
       properties:
@@ -1384,7 +1386,7 @@ components:
         - profile_id
         - post_id
         - content
-    
+
     Alert:
       type: object
       properties:
@@ -1410,11 +1412,11 @@ components:
           format: int64
           readOnly: true
       required:
-      - id
-      - profile_id
-      - post_id
-      - reason
-      
+        - id
+        - profile_id
+        - post_id
+        - reason
+
     AlertPatch:
       type: object
       properties:
@@ -1422,38 +1424,38 @@ components:
           type: integer
           format: int64
       required:
-      - managed_by
-      
+        - managed_by
+
     ProfileList:
       type: array
       items:
         $ref: '#/components/schemas/Profile'
-    
+
     PostList:
       type: array
-      items: 
+      items:
         $ref: '#/components/schemas/Post'
-        
+
     Feed:
       type: array
-      items: 
+      items:
         $ref: '#/components/schemas/Post'
-        
+
     LikeList:
       type: array
       items:
         $ref: '#/components/schemas/Like'
-    
+
     CommentList:
       type: array
       items:
         $ref: '#/components/schemas/Comment'
-    
+
     AlertList:
       type: array
       items:
         $ref: '#/components/schemas/Alert'
-    
+
     Error:
       type: object
       properties:
@@ -1462,7 +1464,7 @@ components:
           minLength: 1
           description: Error description
           example: Error description
-    
+
     ErrorList:
       type: array
       items:
@@ -1477,33 +1479,33 @@ components:
           minLength: 1
           example: Profile not found
       required:
-      - error
-      
+        - error
+
     Unauthenticated:
       type: object
       properties:
-        error: 
+        error:
           type: string
           minLength: 3
           example: Authentication is required!
-#Action is unauthenticated    
+    #Action is unauthenticated
     Forbidden:
       type: object
       properties:
-        error: 
+        error:
           type: string
           minLength: 3
           example: Action is forbidden!
-          
+
     Conflict:
       type: object
       properties:
-        error: 
+        error:
           type: string
           minLength: 3
           example: Resource already created!
-          
-    
+
+
     InternalServerError:
       type: object
       properties:
@@ -1512,11 +1514,11 @@ components:
           minLength: 1
           example: Internal Server Error
       required:
-      - error
-      
-      
+        - error
+
+
   securitySchemes:
-    bearerAuth:           
+    bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT

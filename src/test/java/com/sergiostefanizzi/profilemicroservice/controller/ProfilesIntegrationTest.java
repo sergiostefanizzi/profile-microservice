@@ -349,7 +349,7 @@ class ProfilesIntegrationTest {
         Optional<ProfileJpa> deletedProfileJpa = this.profilesRepository.findById(savedProfileId);
         if (deletedProfileJpa.isPresent()){
             assertNotNull(deletedProfileJpa.get().getDeletedAt());
-            log.info("Profile with id \n"+savedProfileId+" deleted at -> "+deletedProfileJpa.get().getDeletedAt());
+            log.info("Profile \n"+savedProfileId+" deleted at -> "+deletedProfileJpa.get().getDeletedAt());
         }
     }
 
@@ -382,7 +382,7 @@ class ProfilesIntegrationTest {
     void testDeleteProfileById_Then_404() throws Exception{
         Long invalidProfileId = Long.MAX_VALUE;
         // messaggio d'errore che mi aspetto d'ottenere
-        String error = "Profile with id "+invalidProfileId+" not found!";
+        String error = "Profile "+invalidProfileId+" not found!";
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
                 HttpMethod.DELETE,
                 HttpEntity.EMPTY,
@@ -553,7 +553,7 @@ class ProfilesIntegrationTest {
     @Test
     void testUpdateProfile_Then_404() throws Exception{
         Long invalidProfileId = Long.MAX_VALUE;
-        String error = "Profile with id "+invalidProfileId+" not found!";
+        String error = "Profile "+invalidProfileId+" not found!";
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();
 
