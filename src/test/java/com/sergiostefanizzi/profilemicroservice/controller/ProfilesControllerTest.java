@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
+import com.sergiostefanizzi.profilemicroservice.model.ProfilePatch;
 import com.sergiostefanizzi.profilemicroservice.service.ProfilesService;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
@@ -32,8 +33,7 @@ import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.in;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -52,11 +52,14 @@ class ProfilesControllerTest {
     private Profile savedProfile;
     String profileName = "giuseppe_verdi";
     Boolean isPrivate = false;
+    Boolean updatedIsPrivate = true;
     Long accountId = 1L;
     String bio = "This is Giuseppe's profile!";
+    String updatedBio = "New Giuseppe's bio";
     String pictureUrl = "https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg";
+    String updatedPictureUrl = "https://icons-for-free.com/iconfiles/png/512/avatar+person+profile+user+icon-1320086059654790795.png";
     Long profileId = 12L;
-    String newAccountJson;
+    String newProfileJson;
     private UrlValidator urlValidator;
 
     @BeforeEach
@@ -65,7 +68,7 @@ class ProfilesControllerTest {
         this.newProfile.setBio(bio);
         this.newProfile.setPictureUrl(pictureUrl);
 
-        newAccountJson = this.objectMapper.writeValueAsString(this.newProfile);
+        newProfileJson = this.objectMapper.writeValueAsString(this.newProfile);
 
         this.savedProfile = new Profile(profileName,isPrivate,accountId);
         this.savedProfile.setBio(bio);
@@ -86,7 +89,7 @@ class ProfilesControllerTest {
         MvcResult result = this.mockMvc.perform(post("/profiles")
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(newAccountJson))
+                .content(newProfileJson))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.*", hasSize(6)))
                 .andExpect(jsonPath("$.id").value(this.savedProfile.getId()))
@@ -95,11 +98,9 @@ class ProfilesControllerTest {
                 .andExpect(jsonPath("$.picture_url").value(this.savedProfile.getPictureUrl()))
                 .andExpect(jsonPath("$.is_private").value(this.savedProfile.getIsPrivate()))
                 .andExpect(jsonPath("$.account_id").value(this.savedProfile.getAccountId())).andReturn();
-        // salvo risposta in result per visualizzarla ma anche per controllare la validita' dell'url
+        // salvo risposta in result per visualizzarla
         String resultAsString = result.getResponse().getContentAsString();
         Profile profileResult = this.objectMapper.readValue(resultAsString, Profile.class);
-
-        assertTrue(this.urlValidator.isValid(profileResult.getPictureUrl()));
 
         log.info(profileResult.toString());
     }
@@ -112,14 +113,14 @@ class ProfilesControllerTest {
         this.savedProfile.setBio(null);
         this.savedProfile.setPictureUrl(null);
 
-        newAccountJson = this.objectMapper.writeValueAsString(this.newProfile);
+        newProfileJson = this.objectMapper.writeValueAsString(this.newProfile);
 
         when(this.profilesService.save(this.newProfile)).thenReturn(this.savedProfile);
 
         MvcResult result = this.mockMvc.perform(post("/profiles")
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(newAccountJson))
+                .content(newProfileJson))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.*", hasSize(4)))
                 .andExpect(jsonPath("$.id").value(this.savedProfile.getId()))
@@ -146,13 +147,13 @@ class ProfilesControllerTest {
         this.newProfile.setIsPrivate(null);
         this.newProfile.setAccountId(null);
 
-        newAccountJson = this.objectMapper.writeValueAsString(this.newProfile);
-        log.info("New Account Json "+newAccountJson);
+        newProfileJson = this.objectMapper.writeValueAsString(this.newProfile);
+        log.info("New Account Json "+newProfileJson);
 
         MvcResult result = this.mockMvc.perform(post("/profiles")
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(newAccountJson))
+                .content(newProfileJson))
                 .andExpect(status().isBadRequest())
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof MethodArgumentNotValidException)
@@ -175,13 +176,13 @@ class ProfilesControllerTest {
 
         this.newProfile.setProfileName("g_v");
 
-        newAccountJson = this.objectMapper.writeValueAsString(this.newProfile);
-        log.info("New Account Json "+newAccountJson);
+        newProfileJson = this.objectMapper.writeValueAsString(this.newProfile);
+        log.info("New Account Json "+newProfileJson);
 
         MvcResult result = this.mockMvc.perform(post("/profiles")
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(newAccountJson))
+                        .content(newProfileJson))
                 .andExpect(status().isBadRequest())
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof MethodArgumentNotValidException)
@@ -201,13 +202,13 @@ class ProfilesControllerTest {
 
         this.newProfile.setBio("Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient.");
 
-        newAccountJson = this.objectMapper.writeValueAsString(this.newProfile);
-        log.info("New Account Json "+newAccountJson);
+        newProfileJson = this.objectMapper.writeValueAsString(this.newProfile);
+        log.info("New Account Json "+newProfileJson);
 
         MvcResult result = this.mockMvc.perform(post("/profiles")
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(newAccountJson))
+                        .content(newProfileJson))
                 .andExpect(status().isBadRequest())
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof MethodArgumentNotValidException)
@@ -224,16 +225,20 @@ class ProfilesControllerTest {
     void testAddProfile_InvalidPictureUrl_Then_400() throws Exception{
         String error = "pictureUrl must be a valid URL";
         this.newProfile.setPictureUrl("https://upload.wikimedia.o/ ra-%%$^&& iuyi");
-        newAccountJson = this.objectMapper.writeValueAsString(this.newProfile);
+        newProfileJson = this.objectMapper.writeValueAsString(this.newProfile);
 
         when(this.profilesService.save(this.newProfile)).thenReturn(this.savedProfile);
 
         MvcResult result = this.mockMvc.perform(post("/profiles")
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(newAccountJson))
+                        .content(newProfileJson))
                 .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MethodArgumentNotValidException)
+                )
                 .andExpect(jsonPath("$.error").isArray())
+                .andExpect(jsonPath("$.error", hasSize(1)))
                 .andExpect(jsonPath("$.error[0]").value(error)).andReturn();
 
         // salvo risposta in result solo per visualizzarla
@@ -243,14 +248,15 @@ class ProfilesControllerTest {
 
     @Test
     void testAddProfile_InvalidIsPrivate_Then_400() throws Exception{
-        JsonNode jsonNode = this.objectMapper.readTree(newAccountJson);
+        JsonNode jsonNode = this.objectMapper.readTree(newProfileJson);
+
         ((ObjectNode) jsonNode).put("is_private", "FalseString");
-        newAccountJson = this.objectMapper.writeValueAsString(jsonNode);
+        newProfileJson = this.objectMapper.writeValueAsString(jsonNode);
 
         MvcResult result = this.mockMvc.perform(post("/profiles")
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(newAccountJson))
+                .content(newProfileJson))
                 .andExpect(status().isBadRequest())
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof HttpMessageNotReadableException
@@ -263,14 +269,14 @@ class ProfilesControllerTest {
 
     @Test
     void testAddProfile_InvalidAccountId_Then_400() throws Exception{
-        JsonNode jsonNode = this.objectMapper.readTree(newAccountJson);
+        JsonNode jsonNode = this.objectMapper.readTree(newProfileJson);
         ((ObjectNode) jsonNode).put("account_id", "IdNotLong");
-        newAccountJson = this.objectMapper.writeValueAsString(jsonNode);
+        newProfileJson = this.objectMapper.writeValueAsString(jsonNode);
 
         MvcResult result = this.mockMvc.perform(post("/profiles")
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(newAccountJson))
+                        .content(newProfileJson))
                 .andExpect(status().isBadRequest())
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof HttpMessageNotReadableException
@@ -294,11 +300,11 @@ class ProfilesControllerTest {
         when(this.profilesService.save(this.newProfile)).thenThrow(
                 new ProfileAlreadyCreatedException(this.newProfile.getProfileName())
         );
-        log.info("New Account Json "+newAccountJson);
+        log.info("New Account Json "+newProfileJson);
         this.mockMvc.perform(post("/profiles")
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(newAccountJson))
+                .content(newProfileJson))
                 .andExpect(status().isConflict())
                 .andExpect(result -> assertTrue(
                         result.getResolvedException() instanceof ProfileAlreadyCreatedException))
@@ -340,6 +346,182 @@ class ProfilesControllerTest {
         doThrow(new ProfileNotFoundException(invalidProfileId)).when(this.profilesService).remove(invalidProfileId);
 
         MvcResult result = this.mockMvc.perform(delete("/profiles/{profileId}",invalidProfileId))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof ProfileNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value("Profile with id "+invalidProfileId+" not found!"))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+    
+    @Test
+    void testUpdateProfile_Then_200() throws Exception{
+        // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
+        ProfilePatch profilePatch = new ProfilePatch();
+        profilePatch.setBio(updatedBio);
+        profilePatch.setPictureUrl(updatedPictureUrl);
+        profilePatch.setIsPrivate(updatedIsPrivate);
+        
+        String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
+
+        // Aggiorno il profilo che verra' restituito dal service con i nuovi valori
+        Profile updatedProfile = new Profile(profileName, isPrivate, accountId);
+        updatedProfile.setId(profileId);
+        updatedProfile.setBio(profilePatch.getBio() != null ? profilePatch.getBio() : bio);
+        updatedProfile.setPictureUrl(profilePatch.getPictureUrl() != null ? profilePatch.getPictureUrl() : pictureUrl);
+        updatedProfile.setIsPrivate(profilePatch.getIsPrivate() != null ? profilePatch.getIsPrivate() : isPrivate);
+        
+        
+        when(this.profilesService.update(profileId, profilePatch)).thenReturn(updatedProfile);
+        
+        MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",profileId)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(profilePatchJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.*", hasSize(6)))
+                .andExpect(jsonPath("$.id").value(updatedProfile.getId()))
+                .andExpect(jsonPath("$.profile_name").value(updatedProfile.getProfileName()))
+                .andExpect(jsonPath("$.bio").value(updatedProfile.getBio()))
+                .andExpect(jsonPath("$.picture_url").value(updatedProfile.getPictureUrl()))
+                .andExpect(jsonPath("$.is_private").value(updatedProfile.getIsPrivate()))
+                .andExpect(jsonPath("$.account_id").value(updatedProfile.getAccountId())).andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        Profile profileResult = this.objectMapper.readValue(resultAsString, Profile.class);
+
+        log.info(profileResult.toString());
+    }
+
+    @Test
+    void testUpdateProfile_InvalidId_Then_400() throws Exception{
+        Long invalidProfileId = 1000L;
+        // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
+        ProfilePatch profilePatch = new ProfilePatch();
+        profilePatch.setBio(updatedBio);
+        profilePatch.setPictureUrl(updatedPictureUrl);
+        profilePatch.setIsPrivate(updatedIsPrivate);
+
+        String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
+
+        doThrow(new ProfileNotFoundException(invalidProfileId)).when(this.profilesService).update(invalidProfileId, profilePatch);
+
+        MvcResult result = this.mockMvc.perform(patch("/profiles/IdNotLong")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(profilePatchJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                ))
+                .andExpect(jsonPath("$.error").value("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\""))
+                .andReturn();
+
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    @Test
+    void testUpdateProfile_BioLength_Then_400() throws Exception{
+        String error = "bio size must be between 0 and 150";
+
+        // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
+        ProfilePatch profilePatch = new ProfilePatch();
+        profilePatch.setBio("Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient.");
+
+        String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
+
+        MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",profileId)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(profilePatchJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MethodArgumentNotValidException)
+                )
+                .andExpect(jsonPath("$.error").isArray())
+                .andExpect(jsonPath("$.error", hasSize(1)))
+                .andExpect(jsonPath("$.error[0]").value(error)).andReturn();
+        // salvo risposta in result solo per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+    }
+
+    @Test
+    void testUpdateProfile_InvalidPictureUrl_Then_400() throws Exception{
+        String error = "pictureUrl must be a valid URL";
+
+        ProfilePatch profilePatch = new ProfilePatch();
+        profilePatch.setPictureUrl("https://upload.wikimedia.o/ ra-%%$^&& iuyi");
+
+        String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
+
+        when(this.profilesService.save(this.newProfile)).thenReturn(this.savedProfile);
+
+        MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",profileId)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(profilePatchJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MethodArgumentNotValidException)
+                )
+                .andExpect(jsonPath("$.error").isArray())
+                .andExpect(jsonPath("$.error", hasSize(1)))
+                .andExpect(jsonPath("$.error[0]").value(error)).andReturn();
+        // salvo risposta in result solo per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+    }
+
+    @Test
+    void testUpdateProfile_InvalidIsPrivate_Then_400() throws Exception{
+        ProfilePatch profilePatch = new ProfilePatch();
+        profilePatch.setIsPrivate(false);
+
+        String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
+
+        JsonNode jsonNode = this.objectMapper.readTree(profilePatchJson);
+        ((ObjectNode) jsonNode).put("is_private", "FalseString");
+        profilePatchJson = this.objectMapper.writeValueAsString(jsonNode);
+
+        MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",profileId)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(profilePatchJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof HttpMessageNotReadableException
+                ))
+                .andExpect(jsonPath("$.error").value("JSON parse error: Cannot deserialize value of type `java.lang.Boolean` from String \"FalseString\": only \"true\" or \"false\" recognized")).andReturn();
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+    @Test
+    void testUpdateProfile_Then_404() throws Exception{
+        Long invalidProfileId = 1000L;
+        // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
+        ProfilePatch profilePatch = new ProfilePatch();
+        profilePatch.setBio(updatedBio);
+        profilePatch.setPictureUrl(updatedPictureUrl);
+        profilePatch.setIsPrivate(updatedIsPrivate);
+
+        String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
+
+        doThrow(new ProfileNotFoundException(invalidProfileId)).when(this.profilesService).update(invalidProfileId, profilePatch);
+
+        MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",invalidProfileId)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(profilePatchJson))
                 .andExpect(status().isNotFound())
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof ProfileNotFoundException

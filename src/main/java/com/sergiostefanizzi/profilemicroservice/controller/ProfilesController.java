@@ -40,7 +40,7 @@ public class ProfilesController implements ProfilesApi {
     @Override
     public ResponseEntity<Profile> updateProfileById(Long profileId, ProfilePatch profilePatch) {
         Profile updatedProfile = this.profilesService.update(profileId, profilePatch);
-        return new ResponseEntity<>(HttpStatus.OK);
+        return new ResponseEntity<>(updatedProfile, HttpStatus.OK);
     }
 
     @Override
