@@ -9,7 +9,6 @@ import com.sergiostefanizzi.profilemicroservice.service.ProfilesService;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.validator.routines.UrlValidator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -57,6 +56,7 @@ class ProfilesControllerTest {
     String bio = "This is Giuseppe's profile!";
     String updatedBio = "New Giuseppe's bio";
     String pictureUrl = "https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg";
+    String pictureUrlXSS = "http://www.example.com?d=<script type=\"javascript\" src=\"http://www.google.it\"/>"; //Cross site scripting XSS
     String updatedPictureUrl = "https://icons-for-free.com/iconfiles/png/512/avatar+person+profile+user+icon-1320086059654790795.png";
     Long profileId = 12L;
     String newProfileJson;
@@ -102,6 +102,7 @@ class ProfilesControllerTest {
 
         log.info(profileResult.toString());
     }
+
 
     @Test
     void testAddProfile_RequiredFields_Then_201() throws Exception {
@@ -223,9 +224,9 @@ class ProfilesControllerTest {
     void testAddProfile_InvalidPictureUrl_Then_400() throws Exception{
         String error = "pictureUrl must be a valid URL";
         this.newProfile.setPictureUrl("https://upload.wikimedia.o/ ra-%%$^&& iuyi");
+        //Test XSS
+        //this.newProfile.setPictureUrl(pictureUrlXSS);
         newProfileJson = this.objectMapper.writeValueAsString(this.newProfile);
-
-        when(this.profilesService.save(this.newProfile)).thenReturn(this.savedProfile);
 
         MvcResult result = this.mockMvc.perform(post("/profiles")
                         .accept(MediaType.APPLICATION_JSON)
@@ -454,10 +455,10 @@ class ProfilesControllerTest {
 
         ProfilePatch profilePatch = new ProfilePatch();
         profilePatch.setPictureUrl("https://upload.wikimedia.o/ ra-%%$^&& iuyi");
+        //Test XSS
+        //profilePatch.setPictureUrl(pictureUrlXSS);
 
         String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
-
-        when(this.profilesService.save(this.newProfile)).thenReturn(this.savedProfile);
 
         MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",profileId)
                         .accept(MediaType.APPLICATION_JSON)

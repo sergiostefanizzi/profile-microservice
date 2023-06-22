@@ -6,10 +6,12 @@ import com.sergiostefanizzi.profilemicroservice.model.Profile;
 import com.sergiostefanizzi.profilemicroservice.model.ProfilePatch;
 import com.sergiostefanizzi.profilemicroservice.service.ProfilesService;
 
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.NativeWebRequest;
 
@@ -44,15 +46,19 @@ public class ProfilesController implements ProfilesApi {
     }
 
     @Override
-    public ResponseEntity<FullProfile> findProfileById(Long profileId) {
+    public ResponseEntity<Profile> searchProfileByProfileName(String profileName) {
+        Profile profile = this.profilesService.findByProfileName(profileName);
         return new ResponseEntity<>(HttpStatus.OK);
     }
     /*
+    //TODO dopo creazione sezione Post
     @Override
-    public ResponseEntity<Profile> searchProfileByProfileName(@NotNull String profileName) {
+    public ResponseEntity<FullProfile> findProfileById(Long profileId) {
         return new ResponseEntity<>(HttpStatus.OK);
     }
+
      */
+
 
 
 }

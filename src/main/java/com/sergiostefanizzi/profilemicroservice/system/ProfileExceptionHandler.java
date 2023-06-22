@@ -2,6 +2,7 @@ package com.sergiostefanizzi.profilemicroservice.system;
 
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -21,10 +22,12 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @ControllerAdvice
+@Slf4j
 public class ProfileExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ProfileAlreadyCreatedException.class)
     public ResponseEntity<Object> handleProfileAlreadyCreatedException(ProfileAlreadyCreatedException ex, WebRequest request){
+        log.error(ex.getMessage(),ex);
         String error = "Conflict! Profile with name "+ex.getMessage()+" already created!";
         Map<String, String> body = new HashMap<>();
         body.put("error", error);
@@ -33,6 +36,7 @@ public class ProfileExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ProfileNotFoundException.class)
     public ResponseEntity<Object> handleProfileNotFoundException(ProfileNotFoundException ex, WebRequest request){
+        log.error(ex.getMessage(),ex);
         String error = "Profile "+ex.getMessage()+" not found!";
         Map<String, String> body = new HashMap<>();
         body.put("error", error);
@@ -42,6 +46,7 @@ public class ProfileExceptionHandler extends ResponseEntityExceptionHandler {
     // INTERNAL SERVER ERROR
     @ExceptionHandler({RuntimeException.class, Exception.class})
     public ResponseEntity<Object> handleNotManagedException(RuntimeException ex, WebRequest request){
+        log.error(ex.getMessage(),ex);
         String error = "Internal Server Error!";
         Map<String, String> body = new HashMap<>();
         body.put("error", error);
@@ -50,6 +55,7 @@ public class ProfileExceptionHandler extends ResponseEntityExceptionHandler {
     // OVERRIDE METHODS
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        log.error(ex.getMessage(),ex);
         List<String> errors = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
@@ -63,6 +69,7 @@ public class ProfileExceptionHandler extends ResponseEntityExceptionHandler {
 
     @Override
     protected ResponseEntity<Object> handleTypeMismatch(TypeMismatchException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        log.error(ex.getMessage(),ex);
         String error = ex.getMessage();
         Map<String, String> body = new HashMap<>();
         body.put("error", error);
@@ -72,6 +79,7 @@ public class ProfileExceptionHandler extends ResponseEntityExceptionHandler {
 
     @Override
     protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        log.error(ex.getMessage(),ex);
         String error = ex.getMessage();
         Map<String, String> body = new HashMap<>();
         body.put("error", error);
@@ -80,6 +88,7 @@ public class ProfileExceptionHandler extends ResponseEntityExceptionHandler {
 
     @Override
     protected ResponseEntity<Object> handleHttpMessageNotWritable(HttpMessageNotWritableException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        log.error(ex.getMessage(),ex);
         String error = ex.getMessage();
         Map<String, String> body = new HashMap<>();
         body.put("error", error);

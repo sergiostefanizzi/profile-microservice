@@ -78,4 +78,9 @@ public class ProfilesService {
 
         return this.profileToProfileJpaConverter.convertBack(updatedProfileJpa);
     }
+    //TODO dopo creazione sezione Post
+    @Transactional
+    public Profile findByProfileName(String profileName) {
+        return null;
+    }
 }

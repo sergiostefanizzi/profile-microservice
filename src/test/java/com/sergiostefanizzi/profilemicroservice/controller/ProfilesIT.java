@@ -26,7 +26,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Slf4j
-class ProfilesIntegrationTest {
+class ProfilesIT {
     @LocalServerPort
     private int port;
 
@@ -46,6 +46,7 @@ class ProfilesIntegrationTest {
     String bio = "This is Giuseppe's profile!";
     String updatedBio = "New Giuseppe's bio";
     String pictureUrl = "https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg";
+    String pictureUrlXSS = "http://www.example.com?d=<script type=\"javascript\" src=\"http://www.google.it\"/>"; //Cross site scripting XSS
     String updatedPictureUrl = "https://icons-for-free.com/iconfiles/png/512/avatar+person+profile+user+icon-1320086059654790795.png";
 
     @BeforeEach
@@ -204,7 +205,8 @@ class ProfilesIntegrationTest {
         String error = "pictureUrl must be a valid URL";
         // imposto un url non valido
         this.newProfile.setPictureUrl("https://upload.wikimedia.o/ ra-%%$^&& iuyi");
-
+        //Test XSS
+        //this.newProfile.setPictureUrl(pictureUrlXSS);
         HttpEntity<Profile> request = new HttpEntity<>(newProfile);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
@@ -498,7 +500,8 @@ class ProfilesIntegrationTest {
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();
         profilePatch.setPictureUrl("https://upload.wikimedia.o/ ra-%%$^&& iuyi");
-
+        //Test XSS
+        //profilePatch.setPictureUrl(pictureUrlXSS);
 
         HttpEntity<ProfilePatch> requestPatch = new HttpEntity<>(profilePatch);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
