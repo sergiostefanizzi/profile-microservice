@@ -1,11 +1,13 @@
 package com.sergiostefanizzi.profilemicroservice.model;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import org.hibernate.validator.constraints.URL;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
 @Table(name = "Profile")
@@ -20,11 +22,11 @@ public class ProfileJpa {
     private Long id;
 
     @NotBlank
-    @NonNull
+    @NotNull
     @Column(name = "profile_name", nullable = false, unique = true, length = 30)
     @Size(min = 8, max = 20)
     @Pattern(regexp = "^(?=.{8,20}$)(?![_.])(?!.*[_.]{2})[a-zA-Z0-9._]+(?<![_.])$")
-    private String profileName;
+    private final String profileName;
 
     @Column(name = "bio", length = 150)
     @Size(max = 150)
@@ -58,8 +60,11 @@ public class ProfileJpa {
 
     @Column(name = "account_id", nullable = false)
     @NotNull
-    @NonNull
-    private Long accountId;
+    private final Long accountId;
+
+    @OneToMany(mappedBy = "profile")
+    @JsonBackReference
+    private List<PostJpa> postList;
 
     @Version
     @Column(name = "version", nullable = false)

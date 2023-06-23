@@ -340,7 +340,7 @@ class ProfilesControllerTest {
     */
 
     @Test
-    void testDeleteProfileById_Then_404() throws Exception{
+    void testDeleteProfileById_Then_404() throws Exception {
         Long invalidProfileId = Long.MAX_VALUE;
         doThrow(new ProfileNotFoundException(invalidProfileId)).when(this.profilesService).remove(invalidProfileId);
 

@@ -21,9 +21,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@ControllerAdvice
+
+@ControllerAdvice()
 @Slf4j
-public class ProfileExceptionHandler extends ResponseEntityExceptionHandler {
+public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
 
     @ExceptionHandler(ProfileAlreadyCreatedException.class)
     public ResponseEntity<Object> handleProfileAlreadyCreatedException(ProfileAlreadyCreatedException ex, WebRequest request){

@@ -1331,10 +1331,10 @@ components:
         profile_id:
           type: integer
           format: int64
-          readOnly: true
       required:
         - content_url
         - post_type
+        - profile_id
 
     PostPatch:
       type: object
