@@ -63,7 +63,7 @@ class ProfilesIT {
 
     @Test
     void testAddProfile_Then_201(){
-        HttpEntity<Profile> request = new HttpEntity<>(newProfile);
+        HttpEntity<Profile> request = new HttpEntity<>(this.newProfile);
         ResponseEntity<Profile> response = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
                 request,
@@ -74,11 +74,11 @@ class ProfilesIT {
         assertInstanceOf(Profile.class, response.getBody());
         Profile savedProfile = response.getBody();
         assertNotNull(savedProfile.getId());
-        assertEquals(newProfile.getProfileName(), savedProfile.getProfileName());
-        assertEquals(newProfile.getBio(), savedProfile.getBio());
-        assertEquals(newProfile.getPictureUrl(), savedProfile.getPictureUrl());
-        assertEquals(newProfile.getIsPrivate(), savedProfile.getIsPrivate());
-        assertEquals(newProfile.getAccountId(), savedProfile.getAccountId());
+        assertEquals(this.newProfile.getProfileName(), savedProfile.getProfileName());
+        assertEquals(this.newProfile.getBio(), savedProfile.getBio());
+        assertEquals(this.newProfile.getPictureUrl(), savedProfile.getPictureUrl());
+        assertEquals(this.newProfile.getIsPrivate(), savedProfile.getIsPrivate());
+        assertEquals(this.newProfile.getAccountId(), savedProfile.getAccountId());
 
         // visulazzo il profilo salvato
         log.info(savedProfile.toString());
@@ -94,7 +94,7 @@ class ProfilesIT {
         this.newProfile.setBio(null);
         this.newProfile.setPictureUrl(null);
 
-        HttpEntity<Profile> request = new HttpEntity<>(newProfile);
+        HttpEntity<Profile> request = new HttpEntity<>(this.newProfile);
         ResponseEntity<Profile> response = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
                 request,
@@ -105,11 +105,11 @@ class ProfilesIT {
         assertInstanceOf(Profile.class, response.getBody());
         Profile savedProfile = response.getBody();
         assertNotNull(savedProfile.getId());
-        assertEquals(newProfile.getProfileName(), savedProfile.getProfileName());
+        assertEquals(this.newProfile.getProfileName(), savedProfile.getProfileName());
         assertNull(savedProfile.getBio());
         assertNull(savedProfile.getPictureUrl());
-        assertEquals(newProfile.getIsPrivate(), savedProfile.getIsPrivate());
-        assertEquals(newProfile.getAccountId(), savedProfile.getAccountId());
+        assertEquals(this.newProfile.getIsPrivate(), savedProfile.getIsPrivate());
+        assertEquals(this.newProfile.getAccountId(), savedProfile.getAccountId());
 
         // visulazzo il profilo salvato
         log.info(savedProfile.toString());
@@ -128,7 +128,7 @@ class ProfilesIT {
         this.newProfile.setIsPrivate(null);
         this.newProfile.setAccountId(null);
 
-        HttpEntity<Profile> request = new HttpEntity<>(newProfile);
+        HttpEntity<Profile> request = new HttpEntity<>(this.newProfile);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
                 request,
@@ -156,7 +156,7 @@ class ProfilesIT {
         // imposto il profileName in modo che non rispetti le regole d'inserimento
         this.newProfile.setProfileName("g_v");
 
-        HttpEntity<Profile> request = new HttpEntity<>(newProfile);
+        HttpEntity<Profile> request = new HttpEntity<>(this.newProfile);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
                 request,
@@ -182,7 +182,7 @@ class ProfilesIT {
         // Imposto una bio di 160 caratteri
         this.newProfile.setBio("Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient.");
 
-        HttpEntity<Profile> request = new HttpEntity<>(newProfile);
+        HttpEntity<Profile> request = new HttpEntity<>(this.newProfile);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
                 request,
@@ -207,7 +207,7 @@ class ProfilesIT {
         this.newProfile.setPictureUrl("https://upload.wikimedia.o/ ra-%%$^&& iuyi");
         //Test XSS
         //this.newProfile.setPictureUrl(pictureUrlXSS);
-        HttpEntity<Profile> request = new HttpEntity<>(newProfile);
+        HttpEntity<Profile> request = new HttpEntity<>(this.newProfile);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
                 request,
@@ -231,7 +231,7 @@ class ProfilesIT {
 
         // per impostare una stringa in un campo boolean come isPrivate
         // devo convertire il Profile in formato json e modificare il campo direttamente
-        String newAccountJson = this.objectMapper.writeValueAsString(newProfile);
+        String newAccountJson = this.objectMapper.writeValueAsString(this.newProfile);
         JsonNode jsonNode = this.objectMapper.readTree(newAccountJson);
         ((ObjectNode) jsonNode).put("is_private", "FalseString");
         newAccountJson = this.objectMapper.writeValueAsString(jsonNode);
@@ -262,7 +262,7 @@ class ProfilesIT {
 
         // per impostare una stringa in un campo Long come accountId
         // devo convertire il Profile in formato json e modificare il campo direttamente
-        String newAccountJson = this.objectMapper.writeValueAsString(newProfile);
+        String newAccountJson = this.objectMapper.writeValueAsString(this.newProfile);
         JsonNode jsonNode = this.objectMapper.readTree(newAccountJson);
         ((ObjectNode) jsonNode).put("account_id", "IdNotLong");
         newAccountJson = this.objectMapper.writeValueAsString(jsonNode);
@@ -302,7 +302,7 @@ class ProfilesIT {
         // messaggio d'errore che mi aspetto d'ottenere
         String error = "Conflict! Profile with name "+profileName+" already created!";
 
-        HttpEntity<Profile> request = new HttpEntity<>(newProfile);
+        HttpEntity<Profile> request = new HttpEntity<>(this.newProfile);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
                 request,
@@ -321,7 +321,7 @@ class ProfilesIT {
     void testDeleteProfileById_Then_204() throws Exception{
         // creo un nuovo profilo
         this.newProfile.setProfileName(profileName+"_2");
-        HttpEntity<Profile> request = new HttpEntity<>(newProfile);
+        HttpEntity<Profile> request = new HttpEntity<>(this.newProfile);
         ResponseEntity<Profile> responsePost = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
                 request,
@@ -404,7 +404,7 @@ class ProfilesIT {
     void testUpdateProfile_Then_200() throws Exception{
         // creo un nuovo profilo
         this.newProfile.setProfileName(profileName+"_3");
-        HttpEntity<Profile> requestPost = new HttpEntity<>(newProfile);
+        HttpEntity<Profile> requestPost = new HttpEntity<>(this.newProfile);
         ResponseEntity<Profile> responsePost = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
                 requestPost,
@@ -437,11 +437,11 @@ class ProfilesIT {
         assertInstanceOf(Profile.class, responsePatch.getBody());
         Profile updatedProfile = responsePatch.getBody();
         assertEquals(savedProfileId, updatedProfile.getId());
-        assertEquals(newProfile.getProfileName(), updatedProfile.getProfileName());
+        assertEquals(this.newProfile.getProfileName(), updatedProfile.getProfileName());
         assertEquals(profilePatch.getBio() != null ? updatedBio : this.newProfile.getBio(), updatedProfile.getBio());
         assertEquals(profilePatch.getPictureUrl() != null ? updatedPictureUrl : this.newProfile.getPictureUrl(), updatedProfile.getPictureUrl());
         assertEquals(profilePatch.getIsPrivate() != null ? updatedIsPrivate : this.newProfile.getIsPrivate(), updatedProfile.getIsPrivate());
-        assertEquals(newProfile.getAccountId(), updatedProfile.getAccountId());
+        assertEquals(this.newProfile.getAccountId(), updatedProfile.getAccountId());
         // visualizzo il profilo aggiornato
         log.info(updatedProfile.toString());
     }

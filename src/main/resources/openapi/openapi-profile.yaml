@@ -1287,7 +1287,6 @@ components:
         picture_url:
           type: string
           x-nonnull: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
-          #x-url: '@org.hibernate.validator.constraints.URL'
           x-url: '@MyURL'
         is_private:
           type: boolean
@@ -1322,9 +1321,11 @@ components:
           type: string
           minLength: 1
           example: http://www.contentUrl.com/2342
+          x-url: '@MyURL'
         caption:
           type: string
           maxLength: 2200
+          x-nonnull: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
         post_type:
           format: string
           enum: [POST,STORY]

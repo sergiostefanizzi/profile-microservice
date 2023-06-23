@@ -35,7 +35,7 @@ class PostsServiceTest {
     @InjectMocks
     private PostsService postsService;
 
-    String contentUrl = "";
+    String contentUrl = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Cape_may.jpg";
     String caption = "This is the post caption";
     Post.PostTypeEnum postType = Post.PostTypeEnum.POST;
     Long postId = 1L;
