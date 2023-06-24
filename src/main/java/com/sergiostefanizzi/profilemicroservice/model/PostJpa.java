@@ -22,6 +22,7 @@ public class PostJpa {
     @Column(name = "content_url", nullable = false)
     @NotNull
     @NonNull
+    @Size(min = 3, max = 2048)
     private String contentUrl;
     @Column(name = "caption", length = 2200)
     @Size(max = 2200)

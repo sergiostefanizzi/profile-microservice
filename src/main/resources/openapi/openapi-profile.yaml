@@ -54,6 +54,10 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
         '500':
@@ -1249,6 +1253,8 @@ components:
           x-nonnull: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
         picture_url:
           type: string
+          minLength: 3
+          maxLength: 2048
           x-nonnull: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
           #x-url: '@org.hibernate.validator.constraints.URL'
           x-url: '@MyURL'
@@ -1286,6 +1292,8 @@ components:
           x-nonnull: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
         picture_url:
           type: string
+          minLength: 3
+          maxLength: 2048
           x-nonnull: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
           x-url: '@MyURL'
         is_private:
@@ -1319,7 +1327,8 @@ components:
           readOnly: true
         content_url:
           type: string
-          minLength: 1
+          minLength: 3
+          maxLength: 2048
           example: http://www.contentUrl.com/2342
           x-url: '@MyURL'
         caption:

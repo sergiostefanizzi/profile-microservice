@@ -27,8 +27,8 @@ public class PostsService {
 
     @Transactional
     public Post save(Post post) {
-        // TODO controllo l'id del profilo all'interno del JWT
-        // controllo l'esistenza del profileId
+        //TODO controllo l'id del profilo all'interno del JWT
+        // controllo l'esistenza del profileId , altrimenti 403 Forbidden e non 404
         ProfileJpa profileJpa = this.profilesRepository.findById(post.getProfileId()).orElseThrow(
                 () -> new ProfileNotFoundException(post.getProfileId())
         );
