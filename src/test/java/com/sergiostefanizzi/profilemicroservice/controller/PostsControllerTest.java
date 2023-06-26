@@ -117,7 +117,7 @@ class PostsControllerTest {
 
         when(this.postsService.save(this.newPost)).thenReturn(this.savedPost);
 
-        //La caption non dovrebbe essere presenze, e quindi ci saranno solo 4 campi
+        //La caption non dovrebbe essere presenze, e quindi ci saranno solo quattro campi
         MvcResult result = this.mockMvc.perform(post("/posts")
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -175,6 +175,7 @@ class PostsControllerTest {
         this.newPost.setCaption(RandomStringUtils.randomAlphabetic(2210));
 
         newPostJson = this.objectMapper.writeValueAsString(this.newPost);
+        log.info("JSON\n"+newPostJson);
 
         MvcResult result = this.mockMvc.perform(post("/posts")
                         .accept(MediaType.APPLICATION_JSON)
@@ -264,7 +265,7 @@ class PostsControllerTest {
     // Questo dovra' essere sostituito con il 403
     @Test
     void testAddPost_Then_404() throws Exception {
-        Long invalidProfileId = Long.MAX_VALUE;
+        Long invalidProfileId = Long.MIN_VALUE;
         doThrow(new ProfileNotFoundException(invalidProfileId)).when(this.postsService).save(this.newPost);
 
         MvcResult result = this.mockMvc.perform(post("/posts")

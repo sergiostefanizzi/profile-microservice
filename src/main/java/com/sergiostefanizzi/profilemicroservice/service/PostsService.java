@@ -42,5 +42,4 @@ public class PostsService {
                 this.postsRepository.save(postJpa)
         );
     }
-    //TODO aggiungere converte DTO JPA
 }

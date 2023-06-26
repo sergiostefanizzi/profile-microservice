@@ -231,16 +231,16 @@ class ProfilesIT {
 
         // per impostare una stringa in un campo boolean come isPrivate
         // devo convertire il Profile in formato json e modificare il campo direttamente
-        String newAccountJson = this.objectMapper.writeValueAsString(this.newProfile);
-        JsonNode jsonNode = this.objectMapper.readTree(newAccountJson);
+        String newProfileJson = this.objectMapper.writeValueAsString(this.newProfile);
+        JsonNode jsonNode = this.objectMapper.readTree(newProfileJson);
         ((ObjectNode) jsonNode).put("is_private", "FalseString");
-        newAccountJson = this.objectMapper.writeValueAsString(jsonNode);
+        newProfileJson = this.objectMapper.writeValueAsString(jsonNode);
 
         // Dato che invio direttamente il json del profile, devo impostare il contentType application/json
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> request = new HttpEntity<>(newAccountJson, headers);
+        HttpEntity<String> request = new HttpEntity<>(newProfileJson, headers);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
                 request,
@@ -382,7 +382,7 @@ class ProfilesIT {
     */
     @Test
     void testDeleteProfileById_Then_404() throws Exception{
-        Long invalidProfileId = Long.MAX_VALUE;
+        Long invalidProfileId = Long.MIN_VALUE;
         // messaggio d'errore che mi aspetto d'ottenere
         String error = "Profile "+invalidProfileId+" not found!";
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
@@ -481,7 +481,7 @@ class ProfilesIT {
                 HttpMethod.PATCH,
                 requestPatch,
                 String.class,
-                Long.MAX_VALUE);
+                Long.MIN_VALUE);
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
 
@@ -508,7 +508,7 @@ class ProfilesIT {
                 HttpMethod.PATCH,
                 requestPatch,
                 String.class,
-                Long.MAX_VALUE);
+                Long.MIN_VALUE);
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
 
@@ -542,7 +542,7 @@ class ProfilesIT {
                 HttpMethod.PATCH,
                 requestPatch,
                 String.class,
-                Long.MAX_VALUE);
+                Long.MIN_VALUE);
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
 
@@ -555,7 +555,7 @@ class ProfilesIT {
     //:TODO 401 e 403
     @Test
     void testUpdateProfile_Then_404() throws Exception{
-        Long invalidProfileId = Long.MAX_VALUE;
+        Long invalidProfileId = Long.MIN_VALUE;
         String error = "Profile "+invalidProfileId+" not found!";
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();

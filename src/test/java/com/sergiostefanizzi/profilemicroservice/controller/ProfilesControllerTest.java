@@ -287,12 +287,7 @@ class ProfilesControllerTest {
     }
 
     //TODO: In inserimento fare controllo permessi d'accesso account id, JWT
-    /*
-    @Test
-    void testAddProfile_Authentication_AccountId_Then_401() throws Exception{
 
-    }
-    */
 
     @Test
     void testAddProfile_ProfileNameExists_Then_409() throws Exception {
@@ -332,12 +327,7 @@ class ProfilesControllerTest {
     }
 
     //TODO: In rimozione fare controllo permessi d'accesso account id, JWT
-    /*
-    @Test
-    void testDeleteProfileById_Authentication_AccountId_Then_401() throws Exception{
 
-    }
-    */
 
     @Test
     void testDeleteProfileById_Then_404() throws Exception {
