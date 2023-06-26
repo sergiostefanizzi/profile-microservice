@@ -6,6 +6,7 @@ import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
 import com.sergiostefanizzi.profilemicroservice.model.converter.PostToPostJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
+import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import jakarta.transaction.Transactional;
@@ -14,7 +15,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Objects;
+
 
 @Service
 @RequiredArgsConstructor
@@ -41,5 +42,29 @@ public class PostsService {
         return this.postToPostJpaConverter.convertBack(
                 this.postsRepository.save(postJpa)
         );
+    }
+
+    @Transactional
+    public void remove(Long postId) {
+        if(postId == null){
+            throw new PostNotFoundException("null");
+        }
+        // Controllo prima l'esistenza del post
+        PostJpa postJpa = this.postsRepository.findById(postId)
+                .filter(post -> post.getDeletedAt() == null)
+                .orElseThrow(() -> new PostNotFoundException(postId));
+        // TODO mi serve il JWT
+        // Controllo che chi richiede la rimozione abbia l'autorizzazione per farlo
+        /*
+        if (postJpa.getProfile().getId().equals(Long.MIN_VALUE)){
+            throw new PostNotFoundException(postId);
+        }
+        */
+
+        postJpa.setDeletedAt(LocalDateTime.now());
+
+        log.info("Post Deleted At -> "+postJpa.getDeletedAt());
+
+        this.postsRepository.save(postJpa);
     }
 }

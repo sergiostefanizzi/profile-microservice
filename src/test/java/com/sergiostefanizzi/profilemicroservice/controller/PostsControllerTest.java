@@ -10,6 +10,7 @@ import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.service.PostsService;
 import com.sergiostefanizzi.profilemicroservice.service.ProfilesService;
+import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -29,6 +30,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -36,8 +38,7 @@ import java.util.List;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.in;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -138,7 +139,7 @@ class PostsControllerTest {
     }
 
     @Test
-    void testAddPost_MissingRequired_Then_400() throws Exception{
+    void testAddPost_MissingRequired_Then_400() throws Exception {
         // arrayList contenente i messaggi di errore
         errors.add("contentUrl must not be null");
         errors.add("postType must not be null");
@@ -165,7 +166,7 @@ class PostsControllerTest {
                 .andReturn();
         // salvo risposta in result solo per visualizzarla
         String resultAsString = result.getResponse().getContentAsString();
-        log.info("Errors\n"+resultAsString);
+        log.info("Errors\n" + resultAsString);
     }
 
     @Test
@@ -175,7 +176,7 @@ class PostsControllerTest {
         this.newPost.setCaption(RandomStringUtils.randomAlphabetic(2210));
 
         newPostJson = this.objectMapper.writeValueAsString(this.newPost);
-        log.info("JSON\n"+newPostJson);
+        log.info("JSON\n" + newPostJson);
 
         MvcResult result = this.mockMvc.perform(post("/posts")
                         .accept(MediaType.APPLICATION_JSON)
@@ -189,7 +190,7 @@ class PostsControllerTest {
                 .andReturn();
         // salvo risposta in result solo per visualizzarla
         String resultAsString = result.getResponse().getContentAsString();
-        log.info("Errors\n"+resultAsString);
+        log.info("Errors\n" + resultAsString);
     }
 
     @Test
@@ -197,7 +198,7 @@ class PostsControllerTest {
         errors.add("contentUrl must be a valid URL");
         errors.add("contentUrl size must be between 3 and 2048");
         // Url non valido
-        this.newPost.setContentUrl("https://upload.wikimedia.o/ ra-%%$^&& iuyi"+RandomStringUtils.randomAlphabetic(2048));
+        this.newPost.setContentUrl("https://upload.wikimedia.o/ ra-%%$^&& iuyi" + RandomStringUtils.randomAlphabetic(2048));
         //Test XSS
         //this.newPost.setContentUrl(contentUrlXSS);
         newPostJson = this.objectMapper.writeValueAsString(this.newPost);
@@ -215,11 +216,11 @@ class PostsControllerTest {
                 .andReturn();
         // salvo risposta in result solo per visualizzarla
         String resultAsString = result.getResponse().getContentAsString();
-        log.info("Errors\n"+resultAsString);
+        log.info("Errors\n" + resultAsString);
     }
 
     @Test
-    void testAddPost_InvalidPostType_Then_400() throws Exception{
+    void testAddPost_InvalidPostType_Then_400() throws Exception {
         JsonNode jsonNode = this.objectMapper.readTree(newPostJson);
 
         ((ObjectNode) jsonNode).put("post_type", "NOTVALID");
@@ -236,12 +237,12 @@ class PostsControllerTest {
                 .andExpect(jsonPath("$.error").value("JSON parse error: Cannot construct instance of `com.sergiostefanizzi.profilemicroservice.model.Post$PostTypeEnum`, problem: Unexpected value 'NOTVALID'"))
                 .andReturn();
         String resultAsString = result.getResponse().getContentAsString();
-        log.info("Errors\n"+resultAsString);
-        log.info("Resolved Error ---> "+result.getResolvedException());
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
     }
 
     @Test
-    void testAddPost_InvalidProfileId_Then_400() throws Exception{
+    void testAddPost_InvalidProfileId_Then_400() throws Exception {
         JsonNode jsonNode = this.objectMapper.readTree(newPostJson);
         ((ObjectNode) jsonNode).put("profile_id", "IdNotLong");
         newPostJson = this.objectMapper.writeValueAsString(jsonNode);
@@ -256,8 +257,8 @@ class PostsControllerTest {
                 ))
                 .andExpect(jsonPath("$.error").value("JSON parse error: Cannot deserialize value of type `java.lang.Long` from String \"IdNotLong\": not a valid `java.lang.Long` value")).andReturn();
         String resultAsString = result.getResponse().getContentAsString();
-        log.info("Errors\n"+resultAsString);
-        log.info("Resolved Error ---> "+result.getResolvedException());
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
     }
 
     //TODO 401, 403
@@ -276,7 +277,50 @@ class PostsControllerTest {
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof ProfileNotFoundException
                 ))
-                .andExpect(jsonPath("$.error").value("Profile "+invalidProfileId+" not found!"))
+                .andExpect(jsonPath("$.error").value("Profile " + invalidProfileId + " not found!"))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+    }
+
+    @Test
+    void testDeletePostById_Then_204() throws Exception {
+        doNothing().when(this.postsService).remove(postId);
+
+        this.mockMvc.perform(delete("/posts/{postId}", postId))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void testDeletePostById_Then_400() throws Exception {
+        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        MvcResult result = this.mockMvc.perform(delete("/posts/IdNotLong"))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                ))
+                .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+    }
+
+    //TODO remove 401, 403
+
+    @Test
+    void testDeletePostById_Then_404() throws Exception {
+        Long invalidPostId = Long.MIN_VALUE;
+        doThrow(new PostNotFoundException(invalidPostId)).when(this.postsService).remove(invalidPostId);
+
+        MvcResult result = this.mockMvc.perform(delete("/posts/{postId}",invalidPostId))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof PostNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value("Post "+invalidPostId+" not found!"))
                 .andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();

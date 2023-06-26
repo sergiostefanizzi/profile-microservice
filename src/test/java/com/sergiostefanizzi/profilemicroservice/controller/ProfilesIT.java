@@ -374,12 +374,7 @@ class ProfilesIT {
     }
 
     //TODO: In rimozione fare controllo permessi d'accesso account id, JWT
-    /*
-    @Test
-    void testDeleteProfileById_Authentication_AccountId_Then_401() throws Exception{
 
-    }
-    */
     @Test
     void testDeleteProfileById_Then_404() throws Exception{
         Long invalidProfileId = Long.MIN_VALUE;

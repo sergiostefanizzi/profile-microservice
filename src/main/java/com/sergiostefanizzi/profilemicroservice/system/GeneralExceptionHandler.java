@@ -1,5 +1,6 @@
 package com.sergiostefanizzi.profilemicroservice.system;
 
+import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +26,16 @@ import java.util.stream.Collectors;
 @ControllerAdvice()
 @Slf4j
 public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
+
+    @ExceptionHandler(PostNotFoundException.class)
+    public ResponseEntity<Object> handleProfileNotFoundException(PostNotFoundException ex, WebRequest request){
+        log.error(ex.getMessage(),ex);
+        String error = "Post "+ex.getMessage()+" not found!";
+        Map<String, String> body = new HashMap<>();
+        body.put("error", error);
+        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
+    }
+
 
     @ExceptionHandler(ProfileAlreadyCreatedException.class)
     public ResponseEntity<Object> handleProfileAlreadyCreatedException(ProfileAlreadyCreatedException ex, WebRequest request){

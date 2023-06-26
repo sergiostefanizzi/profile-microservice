@@ -3,10 +3,7 @@ package com.sergiostefanizzi.profilemicroservice.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.sergiostefanizzi.profilemicroservice.model.Post;
-import com.sergiostefanizzi.profilemicroservice.model.Profile;
-import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
-import com.sergiostefanizzi.profilemicroservice.model.ProfilePatch;
+import com.sergiostefanizzi.profilemicroservice.model.*;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +21,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.*;
@@ -317,4 +315,97 @@ class PostsIT {
         assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
+
+    @Test
+    void testDeletePostById_Then_204() throws Exception {
+        // Creo prima un profilo
+        newProfile.setProfileName(profileName+"_2");
+        HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);
+        ResponseEntity<Profile> responseProfile = this.testRestTemplate.exchange(
+                this.baseUrlProfile,
+                HttpMethod.POST,
+                requestProfile,
+                Profile.class);
+        assertEquals(HttpStatus.CREATED, responseProfile.getStatusCode());
+        assertNotNull(responseProfile.getBody());
+        Profile savedProfile = responseProfile.getBody();
+        assertNotNull(savedProfile.getId());
+        profileId = savedProfile.getId();
+        this.newPost.setProfileId(profileId);
+
+        // creo un nuovo post
+        HttpEntity<Post> request = new HttpEntity<>(this.newPost);
+        ResponseEntity<Profile> responsePost = this.testRestTemplate.exchange(this.baseUrl,
+                HttpMethod.POST,
+                request,
+                Profile.class);
+        // controllo che l'inserimento sia andato a buon fine
+        assertEquals(HttpStatus.CREATED, responsePost.getStatusCode());
+        assertNotNull(responsePost.getBody());
+        assertInstanceOf(Profile.class, responsePost.getBody());
+        Profile savedPost = responsePost.getBody();
+        assertNotNull(savedPost.getId());
+        // salvo l'id generato dal profilo inserito
+        Long savedPostId = savedPost.getId();
+
+        // elimino il profilo appena inserito
+        ResponseEntity<Void> responseDelete = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
+                HttpMethod.DELETE,
+                HttpEntity.EMPTY,
+                Void.class,
+                savedPostId);
+
+        assertEquals(HttpStatus.NO_CONTENT, responseDelete.getStatusCode());
+        assertNull(responseDelete.getBody());
+
+        // verifico dalla repository del post che il profilo sia stato effettivamente eliminato
+        // la risorsa e' ancora presente, ma e' eliminata logicamente in quanto il campo
+        // deletedAt e' non nullo
+        Optional<PostJpa> deletedPostJpa = this.postsRepository.findById(savedPostId);
+        if (deletedPostJpa.isPresent()){
+            assertNotNull(deletedPostJpa.get().getDeletedAt());
+            log.info("Post \n"+savedPostId+" deleted at -> "+deletedPostJpa.get().getDeletedAt());
+        }
+    }
+
+    @Test
+    void testDeletePostById_Then_400() throws Exception {
+        // messaggio d'errore che mi aspetto d'ottenere
+        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/IdNotLong",
+                HttpMethod.DELETE,
+                HttpEntity.EMPTY,
+                String.class);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    //TODO remove 401, 403
+
+    @Test
+    void testDeletePostById_Then_404() throws Exception {
+        Long invalidPostId = Long.MIN_VALUE;
+        // messaggio d'errore che mi aspetto d'ottenere
+        errors.add("Post "+invalidPostId+" not found!");
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
+                HttpMethod.DELETE,
+                HttpEntity.EMPTY,
+                String.class,
+                invalidPostId);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
 }

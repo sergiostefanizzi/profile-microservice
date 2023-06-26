@@ -33,7 +33,8 @@ public class PostsController implements PostsApi {
 
     @Override
     public ResponseEntity<Void> deletePostById(Long postId) {
-        return PostsApi.super.deletePostById(postId);
+        this.postsService.remove(postId);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     @Override
@@ -42,12 +43,14 @@ public class PostsController implements PostsApi {
     }
 
     @Override
+    public ResponseEntity<Post> updatePostById(Long postId, PostPatch postPatch) {
+        return PostsApi.super.updatePostById(postId, postPatch);
+    }
+    //TODO dopo aver fatto i follower
+    @Override
     public ResponseEntity<List<Post>> profileFeedById(Long profileId) {
         return PostsApi.super.profileFeedById(profileId);
     }
 
-    @Override
-    public ResponseEntity<Post> updatePostById(Long postId, PostPatch postPatch) {
-        return PostsApi.super.updatePostById(postId, postPatch);
-    }
+
 }
