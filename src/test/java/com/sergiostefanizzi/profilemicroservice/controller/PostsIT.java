@@ -17,18 +17,14 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.web.servlet.MvcResult;
+
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -335,17 +331,17 @@ class PostsIT {
 
         // creo un nuovo post
         HttpEntity<Post> request = new HttpEntity<>(this.newPost);
-        ResponseEntity<Profile> responsePost = this.testRestTemplate.exchange(this.baseUrl,
+        ResponseEntity<Post> responsePost = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
                 request,
-                Profile.class);
+                Post.class);
         // controllo che l'inserimento sia andato a buon fine
         assertEquals(HttpStatus.CREATED, responsePost.getStatusCode());
         assertNotNull(responsePost.getBody());
-        assertInstanceOf(Profile.class, responsePost.getBody());
-        Profile savedPost = responsePost.getBody();
+        assertInstanceOf(Post.class, responsePost.getBody());
+        Post savedPost = responsePost.getBody();
         assertNotNull(savedPost.getId());
-        // salvo l'id generato dal profilo inserito
+        // salvo l'id generato dal post inserito
         Long savedPostId = savedPost.getId();
 
         // elimino il profilo appena inserito
@@ -399,6 +395,134 @@ class PostsIT {
                 String.class,
                 invalidPostId);
 
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
+    void testUpdatePost_Then_200() throws Exception{
+        // Creo prima un profilo
+        newProfile.setProfileName(profileName+"_3");
+        HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);
+        ResponseEntity<Profile> responseProfile = this.testRestTemplate.exchange(
+                this.baseUrlProfile,
+                HttpMethod.POST,
+                requestProfile,
+                Profile.class);
+        assertEquals(HttpStatus.CREATED, responseProfile.getStatusCode());
+        assertNotNull(responseProfile.getBody());
+        Profile savedProfile = responseProfile.getBody();
+        assertNotNull(savedProfile.getId());
+        profileId = savedProfile.getId();
+        this.newPost.setProfileId(profileId);
+
+        // creo un nuovo post
+        HttpEntity<Post> request = new HttpEntity<>(this.newPost);
+        ResponseEntity<Post> responsePost = this.testRestTemplate.exchange(this.baseUrl,
+                HttpMethod.POST,
+                request,
+                Post.class);
+        // controllo che l'inserimento sia andato a buon fine
+        assertEquals(HttpStatus.CREATED, responsePost.getStatusCode());
+        assertNotNull(responsePost.getBody());
+        assertInstanceOf(Post.class, responsePost.getBody());
+        Post savedPost = responsePost.getBody();
+        assertNotNull(savedPost.getId());
+        // salvo l'id generato dal post inserito
+        Long savedPostId = savedPost.getId();
+
+        // Definisco la caption da aggiornare tramite l'oggetto PostPatch
+        String newCaption = "Nuova caption del post";
+        PostPatch postPatch = new PostPatch(newCaption);
+
+        HttpEntity<PostPatch> requestPatch = new HttpEntity<>(postPatch);
+        ResponseEntity<Post> responsePatch = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
+                HttpMethod.PATCH,
+                requestPatch,
+                Post.class,
+                savedPostId);
+
+        assertEquals(HttpStatus.OK, responsePatch.getStatusCode());
+        assertNotNull(responsePatch.getBody());
+        assertInstanceOf(Post.class, responsePatch.getBody());
+        Post updatedPost = responsePatch.getBody();
+        assertEquals(savedPostId, updatedPost.getId());
+        assertEquals(savedPost.getContentUrl(), updatedPost.getContentUrl());
+        assertEquals(postPatch.getCaption(), updatedPost.getCaption());
+        assertEquals(savedPost.getPostType(), updatedPost.getPostType());
+        assertEquals(savedPost.getProfileId(), updatedPost.getProfileId());
+
+        // visualizzo il profilo aggiornato
+        log.info(updatedPost.toString());
+    }
+
+    @Test
+    void testUpdatePost_InvalidId_Then_400() throws Exception{
+        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        // Definisco la caption da aggiornare tramite l'oggetto PostPatch
+        String newCaption = "Nuova caption del post";
+        PostPatch postPatch = new PostPatch(newCaption);
+
+        HttpEntity<PostPatch> requestPatch = new HttpEntity<>(postPatch);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
+                HttpMethod.PATCH,
+                requestPatch,
+                String.class,
+                "IdNotLong");
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
+    void testUpdatePost_CaptionLength_Then_400() throws Exception {
+        errors.add("caption size must be between 0 and 2200");
+
+        // genero una caption di 2210 caratteri, superando di 10 il limite
+        PostPatch postPatch = new PostPatch(RandomStringUtils.randomAlphabetic(2210));
+
+        HttpEntity<PostPatch> requestPatch = new HttpEntity<>(postPatch);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
+                HttpMethod.PATCH,
+                requestPatch,
+                String.class,
+                Long.MIN_VALUE);
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore e' un array di dimensione 1
+        assertTrue(node.get("error").isArray());
+        assertEquals(1, node.get("error").size());
+        assertEquals(errors.get(0) ,node.get("error").get(0).asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error").get(0));
+    }
+
+    //:TODO 401 e 403
+    @Test
+    void testUpdatePost_Then_404() throws Exception{
+        Long invalidPostId = Long.MIN_VALUE;
+        errors.add("Post "+invalidPostId+" not found!");
+        // Definisco la caption da aggiornare tramite l'oggetto PostPatch
+        String newCaption = "Nuova caption del post";
+        PostPatch postPatch = new PostPatch(newCaption);
+
+        HttpEntity<PostPatch> requestPatch = new HttpEntity<>(postPatch);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
+                HttpMethod.PATCH,
+                requestPatch,
+                String.class,
+                invalidPostId);
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertNotNull(response.getBody());
 

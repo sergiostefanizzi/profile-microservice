@@ -38,14 +38,17 @@ public class PostsController implements PostsApi {
     }
 
     @Override
+    public ResponseEntity<Post> updatePostById(Long postId, PostPatch postPatch) {
+        Post updatedPost = this.postsService.update(postId, postPatch);
+        return new ResponseEntity<>(updatedPost, HttpStatus.OK);
+    }
+
+    @Override
     public ResponseEntity<Post> findPostById(Long postId) {
         return PostsApi.super.findPostById(postId);
     }
 
-    @Override
-    public ResponseEntity<Post> updatePostById(Long postId, PostPatch postPatch) {
-        return PostsApi.super.updatePostById(postId, postPatch);
-    }
+
     //TODO dopo aver fatto i follower
     @Override
     public ResponseEntity<List<Post>> profileFeedById(Long profileId) {

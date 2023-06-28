@@ -2,6 +2,7 @@ package com.sergiostefanizzi.profilemicroservice.service;
 
 import com.sergiostefanizzi.profilemicroservice.model.Post;
 import com.sergiostefanizzi.profilemicroservice.model.PostJpa;
+import com.sergiostefanizzi.profilemicroservice.model.PostPatch;
 import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
 import com.sergiostefanizzi.profilemicroservice.model.converter.PostToPostJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
@@ -151,6 +152,43 @@ class PostsServiceTest {
 
     //TODO fare test rimozione post con controllo autorizzazione
 
+    @Test
+    void testUpdateSuccess(){
+        // Aggiornamento del post
+        String newCaption = "Nuova caption del post";
+        PostPatch postPatch = new PostPatch(newCaption);
+        // Post che verra' restituito
+        Post convertedPost = new Post(contentUrl, postType, profileId);
+        convertedPost.setCaption(newCaption);
+        convertedPost.setId(postId);
+
+        when(this.postsRepository.findById(postId)).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.postsRepository.save(this.savedPostJpa)).thenReturn(this.savedPostJpa);
+        when(this.postToPostJpaConverter.convertBack(this.savedPostJpa)).thenReturn(convertedPost);
+
+        Post updatedPost = this.postsService.update(postId, postPatch);
+
+        assertNotNull(updatedPost);
+        assertEquals(postId, updatedPost.getId());
+        assertEquals(contentUrl, updatedPost.getContentUrl());
+        assertEquals(newCaption, updatedPost.getCaption());
+        assertEquals(postType, updatedPost.getPostType());
+        assertEquals(profileId, updatedPost.getProfileId());
+        verify(this.postsRepository, times(1)).findById(postId);
+        verify(this.postsRepository, times(1)).save(this.savedPostJpa);
+        verify(this.postToPostJpaConverter, times(1)).convertBack(this.savedPostJpa);
+    }
+
+    @Test
+    void testUpdate_PostNot_Found_Failed(){
+        when(this.postsRepository.findById(postId)).thenReturn(Optional.empty());
+        assertThrows(PostNotFoundException.class,
+                () -> this.postsService.update(postId, any(PostPatch.class))
+        );
+
+        verify(this.postsRepository, times(1)).findById(postId);
+        verify(this.postsRepository, times(0)).save(any(PostJpa.class));
+    }
 
 
 }

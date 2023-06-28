@@ -1351,6 +1351,7 @@ components:
       properties:
         caption:
           type: string
+          maxLength: 2200
       required:
         - caption
 

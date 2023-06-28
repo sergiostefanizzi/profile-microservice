@@ -398,7 +398,7 @@ class ProfilesControllerTest {
         String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
 
 
-        MvcResult result = this.mockMvc.perform(delete("/profiles/IdNotLong")
+        MvcResult result = this.mockMvc.perform(patch("/profiles/IdNotLong")
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(profilePatchJson))

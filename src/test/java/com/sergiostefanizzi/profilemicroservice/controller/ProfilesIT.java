@@ -444,7 +444,7 @@ class ProfilesIT {
     @Test
     void testUpdateProfile_InvalidId_Then_400() throws Exception{
         String error = "Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"";
-    // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
+        // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();
 
         HttpEntity<ProfilePatch> requestPatch = new HttpEntity<>(profilePatch);
