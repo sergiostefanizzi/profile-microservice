@@ -45,7 +45,8 @@ public class PostsController implements PostsApi {
 
     @Override
     public ResponseEntity<Post> findPostById(Long postId) {
-        return PostsApi.super.findPostById(postId);
+        Post post = this.postsService.find(postId);
+        return new ResponseEntity<>(post, HttpStatus.OK);
     }
 
 

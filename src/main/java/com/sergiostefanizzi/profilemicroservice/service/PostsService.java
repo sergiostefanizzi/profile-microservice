@@ -69,6 +69,7 @@ public class PostsService {
         this.postsRepository.save(postJpa);
     }
 
+    @Transactional
     public Post update(Long postId, PostPatch postPatch) {
         if(postId == null){
             throw new PostNotFoundException("null");
@@ -89,6 +90,19 @@ public class PostsService {
         postJpa.setUpdatedAt(LocalDateTime.now());
         return this.postToPostJpaConverter.convertBack(
                 this.postsRepository.save(postJpa)
+        );
+    }
+
+    @Transactional
+    public Post find(Long postId) {
+        if(postId == null){
+            throw new PostNotFoundException("null");
+        }
+
+        return this.postToPostJpaConverter.convertBack(
+                this.postsRepository.findById(postId)
+                .filter(post -> post.getDeletedAt() == null)
+                .orElseThrow(() -> new PostNotFoundException(postId))
         );
     }
 }

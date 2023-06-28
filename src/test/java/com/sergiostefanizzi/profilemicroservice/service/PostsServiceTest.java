@@ -190,5 +190,70 @@ class PostsServiceTest {
         verify(this.postsRepository, times(0)).save(any(PostJpa.class));
     }
 
+    @Test
+    void testUpdate_PostAlreadyRemoved_Failed(){
+        // Imposto una data passata
+        this.savedPostJpa.setDeletedAt(LocalDateTime.MIN);
+        log.info("Deleted At"+this.savedPostJpa.getDeletedAt());
+
+        when(this.postsRepository.findById(postId)).thenReturn(Optional.of(this.savedPostJpa));
+
+        assertThrows(PostNotFoundException.class,
+                () -> this.postsService.update(postId, any(PostPatch.class))
+        );
+
+        verify(this.postsRepository, times(1)).findById(postId);
+        verify(this.postsRepository, times(0)).save(any(PostJpa.class));
+    }
+
+    @Test
+    void testFindSuccess(){
+        // Post che verra' restituito
+        Post convertedPost = new Post(contentUrl, postType, profileId);
+        convertedPost.setCaption(caption);
+        convertedPost.setId(postId);
+
+        when(this.postsRepository.findById(postId)).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.postToPostJpaConverter.convertBack((this.savedPostJpa))).thenReturn(convertedPost);
+
+        Post post = this.postsService.find(postId);
+
+        assertNotNull(post);
+        assertEquals(postId, post.getId());
+        assertEquals(contentUrl, post.getContentUrl());
+        assertEquals(caption, post.getCaption());
+        assertEquals(postType, post.getPostType());
+        assertEquals(profileId, post.getProfileId());
+        verify(this.postsRepository, times(1)).findById(postId);
+        verify(this.postToPostJpaConverter, times(1)).convertBack(this.savedPostJpa);
+    }
+
+    @Test
+    void testFind_NotFound_Failed(){
+        when(this.postsRepository.findById(postId)).thenReturn(Optional.empty());
+        assertThrows(PostNotFoundException.class,
+                () -> this.postsService.find(postId)
+        );
+
+        verify(this.postsRepository, times(1)).findById(postId);
+        verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
+    }
+
+    @Test
+    void testFind_PostAlreadyRemoved_Failed(){
+        // Imposto una data passata
+        this.savedPostJpa.setDeletedAt(LocalDateTime.MIN);
+        log.info("Deleted At"+this.savedPostJpa.getDeletedAt());
+
+        when(this.postsRepository.findById(postId)).thenReturn(Optional.of(this.savedPostJpa));
+
+        assertThrows(PostNotFoundException.class,
+                () -> this.postsService.find(postId)
+        );
+
+        verify(this.postsRepository, times(1)).findById(postId);
+        verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
+    }
+
 
 }
