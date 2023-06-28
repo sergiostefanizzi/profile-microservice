@@ -3,11 +3,14 @@ package com.sergiostefanizzi.profilemicroservice.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.sergiostefanizzi.profilemicroservice.model.Post;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
 import com.sergiostefanizzi.profilemicroservice.model.ProfilePatch;
 import com.sergiostefanizzi.profilemicroservice.service.ProfilesService;
+import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -513,6 +516,69 @@ class ProfilesControllerTest {
                         res.getResolvedException() instanceof ProfileNotFoundException
                 ))
                 .andExpect(jsonPath("$.error").value("Profile "+invalidProfileId+" not found!"))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    @Test
+    void testFindProfileByName_Then_200() throws Exception{
+        when(this.profilesService.findByProfileName(profileName)).thenReturn(this.savedProfile);
+
+        MvcResult result = this.mockMvc.perform(get("/profiles/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .queryParam("profileName",profileName))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.*", hasSize(6)))
+                .andExpect(jsonPath("$.id").value(this.savedProfile.getId()))
+                .andExpect(jsonPath("$.profile_name").value(this.savedProfile.getProfileName()))
+                .andExpect(jsonPath("$.bio").value(this.savedProfile.getBio()))
+                .andExpect(jsonPath("$.picture_url").value(this.savedProfile.getPictureUrl()))
+                .andExpect(jsonPath("$.is_private").value(this.savedProfile.getIsPrivate()))
+                .andExpect(jsonPath("$.account_id").value(this.savedProfile.getAccountId()))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        Post postResult = this.objectMapper.readValue(resultAsString, Post.class);
+
+        log.info(postResult.toString());
+    }
+
+    @Test
+    void testFindProfileByName_Then_400() throws Exception{
+        List<String> errors = new ArrayList<>();
+
+        MvcResult result = this.mockMvc.perform(get("/profiles/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .queryParam("profileName","profi"))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof ConstraintViolationException
+                ))
+                .andExpect(jsonPath("$.error").isNotEmpty())
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+    //TODO 401
+
+    @Test
+    void testFindPostById_Then_404() throws Exception{
+        doThrow(new ProfileNotFoundException(profileName)).when(this.profilesService).findByProfileName(profileName);
+
+        MvcResult result = this.mockMvc.perform(get("/profiles/search")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .queryParam("profileName",profileName))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof ProfileNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value("Profile "+profileName+" not found!"))
                 .andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();

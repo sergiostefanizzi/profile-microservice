@@ -1,10 +1,9 @@
 package com.sergiostefanizzi.profilemicroservice.service;
 
-import com.sergiostefanizzi.profilemicroservice.model.Profile;
-import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
-import com.sergiostefanizzi.profilemicroservice.model.ProfilePatch;
+import com.sergiostefanizzi.profilemicroservice.model.*;
 import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfileJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
+import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +46,7 @@ class ProfilesServiceTest {
     String updatedPictureUrl = "https://icons-for-free.com/iconfiles/png/512/avatar+person+profile+user+icon-1320086059654790795.png";
     Long profileId = 12L;
     private Profile newProfile;
-    private ProfileJpa oldProfileJpa;
+    private ProfileJpa savedProfileJpa;
     private UrlValidator validator;
     @BeforeEach
     void setUp() {
@@ -55,10 +54,10 @@ class ProfilesServiceTest {
         this.newProfile.setBio(bio);
         this.newProfile.setPictureUrl(pictureUrl);
 
-        this.oldProfileJpa = new ProfileJpa(profileName, isPrivate, accountId);
-        this.oldProfileJpa.setBio(bio);
-        this.oldProfileJpa.setPictureUrl(pictureUrl);
-        this.oldProfileJpa.setId(profileId);
+        this.savedProfileJpa = new ProfileJpa(profileName, isPrivate, accountId);
+        this.savedProfileJpa.setBio(bio);
+        this.savedProfileJpa.setPictureUrl(pictureUrl);
+        this.savedProfileJpa.setId(profileId);
 
 
 
@@ -111,8 +110,8 @@ class ProfilesServiceTest {
 
     @Test
     void testSaveFailed_ProfileNameExists() {
-        when(this.profilesRepository.findByProfileName(this.newProfile.getProfileName())).thenReturn(Optional.of(this.oldProfileJpa));
-        log.info("Profile with name "+this.oldProfileJpa.getProfileName()+" exists");
+        when(this.profilesRepository.findByProfileName(this.newProfile.getProfileName())).thenReturn(Optional.of(this.savedProfileJpa));
+        log.info("Profile with name "+this.savedProfileJpa.getProfileName()+" exists");
         assertThrows(ProfileAlreadyCreatedException.class, () -> {
             this.profilesService.save(this.newProfile);
         });
@@ -125,18 +124,18 @@ class ProfilesServiceTest {
     // REMOVE A PROFILE
     @Test
     void testRemoveSuccess(){
-        when(this.profilesRepository.findById(profileId)).thenReturn(Optional.of(this.oldProfileJpa));
-        when(this.profilesRepository.save(this.oldProfileJpa)).thenReturn(this.oldProfileJpa);
+        when(this.profilesRepository.findById(profileId)).thenReturn(Optional.of(this.savedProfileJpa));
+        when(this.profilesRepository.save(this.savedProfileJpa)).thenReturn(this.savedProfileJpa);
 
         // l'istante di rimozione deve essere nullo prima della rimozione
-        assertNull(this.oldProfileJpa.getDeletedAt());
+        assertNull(this.savedProfileJpa.getDeletedAt());
 
         this.profilesService.remove(profileId);
 
         // l'istante di rimozione deve essere NON nullo DOPO la rimozione
-        assertNotNull(this.oldProfileJpa.getDeletedAt());
+        assertNotNull(this.savedProfileJpa.getDeletedAt());
         verify(this.profilesRepository, times(1)).findById(profileId);
-        verify(this.profilesRepository, times(1)).save(this.oldProfileJpa);
+        verify(this.profilesRepository, times(1)).save(this.savedProfileJpa);
     }
 
     @Test
@@ -153,10 +152,10 @@ class ProfilesServiceTest {
     @Test
     void testRemove_ProfileAlreadyRemoved_Failed(){
         // Imposto una data passata
-        this.oldProfileJpa.setDeletedAt(LocalDateTime.MIN);
-        log.info("Deleted At"+this.oldProfileJpa.getDeletedAt());
+        this.savedProfileJpa.setDeletedAt(LocalDateTime.MIN);
+        log.info("Deleted At"+this.savedProfileJpa.getDeletedAt());
 
-        when(this.profilesRepository.findById(profileId)).thenReturn(Optional.of(this.oldProfileJpa));
+        when(this.profilesRepository.findById(profileId)).thenReturn(Optional.of(this.savedProfileJpa));
 
         assertThrows(ProfileNotFoundException.class,
                 () -> this.profilesService.remove(profileId)
@@ -183,9 +182,9 @@ class ProfilesServiceTest {
         convertedProfile.setPictureUrl(profilePatch.getPictureUrl() != null ? profilePatch.getPictureUrl() : pictureUrl);
         convertedProfile.setIsPrivate(profilePatch.getIsPrivate() != null ? profilePatch.getIsPrivate() : isPrivate);
 
-        when(this.profilesRepository.findById(profileId)).thenReturn(Optional.of(this.oldProfileJpa));
-        when(this.profilesRepository.save(this.oldProfileJpa)).thenReturn(this.oldProfileJpa);
-        when(this.profileToProfileJpaConverter.convertBack(this.oldProfileJpa)).thenReturn(convertedProfile);
+        when(this.profilesRepository.findById(profileId)).thenReturn(Optional.of(this.savedProfileJpa));
+        when(this.profilesRepository.save(this.savedProfileJpa)).thenReturn(this.savedProfileJpa);
+        when(this.profileToProfileJpaConverter.convertBack(this.savedProfileJpa)).thenReturn(convertedProfile);
 
         Profile updatedProfile = this.profilesService.update(profileId, profilePatch);
 
@@ -200,8 +199,8 @@ class ProfilesServiceTest {
         //assertEquals(isPrivate, updatedProfile.getIsPrivate());
 
         verify(this.profilesRepository, times(1)).findById(profileId);
-        verify(this.profilesRepository, times(1)).save(this.oldProfileJpa);
-        verify(this.profileToProfileJpaConverter, times(1)).convertBack(this.oldProfileJpa);
+        verify(this.profilesRepository, times(1)).save(this.savedProfileJpa);
+        verify(this.profileToProfileJpaConverter, times(1)).convertBack(this.savedProfileJpa);
     }
 
     @Test
@@ -214,15 +213,15 @@ class ProfilesServiceTest {
 
 
         verify(this.profilesRepository, times(1)).findById(profileId);
-        verify(this.profilesRepository, times(0)).save(this.oldProfileJpa);
-        verify(this.profileToProfileJpaConverter, times(0)).convertBack(this.oldProfileJpa);
+        verify(this.profilesRepository, times(0)).save(this.savedProfileJpa);
+        verify(this.profileToProfileJpaConverter, times(0)).convertBack(this.savedProfileJpa);
     }
 
     @Test
     void testUpdate_ProfileAlreadyRemoved_Failed(){
         // Imposto una data passata
-        this.oldProfileJpa.setDeletedAt(LocalDateTime.MIN);
-        log.info("Deleted At"+this.oldProfileJpa.getDeletedAt());
+        this.savedProfileJpa.setDeletedAt(LocalDateTime.MIN);
+        log.info("Deleted At"+this.savedProfileJpa.getDeletedAt());
 
         when(this.profilesRepository.findById(profileId)).thenReturn(Optional.empty());
 
@@ -232,8 +231,59 @@ class ProfilesServiceTest {
 
 
         verify(this.profilesRepository, times(1)).findById(profileId);
-        verify(this.profilesRepository, times(0)).save(this.oldProfileJpa);
-        verify(this.profileToProfileJpaConverter, times(0)).convertBack(this.oldProfileJpa);
+        verify(this.profilesRepository, times(0)).save(this.savedProfileJpa);
+        verify(this.profileToProfileJpaConverter, times(0)).convertBack(this.savedProfileJpa);
+    }
+
+    @Test
+    void testFindByNameSuccess(){
+        // Post che verra' restituito
+        Profile convertedProfile = new Profile(profileName, isPrivate, accountId);
+        convertedProfile.setBio(bio);
+        convertedProfile.setPictureUrl(pictureUrl);
+        convertedProfile.setId(profileId);
+
+        when(this.profilesRepository.findByProfileName(profileName)).thenReturn(Optional.of(this.savedProfileJpa));
+        when(this.profileToProfileJpaConverter.convertBack((this.savedProfileJpa))).thenReturn(convertedProfile);
+
+        Profile profile = this.profilesService.findByProfileName(profileName);
+
+        assertNotNull(profile);
+        assertEquals(profileId, profile.getId());
+        assertEquals(profileName, profile.getProfileName());
+        assertEquals(isPrivate, profile.getIsPrivate());
+        assertEquals(accountId, profile.getAccountId());
+        assertEquals(bio, profile.getBio());
+        assertEquals(pictureUrl, profile.getPictureUrl());
+        verify(this.profilesRepository, times(1)).findByProfileName(profileName);
+        verify(this.profileToProfileJpaConverter, times(1)).convertBack(this.savedProfileJpa);
+    }
+
+    @Test
+    void testFindByName_NotFound_Failed(){
+        when(this.profilesRepository.findByProfileName(profileName)).thenReturn(Optional.empty());
+        assertThrows(ProfileNotFoundException.class,
+                () -> this.profilesService.findByProfileName(profileName)
+        );
+
+        verify(this.profilesRepository, times(1)).findByProfileName(profileName);
+        verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
+    }
+
+    @Test
+    void testFindByName_PostAlreadyRemoved_Failed(){
+        // Imposto una data passata
+        this.savedProfileJpa.setDeletedAt(LocalDateTime.MIN);
+        log.info("Deleted At"+this.savedProfileJpa.getDeletedAt());
+
+        when(this.profilesRepository.findByProfileName(profileName)).thenReturn(Optional.of(this.savedProfileJpa));
+
+        assertThrows(ProfileNotFoundException.class,
+                () -> this.profilesService.findByProfileName(profileName)
+        );
+
+        verify(this.profilesRepository, times(1)).findByProfileName(profileName);
+        verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
     }
 
 }

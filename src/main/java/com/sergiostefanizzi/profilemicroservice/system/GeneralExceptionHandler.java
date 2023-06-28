@@ -1,10 +1,13 @@
 package com.sergiostefanizzi.profilemicroservice.system;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.TypeMismatchException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -23,9 +26,19 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 
-@ControllerAdvice()
+@ControllerAdvice
 @Slf4j
 public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<Object> handleConstraintViolationException(ConstraintViolationException ex, WebRequest request){
+        log.error(ex.getMessage(),ex);
+        String error = ex.getMessage();
+
+        Map<String, String> body = new HashMap<>();
+        body.put("error", error);
+        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
+    }
 
     @ExceptionHandler(PostNotFoundException.class)
     public ResponseEntity<Object> handleProfileNotFoundException(PostNotFoundException ex, WebRequest request){
@@ -106,4 +119,5 @@ public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
         body.put("error", error);
         return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR, request);
     }
+
 }

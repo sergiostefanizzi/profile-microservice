@@ -3,6 +3,7 @@ package com.sergiostefanizzi.profilemicroservice.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.sergiostefanizzi.profilemicroservice.model.Post;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
 import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
 import com.sergiostefanizzi.profilemicroservice.model.ProfilePatch;
@@ -43,6 +44,7 @@ class ProfilesIT {
     Boolean isPrivate = false;
     Boolean updatedIsPrivate = true;
     Long accountId = 1L;
+    Long profileId;
     String bio = "This is Giuseppe's profile!";
     String updatedBio = "New Giuseppe's bio";
     String pictureUrl = "https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg";
@@ -570,6 +572,86 @@ class ProfilesIT {
         log.info("Error -> "+node.get("error"));
 
     }
+
+    @Test
+    void testFindProfileByName_Then_200() throws Exception{
+        String newProfileName = profileName+"_4";
+        // Creo prima un profilo
+        newProfile.setProfileName(newProfileName);
+        HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);
+        ResponseEntity<Profile> responseProfile = this.testRestTemplate.exchange(
+                this.baseUrl,
+                HttpMethod.POST,
+                requestProfile,
+                Profile.class);
+        assertEquals(HttpStatus.CREATED, responseProfile.getStatusCode());
+        assertNotNull(responseProfile.getBody());
+        Profile savedProfile = responseProfile.getBody();
+        assertNotNull(savedProfile.getId());
+        profileId = savedProfile.getId();
+
+
+        ResponseEntity<Profile> responseGet = this.testRestTemplate.exchange(this.baseUrl+"/search?profileName={profileName}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                Profile.class,
+                newProfileName);
+
+        assertEquals(HttpStatus.OK, responseGet.getStatusCode());
+        assertNotNull(responseGet.getBody());
+        assertInstanceOf(Profile.class, responseGet.getBody());
+        Profile profile = responseGet.getBody();
+        assertEquals(profileId, profile.getId());
+        assertEquals(profile.getProfileName(), profile.getProfileName());
+        assertEquals(profile.getPictureUrl(), profile.getPictureUrl());
+        assertEquals(profile.getBio(), profile.getBio());
+        assertEquals(profile.getIsPrivate(), profile.getIsPrivate());
+        assertEquals(profile.getAccountId(), profile.getAccountId());
+
+        // visualizzo il profilo aggiornato
+        log.info(profile.toString());
+    }
+    /*
+    @Test
+    void testFindPostById_Then_400() throws Exception{
+        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class,
+                "IdNotLong");
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    //TODO 401 e 403
+    @Test
+    void testFindPostById_Then_404() throws Exception{
+        Long invalidPostId = Long.MIN_VALUE;
+        errors.add("Post "+invalidPostId+" not found!");
+
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class,
+                invalidPostId);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+     */
 
 
 }
