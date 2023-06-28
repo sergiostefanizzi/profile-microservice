@@ -67,6 +67,7 @@ class PostsControllerTest {
     String newPostJson;
     List<String> errors;
     Long invalidProfileId = Long.MIN_VALUE;
+    Long invalidPostId = Long.MIN_VALUE;
 
     @BeforeEach
     void setUp() throws JsonProcessingException {
@@ -313,7 +314,6 @@ class PostsControllerTest {
 
     @Test
     void testDeletePostById_Then_404() throws Exception {
-        Long invalidPostId = Long.MIN_VALUE;
         doThrow(new PostNotFoundException(invalidPostId)).when(this.postsService).remove(invalidPostId);
 
         MvcResult result = this.mockMvc.perform(delete("/posts/{postId}",invalidPostId))
@@ -426,17 +426,74 @@ class PostsControllerTest {
         String postPatchJson = this.objectMapper.writeValueAsString(postPatch);
 
 
-        doThrow(new ProfileNotFoundException(invalidProfileId)).when(this.postsService).update(invalidProfileId, postPatch);
+        doThrow(new PostNotFoundException(invalidPostId)).when(this.postsService).update(invalidPostId, postPatch);
 
-        MvcResult result = this.mockMvc.perform(patch("/posts/{postId}",invalidProfileId)
+        MvcResult result = this.mockMvc.perform(patch("/posts/{postId}",invalidPostId)
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(postPatchJson))
                 .andExpect(status().isNotFound())
                 .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof ProfileNotFoundException
+                        res.getResolvedException() instanceof PostNotFoundException
                 ))
-                .andExpect(jsonPath("$.error").value("Profile "+invalidProfileId+" not found!"))
+                .andExpect(jsonPath("$.error").value("Post "+invalidPostId+" not found!"))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    @Test
+    void testFindPostById_Then_200() throws Exception{
+        when(this.postsService.find(postId)).thenReturn(this.savedPost);
+
+        MvcResult result = this.mockMvc.perform(get("/posts/{postId}",postId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.*", hasSize(5)))
+                .andExpect(jsonPath("$.id").value(this.savedPost.getId()))
+                .andExpect(jsonPath("$.content_url").value(this.savedPost.getContentUrl()))
+                .andExpect(jsonPath("$.caption").value(this.savedPost.getCaption()))
+                .andExpect(jsonPath("$.post_type").value(this.savedPost.getPostType().toString()))
+                .andExpect(jsonPath("$.profile_id").value(this.savedPost.getProfileId()))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        Post postResult = this.objectMapper.readValue(resultAsString, Post.class);
+
+        log.info(postResult.toString());
+    }
+
+    @Test
+    void testFindPostById_Then_400() throws Exception{
+        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+
+        MvcResult result = this.mockMvc.perform(get("/posts/{postId}","IdNotLong")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                ))
+                .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+    //TODO 401 e 403
+    @Test
+    void testFindPostById_Then_404() throws Exception{
+        doThrow(new PostNotFoundException(invalidPostId)).when(this.postsService).find(invalidPostId);
+
+        MvcResult result = this.mockMvc.perform(get("/posts/{postId}",invalidProfileId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof PostNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value("Post "+invalidPostId+" not found!"))
                 .andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();

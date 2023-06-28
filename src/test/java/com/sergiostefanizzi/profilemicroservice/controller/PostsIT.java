@@ -532,4 +532,96 @@ class PostsIT {
         log.info("Error -> "+node.get("error"));
     }
 
+    @Test
+    void testFindPostById_Then_200() throws Exception{
+        // Creo prima un profilo
+        newProfile.setProfileName(profileName+"_4");
+        HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);
+        ResponseEntity<Profile> responseProfile = this.testRestTemplate.exchange(
+                this.baseUrlProfile,
+                HttpMethod.POST,
+                requestProfile,
+                Profile.class);
+        assertEquals(HttpStatus.CREATED, responseProfile.getStatusCode());
+        assertNotNull(responseProfile.getBody());
+        Profile savedProfile = responseProfile.getBody();
+        assertNotNull(savedProfile.getId());
+        profileId = savedProfile.getId();
+        this.newPost.setProfileId(profileId);
+
+        // creo un nuovo post
+        HttpEntity<Post> request = new HttpEntity<>(this.newPost);
+        ResponseEntity<Post> responsePost = this.testRestTemplate.exchange(this.baseUrl,
+                HttpMethod.POST,
+                request,
+                Post.class);
+        // controllo che l'inserimento sia andato a buon fine
+        assertEquals(HttpStatus.CREATED, responsePost.getStatusCode());
+        assertNotNull(responsePost.getBody());
+        assertInstanceOf(Post.class, responsePost.getBody());
+        Post savedPost = responsePost.getBody();
+        assertNotNull(savedPost.getId());
+        // salvo l'id generato dal post inserito
+        Long savedPostId = savedPost.getId();
+
+
+        ResponseEntity<Post> responseGet = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                Post.class,
+                savedPostId);
+
+        assertEquals(HttpStatus.OK, responseGet.getStatusCode());
+        assertNotNull(responseGet.getBody());
+        assertInstanceOf(Post.class, responseGet.getBody());
+        Post post = responseGet.getBody();
+        assertEquals(savedPostId, post.getId());
+        assertEquals(savedPost.getContentUrl(), post.getContentUrl());
+        assertEquals(savedPost.getCaption(), post.getCaption());
+        assertEquals(savedPost.getPostType(), post.getPostType());
+        assertEquals(savedPost.getProfileId(), post.getProfileId());
+
+        // visualizzo il profilo aggiornato
+        log.info(post.toString());
+    }
+
+    @Test
+    void testFindPostById_Then_400() throws Exception{
+        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class,
+                "IdNotLong");
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    //TODO 401 e 403
+    @Test
+    void testFindPostById_Then_404() throws Exception{
+        Long invalidPostId = Long.MIN_VALUE;
+        errors.add("Post "+invalidPostId+" not found!");
+
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class,
+                invalidPostId);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
 }

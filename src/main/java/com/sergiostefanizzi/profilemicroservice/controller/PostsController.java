@@ -1,6 +1,7 @@
 package com.sergiostefanizzi.profilemicroservice.controller;
 
 import com.sergiostefanizzi.profilemicroservice.api.PostsApi;
+import com.sergiostefanizzi.profilemicroservice.model.FullProfile;
 import com.sergiostefanizzi.profilemicroservice.model.Post;
 import com.sergiostefanizzi.profilemicroservice.model.PostPatch;
 import com.sergiostefanizzi.profilemicroservice.service.PostsService;
