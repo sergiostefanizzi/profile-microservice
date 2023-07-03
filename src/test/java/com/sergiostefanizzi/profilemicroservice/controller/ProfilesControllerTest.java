@@ -3,6 +3,7 @@ package com.sergiostefanizzi.profilemicroservice.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.sergiostefanizzi.profilemicroservice.model.FullProfile;
 import com.sergiostefanizzi.profilemicroservice.model.Post;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
 import com.sergiostefanizzi.profilemicroservice.model.ProfilePatch;
@@ -31,8 +32,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.in;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -63,6 +63,9 @@ class ProfilesControllerTest {
     String updatedPictureUrl = "https://icons-for-free.com/iconfiles/png/512/avatar+person+profile+user+icon-1320086059654790795.png";
     Long profileId = 12L;
     String newProfileJson;
+    String contentUrl = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Cape_may.jpg";
+    String caption = "This is the post caption";
+    Post.PostTypeEnum postType = Post.PostTypeEnum.POST;
 
 
     @BeforeEach
@@ -568,12 +571,130 @@ class ProfilesControllerTest {
     //TODO 401
 
     @Test
-    void testFindPostById_Then_404() throws Exception{
+    void testFindProfileByName_Then_404() throws Exception{
         doThrow(new ProfileNotFoundException(profileName)).when(this.profilesService).findByProfileName(profileName);
 
         MvcResult result = this.mockMvc.perform(get("/profiles/search")
                         .contentType(MediaType.APPLICATION_JSON)
                         .queryParam("profileName",profileName))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof ProfileNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value("Profile "+profileName+" not found!"))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    @Test
+    void testFindFull_Then_200() throws Exception{
+        Profile convertedProfile = new Profile(profileName, isPrivate, accountId);
+        convertedProfile.setBio(bio);
+        convertedProfile.setPictureUrl(pictureUrl);
+        convertedProfile.setId(profileId);
+
+        Post newPost1 = new Post(contentUrl, postType, profileId);
+        newPost1.setCaption(caption);
+        newPost1.setId(1L);
+
+        Post newPost2 = new Post(contentUrl, postType, profileId);
+        newPost2.setCaption(caption);
+        newPost1.setId(2L);
+
+
+        List<Post> postList = new ArrayList<>();
+        postList.add(newPost1);
+        postList.add(newPost2);
+
+        FullProfile convertedFullProfile = new FullProfile(
+                convertedProfile,
+                postList,
+                postList.size(),
+                true
+        );
+
+        when(this.profilesService.findFull(profileId)).thenReturn(convertedFullProfile);
+
+        MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}",profileId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.*", hasSize(4)))
+                .andExpect(jsonPath("$.profile.id").value(convertedProfile.getId()))
+                .andExpect(jsonPath("$.post_list", hasSize(2)))
+                .andExpect(jsonPath("$.post_count", is(2)))
+                .andExpect(jsonPath("$.profile_granted", is(true)))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        FullProfile getResult = this.objectMapper.readValue(resultAsString, FullProfile.class);
+
+        log.info(getResult.toString());
+    }
+
+    @Test
+    void testFindFull_NoPost_Then_200() throws Exception{
+        Profile convertedProfile = new Profile(profileName, isPrivate, accountId);
+        convertedProfile.setBio(bio);
+        convertedProfile.setPictureUrl(pictureUrl);
+        convertedProfile.setId(profileId);
+
+        List<Post> postList = new ArrayList<>();
+
+        FullProfile convertedFullProfile = new FullProfile(
+                convertedProfile,
+                postList,
+                0,
+                true
+        );
+
+        when(this.profilesService.findFull(profileId)).thenReturn(convertedFullProfile);
+
+        MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}",profileId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.*", hasSize(4)))
+                .andExpect(jsonPath("$.profile.id").value(convertedProfile.getId()))
+                .andExpect(jsonPath("$.post_list", hasSize(0)))
+                .andExpect(jsonPath("$.post_count", is(0)))
+                .andExpect(jsonPath("$.profile_granted", is(true)))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        FullProfile getResult = this.objectMapper.readValue(resultAsString, FullProfile.class);
+
+        log.info(getResult.toString());
+    }
+
+    @Test
+    void testFindFull_Then_400() throws Exception{
+        List<String> errors = new ArrayList<>();
+
+        MvcResult result = this.mockMvc.perform(patch("/profiles/IdNotLong")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                ))
+                .andExpect(jsonPath("$.error").value("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"")).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    //TODO 401
+
+    @Test
+    void testFindFull_Then_404() throws Exception{
+        doThrow(new ProfileNotFoundException(profileName)).when(this.profilesService).findFull(profileId);
+
+        MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}",profileId)
+                        .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof ProfileNotFoundException

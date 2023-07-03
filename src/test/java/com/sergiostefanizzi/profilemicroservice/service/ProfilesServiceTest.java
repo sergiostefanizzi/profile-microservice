@@ -1,7 +1,9 @@
 package com.sergiostefanizzi.profilemicroservice.service;
 
 import com.sergiostefanizzi.profilemicroservice.model.*;
+import com.sergiostefanizzi.profilemicroservice.model.converter.PostToPostJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfileJpaConverter;
+import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
@@ -20,6 +22,8 @@ import org.springframework.test.context.ActiveProfiles;
 
 import javax.swing.text.html.Option;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -32,7 +36,11 @@ class ProfilesServiceTest {
     @Mock
     private ProfilesRepository profilesRepository;
     @Mock
+    private PostsRepository postsRepository;
+    @Mock
     private ProfileToProfileJpaConverter profileToProfileJpaConverter;
+    @Mock
+    private PostToPostJpaConverter postToPostJpaConverter;
     @InjectMocks
     private ProfilesService profilesService;
 
@@ -48,6 +56,10 @@ class ProfilesServiceTest {
     private Profile newProfile;
     private ProfileJpa savedProfileJpa;
     private UrlValidator validator;
+    String contentUrl = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Cape_may.jpg";
+    String caption = "This is the post caption";
+    Post.PostTypeEnum postType = Post.PostTypeEnum.POST;
+    Long postId = 1L;
     @BeforeEach
     void setUp() {
         this.newProfile = new Profile(profileName,isPrivate,accountId);
@@ -283,6 +295,133 @@ class ProfilesServiceTest {
         );
 
         verify(this.profilesRepository, times(1)).findByProfileName(profileName);
+        verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
+    }
+
+    @Test
+    void testFindFullSuccess(){
+        // Profile che verra' restituito
+        Profile convertedProfile = new Profile(profileName, isPrivate, accountId);
+        convertedProfile.setBio(bio);
+        convertedProfile.setPictureUrl(pictureUrl);
+        convertedProfile.setId(profileId);
+
+        PostJpa newPostJpa1 = new PostJpa(contentUrl, postType);
+        newPostJpa1.setCaption(caption);
+        newPostJpa1.setProfile(this.savedProfileJpa);
+
+        PostJpa newPostJpa2 = new PostJpa(contentUrl, postType);
+        newPostJpa2.setCaption(caption);
+        newPostJpa2.setProfile(this.savedProfileJpa);
+
+        List<PostJpa> postJpaList = new ArrayList<>();
+        postJpaList.add(newPostJpa1);
+        postJpaList.add(newPostJpa2);
+
+        Post newPost1 = new Post(contentUrl, postType, profileId);
+        newPost1.setCaption(caption);
+
+        Post newPost2 = new Post(contentUrl, postType, profileId);
+        newPost2.setCaption(caption);
+
+
+        List<Post> postList = new ArrayList<>();
+        postList.add(newPost1);
+        postList.add(newPost2);
+
+        FullProfile convertedFullProfile = new FullProfile(
+                convertedProfile,
+                postList,
+                postList.size(),
+                true
+        );
+
+        when(this.profilesRepository.findById(profileId)).thenReturn(Optional.of(this.savedProfileJpa));
+        when(this.postsRepository.findAllByProfileId(profileId)).thenReturn(Optional.of(postJpaList));
+        when(this.postToPostJpaConverter.convertBack(postJpaList.get(0))).thenReturn(newPost1);
+        when(this.postToPostJpaConverter.convertBack(postJpaList.get(1))).thenReturn(newPost2);
+        when(this.profileToProfileJpaConverter.convertBack(this.savedProfileJpa)).thenReturn(convertedProfile);
+
+        FullProfile fullProfile = this.profilesService.findFull(profileId);
+
+        assertNotNull(fullProfile);
+        assertEquals(convertedProfile, fullProfile.getProfile());
+        assertEquals(postList, fullProfile.getPostList());
+        assertEquals(postList.size(), fullProfile.getPostCount());
+        assertTrue(fullProfile.getProfileGranted());
+        verify(this.profilesRepository, times(1)).findById(profileId);
+        verify(this.postsRepository, times(1)).findAllByProfileId(profileId);
+        verify(this.postToPostJpaConverter, times(2)).convertBack(any(PostJpa.class));
+        verify(this.profileToProfileJpaConverter, times(1)).convertBack(this.savedProfileJpa);
+
+        log.info(fullProfile.toString());
+    }
+
+    @Test
+    void testFindFull_NoPost_Success(){
+        // Post che verra' restituito
+        Profile convertedProfile = new Profile(profileName, isPrivate, accountId);
+        convertedProfile.setBio(bio);
+        convertedProfile.setPictureUrl(pictureUrl);
+        convertedProfile.setId(profileId);
+
+
+        List<Post> postList = new ArrayList<>();
+
+        FullProfile convertedFullProfile = new FullProfile(
+                convertedProfile,
+                postList,
+                0,
+                true
+        );
+
+        when(this.profilesRepository.findById(profileId)).thenReturn(Optional.of(this.savedProfileJpa));
+        when(this.postsRepository.findAllByProfileId(profileId)).thenReturn(Optional.of(new ArrayList<>()));
+        when(this.profileToProfileJpaConverter.convertBack(this.savedProfileJpa)).thenReturn(convertedProfile);
+
+        FullProfile fullProfile = this.profilesService.findFull(profileId);
+
+        assertNotNull(fullProfile);
+        assertEquals(convertedProfile, fullProfile.getProfile());
+        assertEquals(postList, fullProfile.getPostList());
+        assertEquals(postList.size(), fullProfile.getPostCount());
+        assertTrue(fullProfile.getProfileGranted());
+        verify(this.profilesRepository, times(1)).findById(profileId);
+        verify(this.postsRepository, times(1)).findAllByProfileId(profileId);
+        verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
+        verify(this.profileToProfileJpaConverter, times(1)).convertBack(this.savedProfileJpa);
+
+        log.info(fullProfile.toString());
+    }
+
+    @Test
+    void testFindFull_NotFound_Failed(){
+        when(this.profilesRepository.findById(profileId)).thenReturn(Optional.empty());
+        assertThrows(ProfileNotFoundException.class,
+                () -> this.profilesService.findFull(profileId)
+        );
+
+        verify(this.profilesRepository, times(1)).findById(profileId);
+        verify(this.postsRepository, times(0)).findAllByProfileId(profileId);
+        verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
+        verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
+    }
+
+    @Test
+    void testFindFull_PostAlreadyRemoved_Failed(){
+        // Imposto una data passata
+        this.savedProfileJpa.setDeletedAt(LocalDateTime.MIN);
+        log.info("Deleted At"+this.savedProfileJpa.getDeletedAt());
+
+        when(this.profilesRepository.findById(profileId)).thenReturn(Optional.of(this.savedProfileJpa));
+
+        assertThrows(ProfileNotFoundException.class,
+                () -> this.profilesService.findFull(profileId)
+        );
+
+        verify(this.profilesRepository, times(1)).findById(profileId);
+        verify(this.postsRepository, times(0)).findAllByProfileId(profileId);
+        verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
         verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
     }
 

@@ -1,9 +1,9 @@
 package com.sergiostefanizzi.profilemicroservice.service;
 
-import com.sergiostefanizzi.profilemicroservice.model.Profile;
-import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
-import com.sergiostefanizzi.profilemicroservice.model.ProfilePatch;
+import com.sergiostefanizzi.profilemicroservice.model.*;
+import com.sergiostefanizzi.profilemicroservice.model.converter.PostToPostJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfileJpaConverter;
+import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
@@ -15,14 +15,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Slf4j
 public class ProfilesService {
     private final ProfilesRepository profilesRepository;
+    private final PostsRepository postsRepository;
     private final ProfileToProfileJpaConverter profileToProfileJpaConverter;
+    private final PostToPostJpaConverter postToPostJpaConverter;
 
     @Transactional
     public Profile save(@NotNull Profile profile){
@@ -89,5 +95,32 @@ public class ProfilesService {
                 this.profilesRepository.findByProfileName(profileName)
                 .filter(profile-> profile.getDeletedAt() == null)
                 .orElseThrow(() -> new ProfileNotFoundException(profileName)));
+    }
+
+    @Transactional
+    public FullProfile findFull(Long profileId) {
+        if (profileId == null){
+            throw new ProfileNotFoundException("null");
+        }
+        List<Post> postList = new ArrayList<>();
+        int postCount = 0;
+
+        // controllo che il profilo non sia gia' stato eliminato o che non sia mai esistito
+        ProfileJpa profileJpa = this.profilesRepository.findById(profileId)
+                .filter(profile-> profile.getDeletedAt() == null)
+                .orElseThrow(() -> new ProfileNotFoundException(profileId));
+        // cerco i post pubblicati dal profilo
+        Optional<List<PostJpa>> postJpaList = this.postsRepository.findAllByProfileId(profileId);
+        if (postJpaList.isPresent()){
+            postList = postJpaList.get().stream().map(this.postToPostJpaConverter::convertBack).collect(Collectors.toList());
+            postCount = postList.size();
+        }
+
+        return new FullProfile(
+                this.profileToProfileJpaConverter.convertBack(profileJpa),
+                postList,
+                postCount,
+                true
+        );
     }
 }

@@ -1283,6 +1283,11 @@ components:
           minimum: 0
         profile_granted:
           type: boolean
+      required:
+        - profile
+        - post_list
+        - post_count
+        - profile_granted
 
     ProfilePatch:
       type: object

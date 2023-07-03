@@ -47,18 +47,16 @@ public class ProfilesController implements ProfilesApi {
 
     @Override
     public ResponseEntity<Profile> searchProfileByProfileName(String profileName) {
+        //TODO meglio fare lista profili che iniziano per quel nome
         Profile profile = this.profilesService.findByProfileName(profileName);
         return new ResponseEntity<>(profile, HttpStatus.OK);
     }
 
-    //TODO dopo creazione sezione Post
-    /*
     @Override
     public ResponseEntity<FullProfile> findProfileById(Long profileId) {
-        return new ResponseEntity<>(HttpStatus.OK);
+        FullProfile fullProfile = this.profilesService.findFull(profileId);
+        return new ResponseEntity<>(fullProfile, HttpStatus.OK);
     }
-
-     */
 
 
 

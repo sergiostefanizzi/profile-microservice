@@ -3,10 +3,7 @@ package com.sergiostefanizzi.profilemicroservice.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.sergiostefanizzi.profilemicroservice.model.Post;
-import com.sergiostefanizzi.profilemicroservice.model.Profile;
-import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
-import com.sergiostefanizzi.profilemicroservice.model.ProfilePatch;
+import com.sergiostefanizzi.profilemicroservice.model.*;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
@@ -632,7 +629,7 @@ class ProfilesIT {
 
     //TODO 401 e 403
     @Test
-    void testFindPostById_Then_404() throws Exception{
+    void testFindProfileByName_Then_404() throws Exception{
 
         String error = "Profile "+profileName+"_99 not found!";
 
@@ -650,7 +647,78 @@ class ProfilesIT {
         log.info("Error -> "+node.get("error"));
     }
 
+    @Test
+    void testFindFull_Then_200() throws Exception{
+        String newProfileName = profileName+"_5";
+        // Creo prima un profilo
+        newProfile.setProfileName(newProfileName);
+        HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);
+        ResponseEntity<Profile> responseProfile = this.testRestTemplate.exchange(
+                this.baseUrl,
+                HttpMethod.POST,
+                requestProfile,
+                Profile.class);
+        assertEquals(HttpStatus.CREATED, responseProfile.getStatusCode());
+        assertNotNull(responseProfile.getBody());
+        Profile savedProfile = responseProfile.getBody();
+        assertNotNull(savedProfile.getId());
+        profileId = savedProfile.getId();
 
 
+        ResponseEntity<FullProfile> responseGet = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                FullProfile.class,
+                profileId);
+
+        assertEquals(HttpStatus.OK, responseGet.getStatusCode());
+        assertNotNull(responseGet.getBody());
+        assertInstanceOf(FullProfile.class, responseGet.getBody());
+        FullProfile fullProfile = responseGet.getBody();
+        assertEquals(profileId, fullProfile.getProfile().getId());
+        assertEquals(0, fullProfile.getPostList().size());
+        assertEquals(0, fullProfile.getPostCount());
+        assertTrue(fullProfile.getProfileGranted());
+
+        // visualizzo il profilo aggiornato
+        log.info(fullProfile.toString());
+    }
+
+    @Test
+    void testFindFull_Then_400() throws Exception{
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId]",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class,
+                "IdNotLong");
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertNotNull(node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    //TODO 401
+
+    @Test
+    void testFindFull_Then_404() throws Exception{
+        Long invalidProfileId = Long.MIN_VALUE;
+        String error = "Profile "+invalidProfileId+" not found!";
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class,
+                invalidProfileId);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
 
 }

@@ -51,7 +51,7 @@ class PostsServiceTest {
     void setUp() {
         this.newPost = new Post(contentUrl, postType, profileId);
         this.newPost.setCaption(caption);
-        this.newPost.setProfileId(profileId);
+
 
         profileJpa.setId(profileId);
 
