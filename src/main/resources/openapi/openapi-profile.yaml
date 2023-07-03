@@ -16,14 +16,10 @@ servers:
 tags:
   - name: profiles
     description: All about profiles
-  - name: follows
-    description: All about profiles followers and followings
   - name: posts
     description: All about posts
-  - name: likes
-    description: All about likes
-  - name: comments
-    description: All about comments
+  - name: follows
+    description: All about profiles followers and followings
   - name: alerts
     description: All about alerts
   - name: admins
@@ -62,7 +58,7 @@ paths:
           $ref: '#/components/responses/Conflict'
         '500':
           $ref: '#/components/responses/InternalServerError'
-  
+
   /profiles/{profileId}:
     get:
       tags:
@@ -95,7 +91,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-    
+
     patch:
       tags:
         - profiles
@@ -194,6 +190,363 @@ paths:
                 $ref: '#/components/schemas/Profile'
         '401':
           $ref: '#/components/responses/Unauthenticated'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+
+
+  /posts:
+    post:
+      tags:
+        - posts
+      summary: Publish a new post
+      description: Publish a new post
+      operationId: addPost
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Post'
+      responses:
+        '201':
+          description: Post has been successfully published!
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /posts/{postId}:
+    get:
+      tags:
+        - posts
+      summary: Find a post
+      description: Find a post
+      operationId: findPostById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          description: Id of the post
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Post found and returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    patch:
+      tags:
+        - posts
+      summary: Update post caption
+      description: Update post caption
+      operationId: updatePostById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          description: Id of the post
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PostPatch'
+      responses:
+        '200':
+          description: Post caption updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - posts
+      summary: Delete post
+      description: Delete post
+      operationId: deletePostById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          description: Id of the post
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Post has been successfully deleted!
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /posts/feed/{profileId}:
+    get:
+      tags:
+        - posts
+      summary: Feed of the profile
+      description: Feed of the profile
+      operationId: profileFeedById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: profileId
+          in: path
+          description: Id of the profile
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: Feed found and returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Feed'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /posts/likes/{postId}:
+    put:
+      tags:
+        - posts
+      summary: Profile likes a post
+      description: Profile likes a post
+      operationId: addLike
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          description: Id of the liked post
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: removeLike
+          in: query
+          description: Remove or create the like
+          schema:
+            type: boolean
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Like'
+      responses:
+        '204':
+          description: Like added or removed
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    get:
+      tags:
+        - posts
+      summary: List of likes of a post
+      description: List of likes of a post
+      operationId: findAllLikesById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          description: Id of the liked post
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: List of likes found and returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LikeList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /posts/comments:
+    post:
+      tags:
+        - posts
+      summary: Profile comments a post
+      description: Profile comments a post
+      operationId: addComment
+      security:
+        - bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Comment'
+      responses:
+        '201':
+          description: Comment added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+  /posts/comments/{commentId}:
+    patch:
+      tags:
+        - posts
+      summary: Edit a comment
+      description: Edit a comment
+      operationId: updateCommentById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: commentId
+          in: path
+          description: Id of the comment
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: removeComment
+          in: query
+          description: Remove or create the like
+          schema:
+            type: boolean
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CommentPatch'
+      responses:
+        '200':
+          description: Comment has been successfully update!
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /posts/comments/{postId}:
+    get:
+      tags:
+        - posts
+      summary: List of comments of a post
+      description: List of comments of a post
+      operationId: findAllCommentsById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: postId
+          in: path
+          description: Id of the post
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: List of comments found and returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CommentList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -414,452 +767,6 @@ paths:
           $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthenticated'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /posts:
-    post:
-      tags:
-        - posts
-      summary: Publish a new post
-      description: Publish a new post
-      operationId: addPost
-      security:
-        - bearerAuth: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Post'
-      responses:
-        '201':
-          description: Post has been successfully published!
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Post'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /posts/{postId}:
-    get:
-      tags:
-        - posts
-      summary: Find a post
-      description: Find a post
-      operationId: findPostById
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: postId
-          in: path
-          description: Id of the post
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '200':
-          description: Post found and returned
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Post'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    patch:
-      tags:
-        - posts
-      summary: Update post caption
-      description: Update post caption
-      operationId: updatePostById
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: postId
-          in: path
-          description: Id of the post
-          required: true
-          schema:
-            type: integer
-            format: int64
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/PostPatch'
-      responses:
-        '200':
-          description: Post caption updated
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Post'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    delete:
-      tags:
-        - posts
-      summary: Delete post
-      description: Delete post
-      operationId: deletePostById
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: postId
-          in: path
-          description: Id of the post
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '204':
-          description: Post has been successfully deleted!
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /posts/feed/{profileId}:
-    get:
-      tags:
-        - posts
-      summary: Feed of the profile
-      description: Feed of the profile
-      operationId: profileFeedById
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: profileId
-          in: path
-          description: Id of the profile
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '200':
-          description: Feed found and returned
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Feed'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /likes/{postId}/by/{profileId}:
-    post:
-      tags:
-        - likes
-      summary: Profile likes a post
-      description: Profile likes a post
-      operationId: addLike
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: postId
-          in: path
-          description: Id of the liked post
-          required: true
-          schema:
-            type: integer
-            format: int64
-        - name: profileId
-          in: path
-          description: Id of the profile that likes a post
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '201':
-          description: Like added
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Like'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    delete:
-      tags:
-        - likes
-      summary: Remove like
-      description: Remove like
-      operationId: deleteLikeById
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: postId
-          in: path
-          description: Id of the liked post
-          required: true
-          schema:
-            type: integer
-            format: int64
-        - name: profileId
-          in: path
-          description: Id of the profile that likes a post
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '204':
-          description: Like has been removed
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-  /likes/{postId}:
-    get:
-      tags:
-        - likes
-      summary: List of likes of a post
-      description: List of likes of a post
-      operationId: findAllLikesById
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: postId
-          in: path
-          description: Id of the liked post
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '200':
-          description: List of likes found and returned
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/LikeList'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /comments/{postId}/by/{profileId}:
-    post:
-      tags:
-        - comments
-      summary: Profile comments a post
-      description: Profile comments a post
-      operationId: addComment
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: postId
-          in: path
-          description: Id of the post
-          required: true
-          schema:
-            type: integer
-            format: int64
-        - name: profileId
-          in: path
-          description: Id of the profile that commented a post
-          required: true
-          schema:
-            type: integer
-            format: int64
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Comment'
-      responses:
-        '201':
-          description: Comment added
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Comment'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-    patch:
-      tags:
-        - comments
-      summary: Edit a comment
-      description: Edit a comment
-      operationId: updateCommentById
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: postId
-          in: path
-          description: Id of the post
-          required: true
-          schema:
-            type: integer
-            format: int64
-        - name: profileId
-          in: path
-          description: Id of the profile that comments a post
-          required: true
-          schema:
-            type: integer
-            format: int64
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Comment'
-      responses:
-        '200':
-          description: Comment has been successfully update!
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Comment'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    delete:
-      tags:
-        - comments
-      summary: Remove comment
-      description: Remove comment
-      operationId: deleteCommentById
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: postId
-          in: path
-          description: Id of the post
-          required: true
-          schema:
-            type: integer
-            format: int64
-        - name: profileId
-          in: path
-          description: Id of the profile that comments a post
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '204':
-          description: Comment has been removed
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /comments/{postId}:
-    get:
-      tags:
-        - comments
-      summary: List of comments of a post
-      description: List of comments of a post
-      operationId: findAllCommentsById
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: postId
-          in: path
-          description: Id of the post
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '200':
-          description: List of comments found and returned
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/CommentList'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
@@ -1367,7 +1274,6 @@ components:
         profile_id:
           type: integer
           format: int64
-          readOnly: true
           example: 1
         post_id:
           type: integer
@@ -1376,7 +1282,7 @@ components:
           example: 2
       required:
         - profile_id
-        - post_id
+
 
     Comment:
       type: object
@@ -1388,8 +1294,23 @@ components:
         profile_id:
           type: integer
           format: int64
-          readOnly: true
         post_id:
+          type: integer
+          format: int64
+        content:
+          type: string
+          minLength: 1
+          maxLength: 2200
+          example: comment example
+      required:
+        - profile_id
+        - post_id
+        - content
+
+    CommentPatch:
+      type: object
+      properties:
+        id:
           type: integer
           format: int64
           readOnly: true
@@ -1400,8 +1321,6 @@ components:
           example: comment example
       required:
         - id
-        - profile_id
-        - post_id
         - content
 
     Alert:
