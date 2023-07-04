@@ -15,6 +15,7 @@ import org.springframework.util.Assert;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.NativeWebRequest;
 
+import java.util.List;
 import java.util.Optional;
 
 @RestController
@@ -46,10 +47,9 @@ public class ProfilesController implements ProfilesApi {
     }
 
     @Override
-    public ResponseEntity<Profile> searchProfileByProfileName(String profileName) {
-        //TODO meglio fare lista profili che iniziano per quel nome
-        Profile profile = this.profilesService.findByProfileName(profileName);
-        return new ResponseEntity<>(profile, HttpStatus.OK);
+    public ResponseEntity<List<Profile>> searchProfileByProfileName(String profileName) {
+        List<Profile> profileList = this.profilesService.findByProfileName(profileName);
+        return new ResponseEntity<>(profileList, HttpStatus.OK);
     }
 
     @Override

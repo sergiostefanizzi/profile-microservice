@@ -178,16 +178,17 @@ paths:
           required: true
           schema:
             type: string
-            minLength: 8
             maxLength: 20
-            pattern: '^(?=.{8,20}$)(?![_.])(?!.*[_.]{2})[a-zA-Z0-9._]+(?<![_.])$'
+            #pattern: '[^\s-]'
       responses:
         '200':
           description: Profiles found
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Profile'
+                $ref: '#/components/schemas/ProfileList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '500':

@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -55,6 +56,8 @@ class ProfilesServiceTest {
     Long profileId = 12L;
     private Profile newProfile;
     private ProfileJpa savedProfileJpa;
+    private ProfileJpa savedProfileJpa2;
+    private ProfileJpa savedProfileJpa3;
     private UrlValidator validator;
     String contentUrl = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Cape_may.jpg";
     String caption = "This is the post caption";
@@ -206,9 +209,7 @@ class ProfilesServiceTest {
         assertEquals(updatedBio, updatedProfile.getBio());
         assertEquals(updatedPictureUrl, updatedProfile.getPictureUrl());
         assertEquals(updatedIsPrivate, updatedProfile.getIsPrivate());
-        //assertEquals(bio, updatedProfile.getBio());
-        //assertEquals(pictureUrl, updatedProfile.getPictureUrl());
-        //assertEquals(isPrivate, updatedProfile.getIsPrivate());
+
 
         verify(this.profilesRepository, times(1)).findById(profileId);
         verify(this.profilesRepository, times(1)).save(this.savedProfileJpa);
@@ -249,53 +250,57 @@ class ProfilesServiceTest {
 
     @Test
     void testFindByNameSuccess(){
+        this.savedProfileJpa2 = new ProfileJpa(profileName+"_2", isPrivate, accountId);
+        this.savedProfileJpa2.setBio(bio);
+        this.savedProfileJpa2.setPictureUrl(pictureUrl);
+        this.savedProfileJpa2.setId(2L);
+
+        this.savedProfileJpa3 = new ProfileJpa(profileName+"_3", isPrivate, accountId);
+        this.savedProfileJpa3.setBio(bio);
+        this.savedProfileJpa3.setPictureUrl(pictureUrl);
+        this.savedProfileJpa3.setId(3L);
+        this.savedProfileJpa3.setDeletedAt(LocalDateTime.MIN);
+
+
         // Post che verra' restituito
-        Profile convertedProfile = new Profile(profileName, isPrivate, accountId);
-        convertedProfile.setBio(bio);
-        convertedProfile.setPictureUrl(pictureUrl);
-        convertedProfile.setId(profileId);
+        Profile convertedProfile1 = new Profile(profileName, isPrivate, accountId);
+        convertedProfile1.setBio(bio);
+        convertedProfile1.setPictureUrl(pictureUrl);
+        convertedProfile1.setId(profileId);
 
-        when(this.profilesRepository.findByProfileName(profileName)).thenReturn(Optional.of(this.savedProfileJpa));
-        when(this.profileToProfileJpaConverter.convertBack((this.savedProfileJpa))).thenReturn(convertedProfile);
+        Profile convertedProfile2 = new Profile(profileName+"_2", isPrivate, accountId);
+        convertedProfile2.setBio(bio);
+        convertedProfile2.setPictureUrl(pictureUrl);
+        convertedProfile2.setId(2L);
 
-        Profile profile = this.profilesService.findByProfileName(profileName);
+        Profile convertedProfile3 = new Profile(profileName+"_3", isPrivate, accountId);
+        convertedProfile3.setBio(bio);
+        convertedProfile3.setPictureUrl(pictureUrl);
+        convertedProfile3.setId(3L);
 
-        assertNotNull(profile);
-        assertEquals(profileId, profile.getId());
-        assertEquals(profileName, profile.getProfileName());
-        assertEquals(isPrivate, profile.getIsPrivate());
-        assertEquals(accountId, profile.getAccountId());
-        assertEquals(bio, profile.getBio());
-        assertEquals(pictureUrl, profile.getPictureUrl());
-        verify(this.profilesRepository, times(1)).findByProfileName(profileName);
+        when(this.profilesRepository.findAllByProfileName(profileName)).thenReturn(asList(this.savedProfileJpa, this.savedProfileJpa2, this.savedProfileJpa3));
+        when(this.profileToProfileJpaConverter.convertBack(this.savedProfileJpa)).thenReturn(convertedProfile1);
+        when(this.profileToProfileJpaConverter.convertBack(this.savedProfileJpa2)).thenReturn(convertedProfile2);
+
+
+        List<Profile> profileList = this.profilesService.findByProfileName(profileName);
+
+        assertNotNull(profileList);
+        assertEquals(2, profileList.size());
+        assertEquals(profileId, profileList.get(0).getId());
+        assertEquals(profileName, profileList.get(0).getProfileName());
+        assertEquals(bio, profileList.get(0).getBio());
+        assertEquals(pictureUrl, profileList.get(0).getPictureUrl());
+        assertEquals(isPrivate, profileList.get(0).getIsPrivate());
+        assertEquals(2L, profileList.get(1).getId());
+        assertEquals(profileName+"_2", profileList.get(1).getProfileName());
+        assertEquals(bio, profileList.get(1).getBio());
+        assertEquals(pictureUrl, profileList.get(1).getPictureUrl());
+        assertEquals(isPrivate, profileList.get(1).getIsPrivate());
+        verify(this.profilesRepository, times(1)).findAllByProfileName(profileName);
         verify(this.profileToProfileJpaConverter, times(1)).convertBack(this.savedProfileJpa);
-    }
-
-    @Test
-    void testFindByName_NotFound_Failed(){
-        when(this.profilesRepository.findByProfileName(profileName)).thenReturn(Optional.empty());
-        assertThrows(ProfileNotFoundException.class,
-                () -> this.profilesService.findByProfileName(profileName)
-        );
-
-        verify(this.profilesRepository, times(1)).findByProfileName(profileName);
-        verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
-    }
-
-    @Test
-    void testFindByName_PostAlreadyRemoved_Failed(){
-        // Imposto una data passata
-        this.savedProfileJpa.setDeletedAt(LocalDateTime.MIN);
-        log.info("Deleted At"+this.savedProfileJpa.getDeletedAt());
-
-        when(this.profilesRepository.findByProfileName(profileName)).thenReturn(Optional.of(this.savedProfileJpa));
-
-        assertThrows(ProfileNotFoundException.class,
-                () -> this.profilesService.findByProfileName(profileName)
-        );
-
-        verify(this.profilesRepository, times(1)).findByProfileName(profileName);
-        verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
+        verify(this.profileToProfileJpaConverter, times(1)).convertBack(this.savedProfileJpa2);
+        verify(this.profileToProfileJpaConverter, times(0)).convertBack(this.savedProfileJpa3);
     }
 
     @Test

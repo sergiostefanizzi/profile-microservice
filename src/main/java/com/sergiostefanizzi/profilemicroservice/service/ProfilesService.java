@@ -84,18 +84,15 @@ public class ProfilesService {
 
         return this.profileToProfileJpaConverter.convertBack(updatedProfileJpa);
     }
-
+    //TODO risolvere lo spazio in ProfilesIT
     @Transactional
-    public Profile findByProfileName(String profileName) {
-        if (profileName.isBlank()){
-            throw new ProfileNotFoundException("null");
-        }
+    public List<Profile> findByProfileName(String profileName) {
+        return this.profilesRepository.findAllByProfileName(profileName)
+                .stream().filter(profileJpa -> profileJpa.getDeletedAt() == null)
+                .map(this.profileToProfileJpaConverter::convertBack).toList();
 
-        return this.profileToProfileJpaConverter.convertBack(
-                this.profilesRepository.findByProfileName(profileName)
-                .filter(profile-> profile.getDeletedAt() == null)
-                .orElseThrow(() -> new ProfileNotFoundException(profileName)));
     }
+
 
     @Transactional
     public FullProfile findFull(Long profileId) {

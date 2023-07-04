@@ -1,11 +1,13 @@
 package com.sergiostefanizzi.profilemicroservice.controller;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sergiostefanizzi.profilemicroservice.model.*;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -20,6 +22,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
@@ -587,26 +590,50 @@ class ProfilesIT {
         assertNotNull(savedProfile.getId());
         profileId = savedProfile.getId();
 
+        String newProfileName2 = profileName+"_5";
+        Profile newProfile2 = new Profile(newProfileName2,isPrivate,accountId);
+        newProfile2.setBio(bio);
+        newProfile2.setPictureUrl(pictureUrl);
 
-        ResponseEntity<Profile> responseGet = this.testRestTemplate.exchange(this.baseUrl+"/search?profileName={profileName}",
+        // Creo il secondo profilo
+        HttpEntity<Profile> requestProfile2 = new HttpEntity<>(newProfile2);
+        ResponseEntity<Profile> responseProfile2 = this.testRestTemplate.exchange(
+                this.baseUrl,
+                HttpMethod.POST,
+                requestProfile2,
+                Profile.class);
+        assertEquals(HttpStatus.CREATED, responseProfile2.getStatusCode());
+        assertNotNull(responseProfile2.getBody());
+        Profile savedProfile2 = responseProfile2.getBody();
+        assertNotNull(savedProfile2.getId());
+        Long profileId2 = savedProfile2.getId();
+
+
+        ResponseEntity<String> responseGet = this.testRestTemplate.exchange(this.baseUrl+"/search?profileName={profileName}",
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
-                Profile.class,
-                newProfileName);
+                String.class,
+                "giu");
 
         assertEquals(HttpStatus.OK, responseGet.getStatusCode());
         assertNotNull(responseGet.getBody());
-        assertInstanceOf(Profile.class, responseGet.getBody());
-        Profile profile = responseGet.getBody();
-        assertEquals(profileId, profile.getId());
-        assertEquals(savedProfile.getProfileName(), profile.getProfileName());
-        assertEquals(savedProfile.getPictureUrl(), profile.getPictureUrl());
-        assertEquals(savedProfile.getBio(), profile.getBio());
-        assertEquals(savedProfile.getIsPrivate(), profile.getIsPrivate());
-        assertEquals(savedProfile.getAccountId(), profile.getAccountId());
+        List<Profile> profileList =asList(objectMapper.readValue(responseGet.getBody(), Profile[].class));
+        assertEquals(2,profileList.size());
+        assertEquals(profileId, profileList.get(0).getId());
+        assertEquals(savedProfile.getProfileName(), profileList.get(0).getProfileName());
+        assertEquals(savedProfile.getPictureUrl(), profileList.get(0).getPictureUrl());
+        assertEquals(savedProfile.getBio(), profileList.get(0).getBio());
+        assertEquals(savedProfile.getIsPrivate(), profileList.get(0).getIsPrivate());
+        assertEquals(savedProfile.getAccountId(), profileList.get(0).getAccountId());
+        assertEquals(profileId2, profileList.get(1).getId());
+        assertEquals(savedProfile2.getProfileName(), profileList.get(1).getProfileName());
+        assertEquals(savedProfile2.getPictureUrl(), profileList.get(1).getPictureUrl());
+        assertEquals(savedProfile2.getBio(), profileList.get(1).getBio());
+        assertEquals(savedProfile2.getIsPrivate(), profileList.get(1).getIsPrivate());
+        assertEquals(savedProfile2.getAccountId(), profileList.get(1).getAccountId());
 
         // visualizzo il profilo aggiornato
-        log.info(profile.toString());
+        log.info(profileList.toString());
     }
 
     @Test
@@ -616,7 +643,7 @@ class ProfilesIT {
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
                 String.class,
-                "prof");
+                RandomStringUtils.randomAlphabetic(21));
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -627,29 +654,11 @@ class ProfilesIT {
         log.info("Error -> "+node.get("error"));
     }
 
-    //TODO 401 e 403
-    @Test
-    void testFindProfileByName_Then_404() throws Exception{
-
-        String error = "Profile "+profileName+"_99 not found!";
-
-        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/search?profileName={profileName}",
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                String.class,
-                profileName+"_99");
-        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
-        assertNotNull(response.getBody());
-
-        JsonNode node = this.objectMapper.readTree(response.getBody());
-        // In questo caso l'errore NON è un array di dimensione 1
-        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
-        log.info("Error -> "+node.get("error"));
-    }
+    //TODO 401
 
     @Test
     void testFindFull_Then_200() throws Exception{
-        String newProfileName = profileName+"_5";
+        String newProfileName = profileName+"_6";
         // Creo prima un profilo
         newProfile.setProfileName(newProfileName);
         HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);

@@ -13,6 +13,7 @@ import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyC
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +33,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import java.util.ArrayList;
 import java.util.List;
 
+import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -528,26 +530,36 @@ class ProfilesControllerTest {
 
     @Test
     void testFindProfileByName_Then_200() throws Exception{
-        when(this.profilesService.findByProfileName(profileName)).thenReturn(this.savedProfile);
+        Profile savedProfile2 = new Profile(profileName+"_2",isPrivate,accountId);
+        savedProfile2.setBio(bio);
+        savedProfile2.setPictureUrl(pictureUrl);
+        savedProfile2.setId(13L);
+
+        when(this.profilesService.findByProfileName(profileName)).thenReturn(asList(this.savedProfile, savedProfile2));
 
         MvcResult result = this.mockMvc.perform(get("/profiles/search")
                         .contentType(MediaType.APPLICATION_JSON)
                         .queryParam("profileName",profileName))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.*", hasSize(6)))
-                .andExpect(jsonPath("$.id").value(this.savedProfile.getId()))
-                .andExpect(jsonPath("$.profile_name").value(this.savedProfile.getProfileName()))
-                .andExpect(jsonPath("$.bio").value(this.savedProfile.getBio()))
-                .andExpect(jsonPath("$.picture_url").value(this.savedProfile.getPictureUrl()))
-                .andExpect(jsonPath("$.is_private").value(this.savedProfile.getIsPrivate()))
-                .andExpect(jsonPath("$.account_id").value(this.savedProfile.getAccountId()))
+                .andExpect(jsonPath("$.*").isArray())
+                .andExpect(jsonPath("$.*", hasSize(2)))
+                .andExpect(jsonPath("$.[0]id").value(this.savedProfile.getId()))
+                .andExpect(jsonPath("$.[0]profile_name").value(this.savedProfile.getProfileName()))
+                .andExpect(jsonPath("$.[0]bio").value(this.savedProfile.getBio()))
+                .andExpect(jsonPath("$.[0]picture_url").value(this.savedProfile.getPictureUrl()))
+                .andExpect(jsonPath("$.[0]is_private").value(this.savedProfile.getIsPrivate()))
+                .andExpect(jsonPath("$.[0]account_id").value(this.savedProfile.getAccountId())).andExpect(jsonPath("$.[0]id").value(this.savedProfile.getId()))
+                .andExpect(jsonPath("$.[1]id").value(savedProfile2.getId()))
+                .andExpect(jsonPath("$.[1]profile_name").value(savedProfile2.getProfileName()))
+                .andExpect(jsonPath("$.[1]bio").value(savedProfile2.getBio()))
+                .andExpect(jsonPath("$.[1]picture_url").value(savedProfile2.getPictureUrl()))
+                .andExpect(jsonPath("$.[1]is_private").value(savedProfile2.getIsPrivate()))
+                .andExpect(jsonPath("$.[1]account_id").value(savedProfile2.getAccountId()))
                 .andReturn();
 
         // salvo risposta in result per visualizzarla
         String resultAsString = result.getResponse().getContentAsString();
-        Post postResult = this.objectMapper.readValue(resultAsString, Post.class);
-
-        log.info(postResult.toString());
+        log.info(resultAsString);
     }
 
     @Test
@@ -556,7 +568,8 @@ class ProfilesControllerTest {
 
         MvcResult result = this.mockMvc.perform(get("/profiles/search")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .queryParam("profileName","profi"))
+                        .queryParam("profileName", RandomStringUtils.randomAlphabetic(21)))
+                        //.queryParam("profileName", "   "))
                 .andExpect(status().isBadRequest())
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof ConstraintViolationException
@@ -570,24 +583,6 @@ class ProfilesControllerTest {
     }
     //TODO 401
 
-    @Test
-    void testFindProfileByName_Then_404() throws Exception{
-        doThrow(new ProfileNotFoundException(profileName)).when(this.profilesService).findByProfileName(profileName);
-
-        MvcResult result = this.mockMvc.perform(get("/profiles/search")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .queryParam("profileName",profileName))
-                .andExpect(status().isNotFound())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof ProfileNotFoundException
-                ))
-                .andExpect(jsonPath("$.error").value("Profile "+profileName+" not found!"))
-                .andReturn();
-        // Visualizzo l'errore
-        String resultAsString = result.getResponse().getContentAsString();
-        log.info("Errors\n"+resultAsString);
-        log.info("Resolved Error ---> "+result.getResolvedException());
-    }
 
     @Test
     void testFindFull_Then_200() throws Exception{
