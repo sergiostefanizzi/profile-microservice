@@ -84,7 +84,7 @@ public class ProfilesService {
 
         return this.profileToProfileJpaConverter.convertBack(updatedProfileJpa);
     }
-    //TODO risolvere lo spazio in ProfilesIT
+
     @Transactional
     public List<Profile> findByProfileName(String profileName) {
         return this.profilesRepository.findAllByProfileName(profileName)
@@ -112,6 +112,8 @@ public class ProfilesService {
             postList = postJpaList.get().stream().map(this.postToPostJpaConverter::convertBack).collect(Collectors.toList());
             postCount = postList.size();
         }
+
+        //TODO Devo controllare che il posso accedere al profilo
 
         return new FullProfile(
                 this.profileToProfileJpaConverter.convertBack(profileJpa),

@@ -365,7 +365,7 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /posts/likes/{postId}:
+  /posts/likes:
     put:
       tags:
         - posts
@@ -375,13 +375,6 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: postId
-          in: path
-          description: Id of the liked post
-          required: true
-          schema:
-            type: integer
-            format: int64
         - name: removeLike
           in: query
           description: Remove or create the like
@@ -405,7 +398,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
-
+  /posts/likes/{postId}:
     get:
       tags:
         - posts
@@ -1279,10 +1272,10 @@ components:
         post_id:
           type: integer
           format: int64
-          readOnly: true
           example: 2
       required:
         - profile_id
+        - post_id
 
 
     Comment:

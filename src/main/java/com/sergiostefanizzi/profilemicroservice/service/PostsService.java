@@ -1,10 +1,9 @@
 package com.sergiostefanizzi.profilemicroservice.service;
 
-import com.sergiostefanizzi.profilemicroservice.model.Post;
-import com.sergiostefanizzi.profilemicroservice.model.PostJpa;
-import com.sergiostefanizzi.profilemicroservice.model.PostPatch;
-import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
+import com.sergiostefanizzi.profilemicroservice.model.*;
+import com.sergiostefanizzi.profilemicroservice.model.converter.LikeToLikeJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.model.converter.PostToPostJpaConverter;
+import com.sergiostefanizzi.profilemicroservice.repository.LikesRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
@@ -15,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 
 @Service
@@ -25,6 +25,8 @@ public class PostsService {
     private final PostToPostJpaConverter postToPostJpaConverter;
     // TODO Per adesso uso il profileRepository per il controllo del profileId, ma in seguito serve il JWT
     private final ProfilesRepository profilesRepository;
+    private final LikesRepository likesRepository;
+    private final LikeToLikeJpaConverter likeToLikeJpaConverter;
 
     @Transactional
     public Post save(Post post) {
@@ -104,4 +106,36 @@ public class PostsService {
                 .orElseThrow(() -> new PostNotFoundException(postId))
         );
     }
+
+    @Transactional
+    public void addLike(Boolean removeLike, Like like) {
+        // TODO mi serve il JWT
+        // Controllo che chi vuole mettere il abbia l'autorizzazione per farlo
+        // sia controllando il profilo
+        // sia controllando che il profilo a cui appartiene il posto sia visibile da chi vuole mettere like
+
+        // Controllo prima l'esistenza del post
+        this.postsRepository.findById(like.getPostId())
+                .filter(post -> post.getDeletedAt() == null)
+                .orElseThrow(() -> new PostNotFoundException(like.getPostId()));
+        // Controllo poi l'esistenza del profilo di chi vuole mettere like
+        this.profilesRepository.findById(like.getProfileId())
+                .filter(profile -> profile.getDeletedAt() == null)
+                .orElseThrow(() -> new ProfileNotFoundException(like.getProfileId()));
+
+        // Controllo l'esistenza del like, se non esiste lo creo con il like ottenuto dal controller
+        LikeJpa likeJpa = this.likesRepository.findById(new LikeId(like.getProfileId(), like.getPostId()))
+                .orElseGet(() -> this.likeToLikeJpaConverter.convert(like));
+        assert likeJpa != null;
+        if (removeLike){
+            likeJpa.setDeletedAt(LocalDateTime.now());
+        } else {
+            likeJpa.setCreatedAt(LocalDateTime.now());
+            likeJpa.setDeletedAt(null);
+        }
+
+        this.likesRepository.save(likeJpa);
+    }
+
+
 }

@@ -1,10 +1,9 @@
 package com.sergiostefanizzi.profilemicroservice.service;
 
-import com.sergiostefanizzi.profilemicroservice.model.Post;
-import com.sergiostefanizzi.profilemicroservice.model.PostJpa;
-import com.sergiostefanizzi.profilemicroservice.model.PostPatch;
-import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
+import com.sergiostefanizzi.profilemicroservice.model.*;
+import com.sergiostefanizzi.profilemicroservice.model.converter.LikeToLikeJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.model.converter.PostToPostJpaConverter;
+import com.sergiostefanizzi.profilemicroservice.repository.LikesRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
@@ -35,6 +34,10 @@ class PostsServiceTest {
     // TODO da togliere quando usero' JWT
     @Mock
     private ProfilesRepository profilesRepository;
+    @Mock
+    private LikesRepository likesRepository;
+    @Mock
+    private LikeToLikeJpaConverter likeToLikeJpaConverter;
     @InjectMocks
     private PostsService postsService;
 
@@ -45,6 +48,7 @@ class PostsServiceTest {
     Long profileId = 11L;
     private Post newPost;
     private PostJpa savedPostJpa;
+    private Like newLike;
     ProfileJpa profileJpa = new ProfileJpa("pinco_pallino",false,111L);
 
     @BeforeEach
@@ -59,6 +63,8 @@ class PostsServiceTest {
         this.savedPostJpa.setCaption(caption);
         this.savedPostJpa.setProfile(profileJpa);
         this.savedPostJpa.setId(postId);
+
+        this.newLike = new Like(profileId, postId);
     }
 
     @Test
@@ -255,5 +261,74 @@ class PostsServiceTest {
         verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
     }
 
+    @Test
+    void testAddLikeSuccess(){
+        LikeJpa likeJpa = new LikeJpa(new LikeId(this.newLike.getProfileId(), this.newLike.getPostId()));
+
+        when(this.postsRepository.findById(any(Long.class))).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.profilesRepository.findById(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
+        when(this.likesRepository.findById(any(LikeId.class))).thenReturn(Optional.empty());
+        when(this.likeToLikeJpaConverter.convert(any(Like.class))).thenReturn(likeJpa);
+        when(this.likesRepository.save(any(LikeJpa.class))).thenReturn(likeJpa);
+
+        this.postsService.addLike(false, this.newLike);
+
+        log.info("Like Created at -> "+likeJpa.getCreatedAt());
+        assertNotNull(likeJpa.getCreatedAt());
+        assertNull(likeJpa.getDeletedAt());
+        verify(this.postsRepository, times(1)).findById(any(Long.class));
+        verify(this.profilesRepository, times(1)).findById(any(Long.class));
+        verify(this.likesRepository, times(1)).findById(any(LikeId.class));
+        verify(this.likeToLikeJpaConverter, times(1)).convert(any(Like.class));
+        verify(this.likesRepository, times(1)).save(any(LikeJpa.class));
+    }
+
+    @Test
+    void testAddLike_RemoveLike_Success(){
+        LikeJpa likeJpa = new LikeJpa(new LikeId(this.newLike.getProfileId(), this.newLike.getPostId()));
+
+        when(this.postsRepository.findById(any(Long.class))).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.profilesRepository.findById(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
+        when(this.likesRepository.findById(any(LikeId.class))).thenReturn(Optional.of(likeJpa));
+        when(this.likesRepository.save(likeJpa)).thenReturn(likeJpa);
+
+        this.postsService.addLike(true, this.newLike);
+
+        log.info("Like Deleted at -> "+likeJpa.getDeletedAt());
+        assertNotNull(likeJpa.getDeletedAt());
+        verify(this.postsRepository, times(1)).findById(any(Long.class));
+        verify(this.profilesRepository, times(1)).findById(any(Long.class));
+        verify(this.likesRepository, times(1)).findById(any(LikeId.class));
+        verify(this.likeToLikeJpaConverter, times(0)).convert(any(Like.class));
+        verify(this.likesRepository, times(1)).save(any(LikeJpa.class));
+    }
+
+    @Test
+    void testAddLike_PostNotFound_Success(){
+        when(this.postsRepository.findById(any(Long.class))).thenReturn(Optional.empty());
+
+        assertThrows(PostNotFoundException.class, () -> this.postsService.addLike(false, this.newLike));
+
+        verify(this.postsRepository, times(1)).findById(any(Long.class));
+        verify(this.profilesRepository, times(0)).findById(any(Long.class));
+        verify(this.likesRepository, times(0)).findById(any(LikeId.class));
+        verify(this.likeToLikeJpaConverter, times(0)).convert(any(Like.class));
+        verify(this.likesRepository, times(0)).save(any(LikeJpa.class));
+
+    }
+
+    @Test
+    void testAddLike_ProfileNotFound_Success(){
+        when(this.postsRepository.findById(any(Long.class))).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.profilesRepository.findById(any(Long.class))).thenReturn(Optional.empty());
+
+        assertThrows(ProfileNotFoundException.class, () -> this.postsService.addLike(false, this.newLike));
+
+        verify(this.postsRepository, times(1)).findById(any(Long.class));
+        verify(this.profilesRepository, times(1)).findById(any(Long.class));
+        verify(this.likesRepository, times(0)).findById(any(LikeId.class));
+        verify(this.likeToLikeJpaConverter, times(0)).convert(any(Like.class));
+        verify(this.likesRepository, times(0)).save(any(LikeJpa.class));
+    }
 
 }

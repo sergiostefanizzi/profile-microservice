@@ -47,16 +47,14 @@ public class PostJpa {
     @ManyToOne(optional = false)
     @JoinColumn(name = "profile_id", referencedColumnName = "id")
     private ProfileJpa profile;
-
+    @OneToMany(mappedBy = "post")
+    private List<LikeJpa> likes;
     // TODO fare like,comment e alert
     /*
     @OneToMany(mappedBy = "post")
-    private List<Like> likes;
+    private List<CommentJpa> comments;
 
     @OneToMany(mappedBy = "post")
-    private List<Comment> comments;
-
-    @OneToMany(mappedBy = "post")
-    private List<Alert> alerts;
+    private List<AlertJpa> alerts;
      */
 }

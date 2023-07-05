@@ -1,9 +1,7 @@
 package com.sergiostefanizzi.profilemicroservice.controller;
 
 import com.sergiostefanizzi.profilemicroservice.api.PostsApi;
-import com.sergiostefanizzi.profilemicroservice.model.FullProfile;
-import com.sergiostefanizzi.profilemicroservice.model.Post;
-import com.sergiostefanizzi.profilemicroservice.model.PostPatch;
+import com.sergiostefanizzi.profilemicroservice.model.*;
 import com.sergiostefanizzi.profilemicroservice.service.PostsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -57,5 +55,28 @@ public class PostsController implements PostsApi {
         return PostsApi.super.profileFeedById(profileId);
     }
 
+    @Override
+    public ResponseEntity<Void> addLike(Boolean removeLike, Like like) {
+        this.postsService.addLike(removeLike, like);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
 
+    @Override
+    public ResponseEntity<List<Like>> findAllLikesById(Long postId) {
+        return PostsApi.super.findAllLikesById(postId);
+    }
+    @Override
+    public ResponseEntity<Comment> addComment(Comment comment) {
+        return PostsApi.super.addComment(comment);
+    }
+
+    @Override
+    public ResponseEntity<Comment> updateCommentById(Long commentId, Boolean removeComment, CommentPatch commentPatch) {
+        return PostsApi.super.updateCommentById(commentId, removeComment, commentPatch);
+    }
+
+    @Override
+    public ResponseEntity<List<Comment>> findAllCommentsById(Long postId) {
+        return PostsApi.super.findAllCommentsById(postId);
+    }
 }
