@@ -4,7 +4,9 @@ import com.sergiostefanizzi.profilemicroservice.model.Like;
 import com.sergiostefanizzi.profilemicroservice.model.LikeId;
 import com.sergiostefanizzi.profilemicroservice.model.LikeJpa;
 import org.springframework.core.convert.converter.Converter;
+import org.springframework.stereotype.Component;
 
+@Component
 public class LikeToLikeJpaConverter implements Converter<Like, LikeJpa> {
     @Override
     public LikeJpa convert(Like source) {

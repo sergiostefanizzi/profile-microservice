@@ -16,7 +16,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @RequiredArgsConstructor
-
+@NoArgsConstructor(force = true)
 public class LikeJpa{
     @EmbeddedId
     private final LikeId likesId;

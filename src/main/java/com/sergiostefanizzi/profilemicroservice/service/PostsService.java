@@ -115,26 +115,32 @@ public class PostsService {
         // sia controllando che il profilo a cui appartiene il posto sia visibile da chi vuole mettere like
 
         // Controllo prima l'esistenza del post
-        this.postsRepository.findById(like.getPostId())
+        PostJpa postJpa = this.postsRepository.findById(like.getPostId())
                 .filter(post -> post.getDeletedAt() == null)
                 .orElseThrow(() -> new PostNotFoundException(like.getPostId()));
         // Controllo poi l'esistenza del profilo di chi vuole mettere like
-        this.profilesRepository.findById(like.getProfileId())
+        ProfileJpa profileJpa = this.profilesRepository.findById(like.getProfileId())
                 .filter(profile -> profile.getDeletedAt() == null)
                 .orElseThrow(() -> new ProfileNotFoundException(like.getProfileId()));
 
         // Controllo l'esistenza del like, se non esiste lo creo con il like ottenuto dal controller
-        LikeJpa likeJpa = this.likesRepository.findById(new LikeId(like.getProfileId(), like.getPostId()))
-                .orElseGet(() -> this.likeToLikeJpaConverter.convert(like));
-        assert likeJpa != null;
-        if (removeLike){
+        Optional<LikeJpa> optionalLikeJpa = this.likesRepository.findById(new LikeId(profileJpa.getId(), postJpa.getId()));
+        if (optionalLikeJpa.isPresent() && removeLike){
+            LikeJpa likeJpa = optionalLikeJpa.get();
             likeJpa.setDeletedAt(LocalDateTime.now());
-        } else {
+            this.likesRepository.save(likeJpa);
+        } else if (optionalLikeJpa.isEmpty() && !removeLike){
+            LikeJpa likeJpa = this.likeToLikeJpaConverter.convert(like);
+            assert likeJpa != null;
             likeJpa.setCreatedAt(LocalDateTime.now());
             likeJpa.setDeletedAt(null);
+            likeJpa.setProfile(profileJpa);
+            likeJpa.setPost(postJpa);
+            this.likesRepository.save(likeJpa);
         }
+                //.orElseGet(() -> this.likeToLikeJpaConverter.convert(like));
 
-        this.likesRepository.save(likeJpa);
+
     }
 
 

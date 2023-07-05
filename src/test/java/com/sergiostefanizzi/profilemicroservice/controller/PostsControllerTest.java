@@ -4,10 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.sergiostefanizzi.profilemicroservice.model.Post;
-import com.sergiostefanizzi.profilemicroservice.model.PostPatch;
-import com.sergiostefanizzi.profilemicroservice.model.Profile;
-import com.sergiostefanizzi.profilemicroservice.model.ProfilePatch;
+import com.sergiostefanizzi.profilemicroservice.model.*;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.service.PostsService;
@@ -61,9 +58,10 @@ class PostsControllerTest {
     String caption = "This is the post caption";
     Post.PostTypeEnum postType = Post.PostTypeEnum.POST;
     Long postId = 1L;
-    Long profileId = 11L;
+    Long profileId = 1L;
     private Post newPost;
     private Post savedPost;
+    private Like newLike;
     String newPostJson;
     List<String> errors;
     Long invalidProfileId = Long.MIN_VALUE;
@@ -500,4 +498,114 @@ class PostsControllerTest {
         log.info("Errors\n"+resultAsString);
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
+
+    @Test
+    void testAddLike_Then_204() throws Exception {
+        this.newLike = new Like(profileId, postId);
+        String newLikeJson = this.objectMapper.writeValueAsString(this.newLike);
+
+        doNothing().when(this.postsService).addLike(false, this.newLike);
+
+        this.mockMvc.perform(put("/posts/likes?removeLike={removeLike}",false)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newLikeJson))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void testAddLike_Remove_Then_204() throws Exception {
+        this.newLike = new Like(profileId, postId);
+        String newLikeJson = this.objectMapper.writeValueAsString(this.newLike);
+
+        doNothing().when(this.postsService).addLike(true, this.newLike);
+
+        this.mockMvc.perform(put("/posts/likes?removeLike={removeLike}",true)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newLikeJson))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void testAddLike_Then_400() throws Exception {
+        errors.add("JSON parse error: Cannot deserialize value of type `java.lang.Long` from String \"IdNotLong\": not a valid `java.lang.Long` value");
+
+        this.newLike = new Like(profileId, postId);
+        String newLikeJson = this.objectMapper.writeValueAsString(this.newLike);
+        JsonNode jsonNode = this.objectMapper.readTree(newLikeJson);
+
+        ((ObjectNode) jsonNode).put("profile_id", "IdNotLong");
+        ((ObjectNode) jsonNode).put("post_id", "IdNotLong");
+        newLikeJson = this.objectMapper.writeValueAsString(jsonNode);
+
+        doNothing().when(this.postsService).addLike(false, this.newLike);
+
+        MvcResult result = this.mockMvc.perform(put("/posts/likes?removeLike={removeLike}",false)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newLikeJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof HttpMessageNotReadableException
+                ))
+                .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    //TODO 401 e 403
+    @Test
+    void testAddLike_PostNotFound_Then_404() throws Exception {
+        //errors.add("Profile " + invalidProfileId + " not found!");
+        errors.add("Post " + invalidPostId + " not found!");
+
+        this.newLike = new Like(profileId, invalidPostId);
+        String newLikeJson = this.objectMapper.writeValueAsString(this.newLike);
+
+        doThrow(new PostNotFoundException(invalidPostId)).when(this.postsService).addLike(false, this.newLike);
+
+        MvcResult result = this.mockMvc.perform(put("/posts/likes?removeLike={removeLike}",false)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newLikeJson))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof PostNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    @Test
+    void testAddLike_ProfileNotFound_Then_404() throws Exception {
+        errors.add("Profile " + invalidProfileId + " not found!");
+
+
+        this.newLike = new Like(invalidProfileId, postId);
+        String newLikeJson = this.objectMapper.writeValueAsString(this.newLike);
+
+        doThrow(new ProfileNotFoundException(invalidProfileId)).when(this.postsService).addLike(false, this.newLike);
+
+        MvcResult result = this.mockMvc.perform(put("/posts/likes?removeLike={removeLike}",false)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newLikeJson))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof ProfileNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+
 }
