@@ -1,5 +1,6 @@
 package com.sergiostefanizzi.profilemicroservice.repository;
 
+import com.sergiostefanizzi.profilemicroservice.model.PostJpa;
 import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -15,4 +16,7 @@ public interface ProfilesRepository extends JpaRepository<ProfileJpa, Long> {
     List<ProfileJpa> findAllByProfileName(@Param("profileName") String profileName);
 
     Optional<ProfileJpa> findByProfileName(String profileName);
+
+    @Query("SELECT p FROM ProfileJpa p WHERE p.id=:profileId AND p.deletedAt IS NULL")
+    Optional<ProfileJpa> findNotDeletedById(Long profileId);
 }

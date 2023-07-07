@@ -1,6 +1,6 @@
 package com.sergiostefanizzi.profilemicroservice.repository;
 
-import com.sergiostefanizzi.profilemicroservice.model.LikeId;
+import com.sergiostefanizzi.profilemicroservice.model.CommentJpa;
 import com.sergiostefanizzi.profilemicroservice.model.LikeJpa;
 import com.sergiostefanizzi.profilemicroservice.model.PostJpa;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -8,11 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
-import java.util.Optional;
 
 @Repository
-public interface LikesRepository extends JpaRepository<LikeJpa, LikeId> {
-
-    @Query("SELECT l FROM LikeJpa l WHERE l.post = :post AND l.deletedAt IS NULL")
-    List<LikeJpa> findAllActiveByPost(PostJpa post);
+public interface CommentsRepository extends JpaRepository<CommentJpa, Long> {
 }

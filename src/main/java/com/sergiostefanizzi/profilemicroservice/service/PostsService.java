@@ -1,8 +1,10 @@
 package com.sergiostefanizzi.profilemicroservice.service;
 
 import com.sergiostefanizzi.profilemicroservice.model.*;
+import com.sergiostefanizzi.profilemicroservice.model.converter.CommentToCommentJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.model.converter.LikeToLikeJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.model.converter.PostToPostJpaConverter;
+import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.LikesRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
@@ -27,7 +29,9 @@ public class PostsService {
     // TODO Per adesso uso il profileRepository per il controllo del profileId, ma in seguito serve il JWT
     private final ProfilesRepository profilesRepository;
     private final LikesRepository likesRepository;
+    private final CommentsRepository commentsRepository;
     private final LikeToLikeJpaConverter likeToLikeJpaConverter;
+    private final CommentToCommentJpaConverter commentToCommentJpaConverter;
 
     @Transactional
     public Post save(Post post) {
@@ -144,9 +148,9 @@ public class PostsService {
     @Transactional
     public List<Like> findAllLikesByPostId(Long postId) {
         // TODO mi serve il JWT
-        // Controllo che chi vuole mettere il abbia l'autorizzazione per farlo
+        // Controllo che chi vuole mettere il like abbia l'autorizzazione per farlo
         // sia controllando il profilo
-        // sia controllando che il profilo a cui appartiene il posto sia visibile da chi vuole mettere like
+        // sia controllando che il profilo a cui appartiene il post sia visibile da chi vuole mettere like
 
         // Controllo prima l'esistenza del post
         PostJpa postJpa = this.postsRepository.findNotDeletedById(postId)
@@ -154,5 +158,30 @@ public class PostsService {
 
         return this.likesRepository.findAllActiveByPost(postJpa)
                 .stream().map(this.likeToLikeJpaConverter::convertBack).toList();
+    }
+
+    @Transactional
+    public Comment addComment(Comment comment) {
+        // TODO mi serve il JWT
+        // Controllo che chi vuole mettere il like abbia l'autorizzazione per farlo
+        // sia controllando il profilo
+        // sia controllando che il profilo a cui appartiene il post sia visibile da chi vuole mettere like
+        // Controllo prima l'esistenza del post
+        PostJpa postJpa = this.postsRepository.findNotDeletedById(comment.getPostId())
+                .orElseThrow(() -> new PostNotFoundException(comment.getPostId()));
+
+        // Controllo l'esistenza del profilo che vuole commentare il post
+        ProfileJpa profileJpa = this.profilesRepository.findNotDeletedById(comment.getProfileId())
+                .orElseThrow(() -> new ProfileNotFoundException(comment.getProfileId()));
+
+        CommentJpa commentJpa = this.commentToCommentJpaConverter.convert(comment);
+        assert commentJpa != null;
+        commentJpa.setProfile(profileJpa);
+        commentJpa.setPost(postJpa);
+        commentJpa.setCreatedAt(LocalDateTime.now());
+
+        return this.commentToCommentJpaConverter.convertBack(
+                this.commentsRepository.save(commentJpa)
+        );
     }
 }

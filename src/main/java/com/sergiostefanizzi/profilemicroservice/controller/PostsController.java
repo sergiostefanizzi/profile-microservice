@@ -68,7 +68,8 @@ public class PostsController implements PostsApi {
     }
     @Override
     public ResponseEntity<Comment> addComment(Comment comment) {
-        return PostsApi.super.addComment(comment);
+        Comment savedComment = this.postsService.addComment(comment);
+        return new ResponseEntity<>(savedComment, HttpStatus.CREATED);
     }
 
     @Override
