@@ -14,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 
@@ -138,10 +139,20 @@ public class PostsService {
             likeJpa.setPost(postJpa);
             this.likesRepository.save(likeJpa);
         }
-                //.orElseGet(() -> this.likeToLikeJpaConverter.convert(like));
-
-
     }
 
+    @Transactional
+    public List<Like> findAllLikesByPostId(Long postId) {
+        // TODO mi serve il JWT
+        // Controllo che chi vuole mettere il abbia l'autorizzazione per farlo
+        // sia controllando il profilo
+        // sia controllando che il profilo a cui appartiene il posto sia visibile da chi vuole mettere like
 
+        // Controllo prima l'esistenza del post
+        PostJpa postJpa = this.postsRepository.findNotDeletedById(postId)
+                .orElseThrow(() -> new PostNotFoundException(postId));
+
+        return this.likesRepository.findAllActiveByPost(postJpa)
+                .stream().map(this.likeToLikeJpaConverter::convertBack).toList();
+    }
 }

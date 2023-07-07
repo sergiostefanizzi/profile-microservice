@@ -404,7 +404,7 @@ paths:
         - posts
       summary: List of likes of a post
       description: List of likes of a post
-      operationId: findAllLikesById
+      operationId: findAllLikesByPostId
       security:
         - bearerAuth: []
       parameters:

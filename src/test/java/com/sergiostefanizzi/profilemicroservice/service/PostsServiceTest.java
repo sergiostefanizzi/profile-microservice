@@ -18,7 +18,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -329,6 +333,57 @@ class PostsServiceTest {
         verify(this.likesRepository, times(0)).findById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(0)).convert(any(Like.class));
         verify(this.likesRepository, times(0)).save(any(LikeJpa.class));
+    }
+
+    @Test
+    void testFindAllLikesByPostId_Success(){
+        List<LikeJpa> likeJpaList = Arrays.asList(
+                new LikeJpa(new LikeId(2L, 1L)),
+                new LikeJpa(new LikeId(3L, 1L)),
+                new LikeJpa(new LikeId(4L, 1L)));
+        List<Like> likeList = Arrays.asList(
+                new Like(2L,1L),
+                new Like(3L,1L),
+                new Like(4L,1L));
+
+        when(this.postsRepository.findNotDeletedById(any(Long.class))).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.likesRepository.findAllActiveByPost(any(PostJpa.class))).thenReturn(likeJpaList);
+        when(this.likeToLikeJpaConverter.convertBack(likeJpaList.get(0))).thenReturn(likeList.get(0));
+        when(this.likeToLikeJpaConverter.convertBack(likeJpaList.get(1))).thenReturn(likeList.get(1));
+        when(this.likeToLikeJpaConverter.convertBack(likeJpaList.get(2))).thenReturn(likeList.get(2));
+
+        List<Like> returnedLikeList = this.postsService.findAllLikesByPostId(1L);
+
+        assertEquals(3,returnedLikeList.size());
+        verify(this.postsRepository, times(1)).findNotDeletedById(anyLong());
+        verify(this.likesRepository, times(1)).findAllActiveByPost(any(PostJpa.class));
+        verify(this.likeToLikeJpaConverter, times(3)).convertBack(any(LikeJpa.class));
+    }
+
+    @Test
+    void testFindAllLikesByPostId_Empty_Success(){
+        List<LikeJpa> likeJpaList = new ArrayList<>();
+
+        when(this.postsRepository.findNotDeletedById(any(Long.class))).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.likesRepository.findAllActiveByPost(any(PostJpa.class))).thenReturn(likeJpaList);
+
+        List<Like> returnedLikeList = this.postsService.findAllLikesByPostId(1L);
+
+        assertEquals(0,returnedLikeList.size());
+        verify(this.postsRepository, times(1)).findNotDeletedById(anyLong());
+        verify(this.likesRepository, times(1)).findAllActiveByPost(any(PostJpa.class));
+        verify(this.likeToLikeJpaConverter, times(0)).convertBack(any(LikeJpa.class));
+    }
+
+    @Test
+    void testFindAllLikesByPostId_NotFound_Failed(){
+        when(this.postsRepository.findNotDeletedById(any(Long.class))).thenReturn(Optional.empty());
+
+        assertThrows(PostNotFoundException.class, () -> this.postsService.findAllLikesByPostId(1L));
+
+        verify(this.postsRepository, times(1)).findNotDeletedById(anyLong());
+        verify(this.likesRepository, times(0)).findAllActiveByPost(any(PostJpa.class));
+        verify(this.likeToLikeJpaConverter, times(0)).convertBack(any(LikeJpa.class));
     }
 
 }

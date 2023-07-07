@@ -62,8 +62,9 @@ public class PostsController implements PostsApi {
     }
 
     @Override
-    public ResponseEntity<List<Like>> findAllLikesById(Long postId) {
-        return PostsApi.super.findAllLikesById(postId);
+    public ResponseEntity<List<Like>> findAllLikesByPostId(Long postId) {
+        List<Like> likeList = this.postsService.findAllLikesByPostId(postId);
+        return new ResponseEntity<>(likeList, HttpStatus.OK);
     }
     @Override
     public ResponseEntity<Comment> addComment(Comment comment) {

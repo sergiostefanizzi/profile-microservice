@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -23,6 +24,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 
 
@@ -800,7 +802,6 @@ class PostsIT {
     void testAddLike_ProfileNotFound_Then_404() throws Exception {
         errors.add("Profile " + Long.MIN_VALUE + " not found!");
 
-
         // Creo prima un profilo
         newProfile.setProfileName(profileName+"_8");
         HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);
@@ -848,4 +849,177 @@ class PostsIT {
         log.info("Error -> "+node.get("error"));
     }
 
+    @Test
+    void testFindAllLikesByPostId_Then_200() throws Exception {
+        // Creo prima un profilo
+        newProfile.setProfileName(profileName+"_9");
+        HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);
+        ResponseEntity<Profile> responseProfile = this.testRestTemplate.exchange(
+                this.baseUrlProfile,
+                HttpMethod.POST,
+                requestProfile,
+                Profile.class);
+        assertEquals(HttpStatus.CREATED, responseProfile.getStatusCode());
+        assertNotNull(responseProfile.getBody());
+        Profile savedProfile = responseProfile.getBody();
+        assertNotNull(savedProfile.getId());
+        profileId = savedProfile.getId();
+        this.newPost.setProfileId(profileId);
+
+        // Creo un secondo profilo
+        newProfile.setProfileName(profileName+"_10");
+        HttpEntity<Profile> requestProfile2 = new HttpEntity<>(newProfile);
+        ResponseEntity<Profile> responseProfile2 = this.testRestTemplate.exchange(
+                this.baseUrlProfile,
+                HttpMethod.POST,
+                requestProfile2,
+                Profile.class);
+        assertEquals(HttpStatus.CREATED, responseProfile2.getStatusCode());
+        assertNotNull(responseProfile2.getBody());
+        Profile savedProfile2 = responseProfile2.getBody();
+        assertNotNull(savedProfile2.getId());
+        Long profileId2 = savedProfile2.getId();
+
+
+        // creo un nuovo post
+        HttpEntity<Post> request = new HttpEntity<>(this.newPost);
+        ResponseEntity<Post> responsePost = this.testRestTemplate.exchange(this.baseUrl,
+                HttpMethod.POST,
+                request,
+                Post.class);
+        // controllo che l'inserimento sia andato a buon fine
+        assertEquals(HttpStatus.CREATED, responsePost.getStatusCode());
+        assertNotNull(responsePost.getBody());
+        assertInstanceOf(Post.class, responsePost.getBody());
+        Post savedPost = responsePost.getBody();
+        assertNotNull(savedPost.getId());
+        // salvo l'id generato dal post inserito
+        Long savedPostId = savedPost.getId();
+
+        List<Like> likeList = asList(
+                new Like(profileId,savedPostId),
+                new Like(profileId2,savedPostId)
+        );
+
+        HttpEntity<Like> requestLike = new HttpEntity<>(likeList.get(0));
+
+        ResponseEntity<Void> responseLike = this.testRestTemplate.exchange(this.baseUrlLike+"?removeLike={removeLike}",
+                HttpMethod.PUT,
+                requestLike,
+                Void.class,
+                false);
+        assertEquals(HttpStatus.NO_CONTENT, responseLike.getStatusCode());
+        assertNull(responseLike.getBody());
+
+        HttpEntity<Like> requestLike2 = new HttpEntity<>(likeList.get(1));
+
+        ResponseEntity<Void> responseLike2 = this.testRestTemplate.exchange(this.baseUrlLike+"?removeLike={removeLike}",
+                HttpMethod.PUT,
+                requestLike2,
+                Void.class,
+                false);
+        assertEquals(HttpStatus.NO_CONTENT, responseLike2.getStatusCode());
+        assertNull(responseLike2.getBody());
+
+        ResponseEntity<List<Like>> responseLikeList = this.testRestTemplate.exchange(this.baseUrlLike + "/{postId}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                new ParameterizedTypeReference<List<Like>>() {},
+                savedPostId);
+        assertEquals(HttpStatus.OK, responseLikeList.getStatusCode());
+        assertNotNull(responseLikeList.getBody());
+        List<Like> returnedLikeList = responseLikeList.getBody();
+        assertEquals(likeList.size(), returnedLikeList.size());
+        assertEquals(likeList.get(0).getProfileId(), returnedLikeList.get(0).getProfileId());
+        assertEquals(likeList.get(0).getPostId(), returnedLikeList.get(0).getPostId());
+        assertEquals(likeList.get(1).getProfileId(), returnedLikeList.get(1).getProfileId());
+        assertEquals(likeList.get(1).getPostId(), returnedLikeList.get(1).getPostId());
+
+        log.info(returnedLikeList.toString());
+    }
+
+    @Test
+    void testFindAllLikesByPostId_Empty_Then_200() throws Exception {
+        // Creo prima un profilo
+        newProfile.setProfileName(profileName+"_11");
+        HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);
+        ResponseEntity<Profile> responseProfile = this.testRestTemplate.exchange(
+                this.baseUrlProfile,
+                HttpMethod.POST,
+                requestProfile,
+                Profile.class);
+        assertEquals(HttpStatus.CREATED, responseProfile.getStatusCode());
+        assertNotNull(responseProfile.getBody());
+        Profile savedProfile = responseProfile.getBody();
+        assertNotNull(savedProfile.getId());
+        profileId = savedProfile.getId();
+        this.newPost.setProfileId(profileId);
+
+
+        // creo un nuovo post
+        HttpEntity<Post> request = new HttpEntity<>(this.newPost);
+        ResponseEntity<Post> responsePost = this.testRestTemplate.exchange(this.baseUrl,
+                HttpMethod.POST,
+                request,
+                Post.class);
+        // controllo che l'inserimento sia andato a buon fine
+        assertEquals(HttpStatus.CREATED, responsePost.getStatusCode());
+        assertNotNull(responsePost.getBody());
+        assertInstanceOf(Post.class, responsePost.getBody());
+        Post savedPost = responsePost.getBody();
+        assertNotNull(savedPost.getId());
+        // salvo l'id generato dal post inserito
+        Long savedPostId = savedPost.getId();
+
+
+        ResponseEntity<List<Like>> responseLikeList = this.testRestTemplate.exchange(this.baseUrlLike + "/{postId}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                new ParameterizedTypeReference<List<Like>>() {},
+                savedPostId);
+        assertEquals(HttpStatus.OK, responseLikeList.getStatusCode());
+        assertNotNull(responseLikeList.getBody());
+        List<Like> returnedLikeList = responseLikeList.getBody();
+        assertEquals(0, returnedLikeList.size());
+
+        log.info(returnedLikeList.toString());
+    }
+
+    @Test
+    void testFindAllLikesByPostId_Then_400() throws Exception {
+        // messaggio d'errore che mi aspetto d'ottenere
+        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        ResponseEntity<String> responseLikeList = this.testRestTemplate.exchange(this.baseUrlLike + "/{postId}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class,
+                "IdNotLong");
+        assertEquals(HttpStatus.BAD_REQUEST, responseLikeList.getStatusCode());
+        assertNotNull(responseLikeList.getBody());
+
+        JsonNode node = this.objectMapper.readTree(responseLikeList.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    // TODO 401, 403
+
+    @Test
+    void testFindAllLikesByPostId_PostNotFound_Then_404() throws Exception {
+        errors.add("Post " + Long.MIN_VALUE + " not found!");
+
+        ResponseEntity<String> responseLikeList = this.testRestTemplate.exchange(this.baseUrlLike + "/{postId}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class,
+                Long.MIN_VALUE);
+        assertEquals(HttpStatus.NOT_FOUND, responseLikeList.getStatusCode());
+        assertNotNull(responseLikeList.getBody());
+
+        JsonNode node = this.objectMapper.readTree(responseLikeList.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
 }

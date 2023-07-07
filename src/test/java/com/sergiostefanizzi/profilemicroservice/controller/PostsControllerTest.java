@@ -34,8 +34,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.in;
+import static java.util.Arrays.asList;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -599,6 +599,89 @@ class PostsControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof ProfileNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    @Test
+    void testFindAllLikesByPostId_Then_200() throws Exception {
+        List<Like> likeList = asList(
+                new Like(1L,postId),
+                new Like(2L,postId),
+                new Like(3L,postId)
+        );
+        when(this.postsService.findAllLikesByPostId(postId)).thenReturn(likeList);
+
+        MvcResult result = this.mockMvc.perform(get("/posts/likes/{postId}",postId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(likeList.size())))
+                .andExpect(jsonPath("$[0].profile_id").value(likeList.get(0).getProfileId()))
+                .andExpect(jsonPath("$[1].profile_id").value(likeList.get(1).getProfileId()))
+                .andExpect(jsonPath("$[2].profile_id").value(likeList.get(2).getProfileId()))
+                .andExpect(jsonPath("$[0].post_id").value(likeList.get(0).getPostId()))
+                .andExpect(jsonPath("$[1].post_id").value(likeList.get(1).getPostId()))
+                .andExpect(jsonPath("$[2].post_id").value(likeList.get(2).getPostId()))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+
+        String resultAsString = result.getResponse().getContentAsString();
+
+        log.info(resultAsString);
+    }
+
+    @Test
+    void testFindAllLikesByPostId_Empty_Then_200() throws Exception {
+        List<Like> likeList = new ArrayList<>();
+        when(this.postsService.findAllLikesByPostId(postId)).thenReturn(likeList);
+
+        MvcResult result = this.mockMvc.perform(get("/posts/likes/{postId}",postId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$", hasSize(likeList.size())))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+
+        String resultAsString = result.getResponse().getContentAsString();
+
+        log.info(resultAsString);
+    }
+
+    @Test
+    void testFindAllLikesByPostId_Then_400() throws Exception {
+        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+
+        MvcResult result = this.mockMvc.perform(get("/posts/likes/{postId}","IdNotLong")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                ))
+                .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    // TODO 401, 403
+
+    @Test
+    void testFindAllLikesByPostId_PostNotFound_Then_404() throws Exception {
+        errors.add("Post "+invalidPostId+" not found!");
+
+        when(this.postsService.findAllLikesByPostId(invalidPostId)).thenThrow(new PostNotFoundException(invalidPostId));
+        MvcResult result = this.mockMvc.perform(get("/posts/likes/{postId}",invalidPostId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof PostNotFoundException
                 ))
                 .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
         // Visualizzo l'errore
