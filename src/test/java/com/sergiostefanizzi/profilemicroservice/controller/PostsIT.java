@@ -38,6 +38,7 @@ class PostsIT {
     private String baseUrl = "http://localhost";
     private String baseUrlProfile;
     private String baseUrlLike;
+    private String baseUrlComment;
 
     @Autowired
     private TestRestTemplate testRestTemplate;
@@ -65,6 +66,7 @@ class PostsIT {
         this.baseUrlProfile = this.baseUrl + ":" + port + "/profiles";
         this.baseUrl += ":" + port + "/posts";
         this.baseUrlLike = this.baseUrl + "/likes";
+        this.baseUrlComment = this.baseUrl + "/comments";
 
         // imposto il profileId a 0L per i test dove vengono controllati
         // altri campi diversi da questo che deve comunque essere non null
@@ -1018,6 +1020,256 @@ class PostsIT {
         assertNotNull(responseLikeList.getBody());
 
         JsonNode node = this.objectMapper.readTree(responseLikeList.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
+    void testAddComment_Then_201() throws Exception {
+        // Creo prima un profilo
+        newProfile.setProfileName(profileName+"_12");
+        HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);
+        ResponseEntity<Profile> responseProfile = this.testRestTemplate.exchange(
+                this.baseUrlProfile,
+                HttpMethod.POST,
+                requestProfile,
+                Profile.class);
+        assertEquals(HttpStatus.CREATED, responseProfile.getStatusCode());
+        assertNotNull(responseProfile.getBody());
+        Profile savedProfile = responseProfile.getBody();
+        assertNotNull(savedProfile.getId());
+        profileId = savedProfile.getId();
+        this.newPost.setProfileId(profileId);
+
+        // creo un nuovo post
+        HttpEntity<Post> request = new HttpEntity<>(this.newPost);
+        ResponseEntity<Post> responsePost = this.testRestTemplate.exchange(this.baseUrl,
+                HttpMethod.POST,
+                request,
+                Post.class);
+        // controllo che l'inserimento sia andato a buon fine
+        assertEquals(HttpStatus.CREATED, responsePost.getStatusCode());
+        assertNotNull(responsePost.getBody());
+        assertInstanceOf(Post.class, responsePost.getBody());
+        Post savedPost = responsePost.getBody();
+        assertNotNull(savedPost.getId());
+        // salvo l'id generato dal post inserito
+        Long savedPostId = savedPost.getId();
+
+        String content = "Commento al post";
+        Comment newComment = new Comment(
+                profileId,
+                savedPostId,
+                content
+        );
+        HttpEntity<Comment> requestComment = new HttpEntity<>(newComment);
+        // elimino il profilo appena inserito
+        ResponseEntity<Comment> responseComment = this.testRestTemplate.exchange(this.baseUrlComment,
+                HttpMethod.POST,
+                requestComment,
+                Comment.class);
+
+        assertEquals(HttpStatus.CREATED, responseComment.getStatusCode());
+        assertNotNull(responseComment.getBody());
+        Comment savedComment = responseComment.getBody();
+        assertNotNull(savedComment.getId());
+        assertEquals(profileId, savedComment.getProfileId());
+        assertEquals(savedPostId, savedComment.getProfileId());
+        assertEquals(content, savedComment.getContent());
+
+        // visualizzo il post salvato
+        log.info(savedComment.toString());
+    }
+
+    @Test
+    void testAddComment_Content_Size_Then_400() throws Exception {
+        errors.add("content size must be between 1 and 2200");
+        // Creo prima un profilo
+        newProfile.setProfileName(profileName+"_13");
+        HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);
+        ResponseEntity<Profile> responseProfile = this.testRestTemplate.exchange(
+                this.baseUrlProfile,
+                HttpMethod.POST,
+                requestProfile,
+                Profile.class);
+        assertEquals(HttpStatus.CREATED, responseProfile.getStatusCode());
+        assertNotNull(responseProfile.getBody());
+        Profile savedProfile = responseProfile.getBody();
+        assertNotNull(savedProfile.getId());
+        profileId = savedProfile.getId();
+        this.newPost.setProfileId(profileId);
+
+        // creo un nuovo post
+        HttpEntity<Post> request = new HttpEntity<>(this.newPost);
+        ResponseEntity<Post> responsePost = this.testRestTemplate.exchange(this.baseUrl,
+                HttpMethod.POST,
+                request,
+                Post.class);
+        // controllo che l'inserimento sia andato a buon fine
+        assertEquals(HttpStatus.CREATED, responsePost.getStatusCode());
+        assertNotNull(responsePost.getBody());
+        assertInstanceOf(Post.class, responsePost.getBody());
+        Post savedPost = responsePost.getBody();
+        assertNotNull(savedPost.getId());
+        // salvo l'id generato dal post inserito
+        Long savedPostId = savedPost.getId();
+
+        String content = RandomStringUtils.randomAlphabetic(2210);
+        Comment newComment = new Comment(
+                profileId,
+                savedPostId,
+                content
+        );
+        HttpEntity<Comment> requestComment = new HttpEntity<>(newComment);
+        // elimino il profilo appena inserito
+        ResponseEntity<String> responseComment = this.testRestTemplate.exchange(this.baseUrlComment,
+                HttpMethod.POST,
+                requestComment,
+                String.class);
+
+        assertEquals(HttpStatus.BAD_REQUEST, responseComment.getStatusCode());
+        assertNotNull(responseComment.getBody());
+
+        JsonNode node = this.objectMapper.readTree(responseComment.getBody());
+        // itero gli errori ottenuti dalla risposta per confrontarli con quelli che mi aspetto di ottenere
+        // Anche se è solo un errore, ottengo sempre un array di dimensione 1
+        assertTrue(node.get("error").isArray());
+        assertEquals(1, node.get("error").size());
+        assertEquals(errors.get(0) ,node.get("error").get(0).asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error").get(0));
+    }
+
+    @Test
+    void testAddComment_Invalid_Ids_Then_400() throws Exception {
+        errors.add("JSON parse error: Cannot deserialize value of type `java.lang.Long` from String \"IdNotLong\": not a valid `java.lang.Long` value");
+
+        String content = RandomStringUtils.randomAlphabetic(2210);
+        Comment newComment = new Comment(
+                1L,
+                1L,
+                content
+        );
+
+        String newCommentJson = this.objectMapper.writeValueAsString(this.newPost);
+        JsonNode jsonNode = this.objectMapper.readTree(newCommentJson);
+        ((ObjectNode) jsonNode).put("profile_id", "IdNotLong");
+        ((ObjectNode) jsonNode).put("post_id", "IdNotLong");
+        newCommentJson = this.objectMapper.writeValueAsString(jsonNode);
+
+        // Dato che invio direttamente il json del profile, devo impostare il contentType application/json
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> requestComment = new HttpEntity<>(newCommentJson, headers);
+        // elimino il profilo appena inserito
+        ResponseEntity<String> responseComment = this.testRestTemplate.exchange(this.baseUrlComment,
+                HttpMethod.POST,
+                requestComment,
+                String.class);
+        assertEquals(HttpStatus.BAD_REQUEST, responseComment.getStatusCode());
+        assertNotNull(responseComment.getBody());
+
+        JsonNode node = this.objectMapper.readTree(responseComment.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    //TODO 401, 403
+
+    // Da sostituire con il 403
+    @Test
+    void testAddComment_ProfileNotFound_Then_404() throws Exception {
+        errors.add("Profile " + Long.MIN_VALUE + " not found!");
+        // Creo prima un profilo
+        newProfile.setProfileName(profileName+"_14");
+        HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);
+        ResponseEntity<Profile> responseProfile = this.testRestTemplate.exchange(
+                this.baseUrlProfile,
+                HttpMethod.POST,
+                requestProfile,
+                Profile.class);
+        assertEquals(HttpStatus.CREATED, responseProfile.getStatusCode());
+        assertNotNull(responseProfile.getBody());
+        Profile savedProfile = responseProfile.getBody();
+        assertNotNull(savedProfile.getId());
+        profileId = savedProfile.getId();
+        this.newPost.setProfileId(profileId);
+
+        // creo un nuovo post
+        HttpEntity<Post> request = new HttpEntity<>(this.newPost);
+        ResponseEntity<Post> responsePost = this.testRestTemplate.exchange(this.baseUrl,
+                HttpMethod.POST,
+                request,
+                Post.class);
+        // controllo che l'inserimento sia andato a buon fine
+        assertEquals(HttpStatus.CREATED, responsePost.getStatusCode());
+        assertNotNull(responsePost.getBody());
+        assertInstanceOf(Post.class, responsePost.getBody());
+        Post savedPost = responsePost.getBody();
+        assertNotNull(savedPost.getId());
+        // salvo l'id generato dal post inserito
+        Long savedPostId = savedPost.getId();
+
+        String content = "Commento al post";
+        Comment newComment = new Comment(
+                Long.MIN_VALUE,
+                savedPostId,
+                content
+        );
+        HttpEntity<Comment> requestComment = new HttpEntity<>(newComment);
+        // elimino il profilo appena inserito
+        ResponseEntity<String> responseComment = this.testRestTemplate.exchange(this.baseUrlComment,
+                HttpMethod.POST,
+                requestComment,
+                String.class);
+
+        assertEquals(HttpStatus.NOT_FOUND, responseComment.getStatusCode());
+        assertNotNull(responseComment.getBody());
+
+        JsonNode node = this.objectMapper.readTree(responseComment.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
+    void testAddComment_PostNotFound_Then_404() throws Exception {
+        errors.add("Post " + Long.MIN_VALUE + " not found!");
+        // Creo prima un profilo
+        newProfile.setProfileName(profileName+"_15");
+        HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);
+        ResponseEntity<Profile> responseProfile = this.testRestTemplate.exchange(
+                this.baseUrlProfile,
+                HttpMethod.POST,
+                requestProfile,
+                Profile.class);
+        assertEquals(HttpStatus.CREATED, responseProfile.getStatusCode());
+        assertNotNull(responseProfile.getBody());
+        Profile savedProfile = responseProfile.getBody();
+        assertNotNull(savedProfile.getId());
+        profileId = savedProfile.getId();
+        this.newPost.setProfileId(profileId);
+
+
+        String content = "Commento al post";
+        Comment newComment = new Comment(
+                profileId,
+                Long.MIN_VALUE,
+                content
+        );
+        HttpEntity<Comment> requestComment = new HttpEntity<>(newComment);
+        // elimino il profilo appena inserito
+        ResponseEntity<String> responseComment = this.testRestTemplate.exchange(this.baseUrlComment,
+                HttpMethod.POST,
+                requestComment,
+                String.class);
+
+        assertEquals(HttpStatus.NOT_FOUND, responseComment.getStatusCode());
+        assertNotNull(responseComment.getBody());
+
+        JsonNode node = this.objectMapper.readTree(responseComment.getBody());
         // In questo caso l'errore NON è un array di dimensione 1
         assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));

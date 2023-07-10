@@ -690,5 +690,165 @@ class PostsControllerTest {
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
 
+    @Test
+    void testAddComment_Then_201() throws Exception {
+        String content = "Commento al post";
+        Long commentId = 1L;
+        Comment newComment = new Comment(
+                profileId,
+                postId,
+                content
+        );
+        Comment savedComment = new Comment(
+                profileId,
+                postId,
+                content
+        );
+        savedComment.setId(commentId);
+
+        String newCommentJson = this.objectMapper.writeValueAsString(newComment);
+
+
+        when(this.postsService.addComment(newComment)).thenReturn(savedComment);
+
+        MvcResult result = this.mockMvc.perform(post("/posts/comments")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newCommentJson))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.*", hasSize(4)))
+                .andExpect(jsonPath("$.id").value(savedComment.getId()))
+                .andExpect(jsonPath("$.profile_id").value(savedComment.getProfileId()))
+                .andExpect(jsonPath("$.post_id").value(savedComment.getPostId()))
+                .andExpect(jsonPath("$.content").value(savedComment.getContent()))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        Comment commentResult = this.objectMapper.readValue(resultAsString, Comment.class);
+
+        log.info(commentResult.toString());
+    }
+
+    @Test
+    void testAddComment_Content_Size_Then_400() throws Exception {
+        errors.add("content size must be between 1 and 2200");
+        // genero una caption di 2210 caratteri, superando di 10 il limite
+        String content = RandomStringUtils.randomAlphabetic(2210);
+        Comment newComment = new Comment(
+                profileId,
+                postId,
+                content
+        );
+
+        String newCommentJson = this.objectMapper.writeValueAsString(newComment);
+
+        MvcResult result = this.mockMvc.perform(post("/posts/comments")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newCommentJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(res.getResolvedException() instanceof MethodArgumentNotValidException))
+                .andExpect(jsonPath("$.error").isArray())
+                .andExpect(jsonPath("$.error", hasSize(1)))
+                .andExpect(jsonPath("$.error[0]").value(in(errors)))
+                .andReturn();
+        // salvo risposta in result solo per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+    }
+
+    @Test
+    void testAddComment_Invalid_Ids_Then_400() throws Exception {
+        errors.add("JSON parse error: Cannot deserialize value of type `java.lang.Long` from String \"IdNotLong\": not a valid `java.lang.Long` value");
+        // genero una caption di 2210 caratteri, superando di 10 il limite
+        String content = "Commento al post";
+        Comment newComment = new Comment(
+                profileId,
+                postId,
+                content
+        );
+
+        String newCommentJson = this.objectMapper.writeValueAsString(newComment);
+        JsonNode jsonNode = this.objectMapper.readTree(newCommentJson);
+        ((ObjectNode) jsonNode).put("profile_id", "IdNotLong");
+        ((ObjectNode) jsonNode).put("post_id", "IdNotLong");
+        newCommentJson = this.objectMapper.writeValueAsString(jsonNode);
+
+        MvcResult result = this.mockMvc.perform(post("/posts/comments")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newCommentJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(res.getResolvedException() instanceof HttpMessageNotReadableException))
+                .andExpect(jsonPath("$.error").value(in(errors)))
+                .andReturn();
+        // salvo risposta in result solo per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+    }
+
+    //TODO 401, 403
+
+    // Da sostituire con il 403
+    @Test
+    void testAddComment_ProfileNotFound_Then_404() throws Exception {
+        String content = "Commento al post";
+        Comment newComment = new Comment(
+                invalidProfileId,
+                postId,
+                content
+        );
+
+
+        String newCommentJson = this.objectMapper.writeValueAsString(newComment);
+
+        doThrow(new ProfileNotFoundException(invalidProfileId)).when(this.postsService).addComment(newComment);
+
+        MvcResult result = this.mockMvc.perform(post("/posts/comments")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newCommentJson))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof ProfileNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value("Profile " + invalidProfileId + " not found!"))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+    }
+
+    @Test
+    void testAddComment_PostNotFound_Then_404() throws Exception {
+        String content = "Commento al post";
+        Comment newComment = new Comment(
+                profileId,
+                invalidPostId,
+                content
+        );
+
+
+        String newCommentJson = this.objectMapper.writeValueAsString(newComment);
+
+        doThrow(new PostNotFoundException(invalidPostId)).when(this.postsService).addComment(newComment);
+
+        MvcResult result = this.mockMvc.perform(post("/posts/comments")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newCommentJson))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof PostNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value("Post " + invalidProfileId + " not found!"))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+    }
 
 }
