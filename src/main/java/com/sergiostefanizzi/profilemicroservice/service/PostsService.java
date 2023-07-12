@@ -216,4 +216,16 @@ public class PostsService {
 
         this.commentsRepository.save(commentJpa);
     }
+    @Transactional
+    public List<Comment> findAllCommentsByPostId(Long postId) {
+        if (postId == null){
+            throw new PostNotFoundException("null");
+        }
+
+        PostJpa postJpa = this.postsRepository.findNotDeletedById(postId)
+                .orElseThrow(() -> new PostNotFoundException(postId));
+
+        return this.commentsRepository.findAllActiveByPost(postJpa)
+                .stream().map(this.commentToCommentJpaConverter::convertBack).toList();
+    }
 }

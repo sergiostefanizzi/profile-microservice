@@ -999,4 +999,76 @@ class PostsControllerTest {
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
 
+    @Test
+    void testFindAllCommentsByPostId_Then_200() throws Exception {
+        List<Comment> commentList = asList(
+                new Comment(1L, postId, "Commento1"),
+                new Comment(2L, postId, "Commento2"),
+                new Comment(3L, postId, "Commento3")
+        );
+        commentList.get(0).setId(1L);
+        commentList.get(1).setId(2L);
+        commentList.get(2).setId(3L);
+        when(this.postsService.findAllCommentsByPostId(postId)).thenReturn(commentList);
+
+        MvcResult result = this.mockMvc.perform(get("/posts/comments/{postId}",postId)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$", hasSize(commentList.size())))
+                .andExpect(jsonPath("$[0].id").value(commentList.get(0).getId()))
+                .andExpect(jsonPath("$[0].profile_id").value(commentList.get(0).getProfileId()))
+                .andExpect(jsonPath("$[0].post_id").value(commentList.get(0).getPostId()))
+                .andExpect(jsonPath("$[0].content").value(commentList.get(0).getContent()))
+                .andExpect(jsonPath("$[1].id").value(commentList.get(1).getId()))
+                .andExpect(jsonPath("$[1].profile_id").value(commentList.get(1).getProfileId()))
+                .andExpect(jsonPath("$[1].post_id").value(commentList.get(1).getPostId()))
+                .andExpect(jsonPath("$[1].content").value(commentList.get(1).getContent()))
+                .andExpect(jsonPath("$[2].id").value(commentList.get(2).getId()))
+                .andExpect(jsonPath("$[2].profile_id").value(commentList.get(2).getProfileId()))
+                .andExpect(jsonPath("$[2].post_id").value(commentList.get(2).getPostId()))
+                .andExpect(jsonPath("$[2].content").value(commentList.get(2).getContent()))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+
+        log.info(resultAsString);
+    }
+
+    @Test
+    void testFindAllCommentsByPostId_InvalidId_Then_400() throws Exception {
+        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+
+        MvcResult result = this.mockMvc.perform(get("/posts/comments/IdNotLong")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                ))
+                .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    //TODO 401,403
+    @Test
+    void testFindAllCommentsByPostId_PostNotFound_Then_404() throws Exception {
+        doThrow(new PostNotFoundException(invalidPostId)).when(this.postsService).findAllCommentsByPostId(invalidPostId);
+
+        MvcResult result = this.mockMvc.perform(get("/posts/comments/{postId}",invalidPostId))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof PostNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value("Post "+invalidPostId+" not found!"))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
 }

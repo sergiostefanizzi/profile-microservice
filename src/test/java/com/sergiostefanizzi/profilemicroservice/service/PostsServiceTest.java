@@ -28,6 +28,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -345,11 +346,11 @@ class PostsServiceTest {
 
     @Test
     void testFindAllLikesByPostId_Success(){
-        List<LikeJpa> likeJpaList = Arrays.asList(
+        List<LikeJpa> likeJpaList = asList(
                 new LikeJpa(new LikeId(2L, 1L)),
                 new LikeJpa(new LikeId(3L, 1L)),
                 new LikeJpa(new LikeId(4L, 1L)));
-        List<Like> likeList = Arrays.asList(
+        List<Like> likeList = asList(
                 new Like(2L,1L),
                 new Like(3L,1L),
                 new Like(4L,1L));
@@ -524,6 +525,68 @@ class PostsServiceTest {
         assertThrows(CommentNotFoundException.class, () ->this.postsService.deleteCommentById(commentId));
         verify(this.commentsRepository, times(1)).findNotDeletedById(anyLong());
         verify(this.commentsRepository, times(0)).save(any(CommentJpa.class));
+    }
+
+    @Test
+    void testFindAllCommentsByPostId_Success(){
+        List<ProfileJpa> profileJpaList = asList(
+          new ProfileJpa("pinco_pallino",false,1L),
+          new ProfileJpa("giuseppe_verdi",false,2L),
+          new ProfileJpa("marioRossi",false,3L)
+        );
+
+        profileJpaList.get(0).setId(1L);
+        profileJpaList.get(1).setId(2L);
+        profileJpaList.get(2).setId(3L);
+
+        List<Comment> commentList = asList(
+                new Comment(1L, 1L, "Commento1"),
+                new Comment(2L, 1L, "Commento2"),
+                new Comment(3L, 1L, "Commento3")
+        );
+        commentList.get(0).setId(1L);
+        commentList.get(1).setId(2L);
+        commentList.get(2).setId(3L);
+
+        List<CommentJpa> commentListJpa = asList(
+                new CommentJpa("Commento1"),
+                new CommentJpa("Commento2"),
+                new CommentJpa("Commento3")
+        );
+        commentListJpa.get(0).setPost(this.savedPostJpa);
+        commentListJpa.get(1).setPost(this.savedPostJpa);
+        commentListJpa.get(2).setPost(this.savedPostJpa);
+        commentListJpa.get(0).setProfile(profileJpaList.get(0));
+        commentListJpa.get(1).setProfile(profileJpaList.get(1));
+        commentListJpa.get(2).setProfile(profileJpaList.get(2));
+        commentListJpa.get(0).setId(1L);
+        commentListJpa.get(1).setId(2L);
+        commentListJpa.get(2).setId(3L);
+
+        when(this.postsRepository.findNotDeletedById(anyLong())).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.commentsRepository.findAllActiveByPost(any(PostJpa.class))).thenReturn(commentListJpa);
+        when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(0))).thenReturn(commentList.get(0));
+        when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(1))).thenReturn(commentList.get(1));
+        when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(2))).thenReturn(commentList.get(2));
+
+        List<Comment> returnedCommentList = this.postsService.findAllCommentsByPostId(this.savedPostJpa.getId());
+
+        assertNotNull(returnedCommentList);
+        assertEquals(commentList, returnedCommentList);
+        verify(this.postsRepository, times(1)).findNotDeletedById(anyLong());
+        verify(this.commentsRepository, times(1)).findAllActiveByPost(any(PostJpa.class));
+        verify(this.commentToCommentJpaConverter, times(3)).convertBack(any(CommentJpa.class));
+    }
+
+    @Test
+    void testFindAllCommentsByPostId_PostNotFound_Failed(){
+        when(this.postsRepository.findNotDeletedById(Long.MIN_VALUE)).thenReturn(Optional.empty());
+
+        assertThrows(PostNotFoundException.class, () -> this.postsService.findAllCommentsByPostId(Long.MIN_VALUE));
+
+        verify(this.postsRepository, times(1)).findNotDeletedById(anyLong());
+        verify(this.commentsRepository, times(0)).findAllActiveByPost(any(PostJpa.class));
+        verify(this.commentToCommentJpaConverter, times(0)).convertBack(any(CommentJpa.class));
     }
 
 }

@@ -14,4 +14,7 @@ import java.util.Optional;
 public interface CommentsRepository extends JpaRepository<CommentJpa, Long> {
     @Query("SELECT c FROM CommentJpa c WHERE c.id=:commentId AND c.deletedAt IS NULL")
     Optional<CommentJpa> findNotDeletedById(Long commentId);
+
+    @Query("SELECT c FROM CommentJpa c WHERE c.post = :post AND c.deletedAt IS NULL")
+    List<CommentJpa> findAllActiveByPost(PostJpa post);
 }

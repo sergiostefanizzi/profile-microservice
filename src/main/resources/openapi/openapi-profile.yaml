@@ -540,7 +540,7 @@ paths:
         - posts
       summary: List of comments of a post
       description: List of comments of a post
-      operationId: findAllCommentsById
+      operationId: findAllCommentsByPostId
       security:
         - bearerAuth: []
       parameters:
