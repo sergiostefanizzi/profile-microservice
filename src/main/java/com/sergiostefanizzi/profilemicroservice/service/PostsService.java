@@ -202,4 +202,18 @@ public class PostsService {
                 this.commentsRepository.save(commentJpa)
         );
     }
+
+    @Transactional
+    public void deleteCommentById(Long commentId) {
+        if(commentId == null){
+            throw new CommentNotFoundException("null");
+        }
+
+        CommentJpa commentJpa = this.commentsRepository.findNotDeletedById(commentId)
+                .orElseThrow(() -> new CommentNotFoundException(commentId));
+
+        commentJpa.setDeletedAt(LocalDateTime.now());
+
+        this.commentsRepository.save(commentJpa);
+    }
 }

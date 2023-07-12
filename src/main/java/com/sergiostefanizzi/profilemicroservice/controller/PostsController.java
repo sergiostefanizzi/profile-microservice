@@ -79,10 +79,11 @@ public class PostsController implements PostsApi {
     }
 
     @Override
-    public ResponseEntity<Comment> deleteCommentById(Long commentId) {
-        return PostsApi.super.deleteCommentById(commentId);
+    public ResponseEntity<Void> deleteCommentById(Long commentId) {
+        this.postsService.deleteCommentById(commentId);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
-
+    // TODO
     @Override
     public ResponseEntity<List<Comment>> findAllCommentsById(Long postId) {
         return PostsApi.super.findAllCommentsById(postId);

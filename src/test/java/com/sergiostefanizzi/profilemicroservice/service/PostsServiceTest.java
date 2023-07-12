@@ -498,4 +498,32 @@ class PostsServiceTest {
         verify(this.commentsRepository, times(0)).save(any(CommentJpa.class));
         verify(this.commentToCommentJpaConverter, times(0)).convertBack(any(CommentJpa.class));
     }
+
+    @Test
+    void testDeleteCommentById_Success(){
+        String content = "Commento al post";
+        Long commentId = 1L;
+        CommentJpa commentJpa = new CommentJpa(content);
+        commentJpa.setId(commentId);
+        commentJpa.setProfile(profileJpa);
+        commentJpa.setPost(this.savedPostJpa);
+
+        when(this.commentsRepository.findNotDeletedById(anyLong())).thenReturn(Optional.of(commentJpa));
+
+        this.postsService.deleteCommentById(commentId);
+
+        verify(this.commentsRepository, times(1)).findNotDeletedById(anyLong());
+        verify(this.commentsRepository, times(1)).save(any(CommentJpa.class));
+    }
+
+    @Test
+    void testDeleteCommentById_CommentNotFound_Failed(){
+        Long commentId = 1L;
+        when(this.commentsRepository.findNotDeletedById(anyLong())).thenReturn(Optional.empty());
+
+        assertThrows(CommentNotFoundException.class, () ->this.postsService.deleteCommentById(commentId));
+        verify(this.commentsRepository, times(1)).findNotDeletedById(anyLong());
+        verify(this.commentsRepository, times(0)).save(any(CommentJpa.class));
+    }
+
 }

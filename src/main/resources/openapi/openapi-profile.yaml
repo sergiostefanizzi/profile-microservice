@@ -523,10 +523,6 @@ paths:
       responses:
         '204':
           description: Comment has been successfully deleted!
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Comment'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':

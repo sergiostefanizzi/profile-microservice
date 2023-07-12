@@ -1474,4 +1474,102 @@ class PostsIT {
         assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
+
+    @Test
+    void testDeleteCommentById_Then_204() throws Exception {
+        // Creo prima un profilo
+        newProfile.setProfileName(profileName+"_18");
+        HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);
+        ResponseEntity<Profile> responseProfile = this.testRestTemplate.exchange(
+                this.baseUrlProfile,
+                HttpMethod.POST,
+                requestProfile,
+                Profile.class);
+        assertEquals(HttpStatus.CREATED, responseProfile.getStatusCode());
+        assertNotNull(responseProfile.getBody());
+        Profile savedProfile = responseProfile.getBody();
+        assertNotNull(savedProfile.getId());
+        profileId = savedProfile.getId();
+        this.newPost.setProfileId(profileId);
+
+        // creo un nuovo post
+        HttpEntity<Post> request = new HttpEntity<>(this.newPost);
+        ResponseEntity<Post> responsePost = this.testRestTemplate.exchange(this.baseUrl,
+                HttpMethod.POST,
+                request,
+                Post.class);
+        // controllo che l'inserimento sia andato a buon fine
+        assertEquals(HttpStatus.CREATED, responsePost.getStatusCode());
+        assertNotNull(responsePost.getBody());
+        assertInstanceOf(Post.class, responsePost.getBody());
+        Post savedPost = responsePost.getBody();
+        assertNotNull(savedPost.getId());
+        // salvo l'id generato dal post inserito
+        Long savedPostId = savedPost.getId();
+
+        String content = "Commento al post";
+        Comment newComment = new Comment(
+                profileId,
+                savedPostId,
+                content
+        );
+        HttpEntity<Comment> requestComment = new HttpEntity<>(newComment);
+        // elimino il profilo appena inserito
+        ResponseEntity<Comment> responseComment = this.testRestTemplate.exchange(this.baseUrlComment,
+                HttpMethod.POST,
+                requestComment,
+                Comment.class);
+
+        assertEquals(HttpStatus.CREATED, responseComment.getStatusCode());
+        assertNotNull(responseComment.getBody());
+        Comment savedComment = responseComment.getBody();
+        assertNotNull(savedComment.getId());
+        Long savedCommentId = savedComment.getId();
+
+        ResponseEntity<Void> responseDeleteComment = this.testRestTemplate.exchange(this.baseUrlComment+"/{commentId}",
+                HttpMethod.DELETE,
+                HttpEntity.EMPTY,
+                Void.class,
+                savedCommentId);
+        assertEquals(HttpStatus.NO_CONTENT, responseDeleteComment.getStatusCode());
+        assertNull(responseDeleteComment.getBody());
+    }
+
+    @Test
+    void testDeleteCommentById_Then_400() throws Exception {
+        // messaggio d'errore che mi aspetto d'ottenere
+        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrlComment+"/IdNotLong",
+                HttpMethod.DELETE,
+                HttpEntity.EMPTY,
+                String.class);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    // TODO 401, 403
+    @Test
+    void testDeleteCommentById_Then_404() throws Exception {
+        Long invalidCommentId = Long.MIN_VALUE;
+        // messaggio d'errore che mi aspetto d'ottenere
+        errors.add("Comment "+invalidCommentId+" not found!");
+        ResponseEntity<String> responseDeleteComment = this.testRestTemplate.exchange(this.baseUrlComment+"/{commentId}",
+                HttpMethod.DELETE,
+                HttpEntity.EMPTY,
+                String.class,
+                invalidCommentId);
+        assertEquals(HttpStatus.NOT_FOUND, responseDeleteComment.getStatusCode());
+        assertNotNull(responseDeleteComment.getBody());
+
+        JsonNode node = this.objectMapper.readTree(responseDeleteComment.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
 }

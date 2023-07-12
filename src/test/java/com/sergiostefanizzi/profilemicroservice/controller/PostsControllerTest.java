@@ -956,4 +956,47 @@ class PostsControllerTest {
         log.info("Resolved Error ---> " + result.getResolvedException());
     }
 
+    @Test
+    void testDeleteCommentById_Then_204() throws Exception {
+        Long commentId = 1L;
+        doNothing().when(this.postsService).deleteCommentById(commentId);
+
+        this.mockMvc.perform(delete("/posts/comments/{commentId}", commentId))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void testDeleteCommentById_Then_400() throws Exception {
+        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        MvcResult result = this.mockMvc.perform(delete("/posts/comments/IdNotLong"))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                ))
+                .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+    }
+
+    // TODO 401, 403
+    @Test
+    void testDeleteCommentById_Then_404() throws Exception {
+        Long invalidCommentId = Long.MIN_VALUE;
+        doThrow(new CommentNotFoundException(invalidCommentId)).when(this.postsService).deleteCommentById(invalidCommentId);
+
+        MvcResult result = this.mockMvc.perform(delete("/posts/comments/{postId}",invalidCommentId))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof CommentNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value("Comment "+invalidCommentId+" not found!"))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
 }
