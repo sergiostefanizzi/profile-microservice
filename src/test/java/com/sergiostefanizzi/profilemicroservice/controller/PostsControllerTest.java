@@ -9,6 +9,7 @@ import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.service.PostsService;
 import com.sergiostefanizzi.profilemicroservice.service.ProfilesService;
+import com.sergiostefanizzi.profilemicroservice.system.exception.CommentNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import lombok.extern.slf4j.Slf4j;
@@ -844,6 +845,110 @@ class PostsControllerTest {
                         res.getResolvedException() instanceof PostNotFoundException
                 ))
                 .andExpect(jsonPath("$.error").value("Post " + invalidProfileId + " not found!"))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+    }
+
+    @Test
+    void testUpdatedCommentById_Then_200() throws Exception {
+        Long commentId = 1L;
+        String content = "Commento modificato";
+        CommentPatch commentPatch = new CommentPatch(content);
+
+        Comment updatedComment = new Comment(1L,1L,content);
+        updatedComment.setId(commentId);
+        String commentPatchJson = this.objectMapper.writeValueAsString(commentPatch);
+
+
+        when(this.postsService.updateCommentById(commentId, commentPatch)).thenReturn(updatedComment);
+
+        MvcResult result = this.mockMvc.perform(patch("/posts/comments/{commentId}",commentId)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentPatchJson))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.*", hasSize(4)))
+                .andExpect(jsonPath("$.id").value(updatedComment.getId()))
+                .andExpect(jsonPath("$.profile_id").value(updatedComment.getProfileId()))
+                .andExpect(jsonPath("$.post_id").value(updatedComment.getPostId()))
+                .andExpect(jsonPath("$.content").value(updatedComment.getContent()))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        Comment commentResult = this.objectMapper.readValue(resultAsString, Comment.class);
+
+        log.info(commentResult.toString());
+    }
+
+    @Test
+    void testUpdatedCommentById_Then_400() throws Exception {
+        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+
+        MvcResult result = this.mockMvc.perform(get("/posts/comments/{commentId}","IdNotLong")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                ))
+                .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    @Test
+    void testUpdatedCommentById_Content_Size_Then_400() throws Exception {
+        errors.add("content size must be between 1 and 2200");
+        // genero una caption di 2210 caratteri, superando di 10 il limite
+        Long commentId = 1L;
+        String content = RandomStringUtils.randomAlphabetic(2210);
+        CommentPatch commentPatch = new CommentPatch(content);
+
+        String commentPatchJson = this.objectMapper.writeValueAsString(commentPatch);
+
+        MvcResult result = this.mockMvc.perform(patch("/posts/comments/{commentId}",commentId)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentPatchJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(res.getResolvedException() instanceof MethodArgumentNotValidException))
+                .andExpect(jsonPath("$.error").isArray())
+                .andExpect(jsonPath("$.error", hasSize(1)))
+                .andExpect(jsonPath("$.error[0]").value(in(errors)))
+                .andReturn();
+        // salvo risposta in result solo per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+    }
+
+
+    //TODO 401, 403
+
+    // Da sostituire con il 403
+    @Test
+    void testUpdatedCommentById_CommentNotFound_Then_404() throws Exception {
+        Long commentId = Long.MIN_VALUE;
+        String content = "Commento al post";
+        CommentPatch commentPatch = new CommentPatch(content);
+
+        String commentPatchJson = this.objectMapper.writeValueAsString(commentPatch);
+
+        doThrow(new CommentNotFoundException(commentId)).when(this.postsService).updateCommentById(commentId, commentPatch);
+
+        MvcResult result = this.mockMvc.perform(patch("/posts/comments/{commentId}",commentId)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(commentPatchJson))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof CommentNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value("Comment " + commentId + " not found!"))
                 .andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();

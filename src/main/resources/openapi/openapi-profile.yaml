@@ -481,11 +481,6 @@ paths:
           schema:
             type: integer
             format: int64
-        - name: removeComment
-          in: query
-          description: Remove or create the like
-          schema:
-            type: boolean
       requestBody:
         content:
           application/json:
@@ -494,6 +489,40 @@ paths:
       responses:
         '200':
           description: Comment has been successfully update!
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Comment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthenticated'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+    delete:
+      tags:
+        - posts
+      summary: Delete a comment
+      description: Delete a comment
+      operationId: deleteCommentById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: commentId
+          in: path
+          description: Id of the comment
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '204':
+          description: Comment has been successfully deleted!
           content:
             application/json:
               schema:
@@ -1304,17 +1333,12 @@ components:
     CommentPatch:
       type: object
       properties:
-        id:
-          type: integer
-          format: int64
-          readOnly: true
         content:
           type: string
           minLength: 1
           maxLength: 2200
           example: comment example
       required:
-        - id
         - content
 
     Alert:

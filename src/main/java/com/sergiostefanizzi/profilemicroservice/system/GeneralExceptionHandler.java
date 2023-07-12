@@ -1,6 +1,7 @@
 package com.sergiostefanizzi.profilemicroservice.system;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sergiostefanizzi.profilemicroservice.system.exception.CommentNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
@@ -29,6 +30,15 @@ import java.util.stream.Collectors;
 @ControllerAdvice
 @Slf4j
 public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
+
+    @ExceptionHandler(CommentNotFoundException.class)
+    public ResponseEntity<Object> handleCommentNotFoundException(CommentNotFoundException ex, WebRequest request){
+        log.error(ex.getMessage(),ex);
+        String error = "Comment "+ex.getMessage()+" not found!";
+        Map<String, String> body = new HashMap<>();
+        body.put("error", error);
+        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
+    }
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<Object> handleConstraintViolationException(ConstraintViolationException ex, WebRequest request){

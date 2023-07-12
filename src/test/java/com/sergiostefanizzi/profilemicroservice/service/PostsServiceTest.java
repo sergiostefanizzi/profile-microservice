@@ -8,6 +8,7 @@ import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.LikesRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
+import com.sergiostefanizzi.profilemicroservice.system.exception.CommentNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import lombok.extern.slf4j.Slf4j;
@@ -448,6 +449,52 @@ class PostsServiceTest {
         verify(this.postsRepository, times(1)).findNotDeletedById(anyLong());
         verify(this.profilesRepository, times(1)).findNotDeletedById(anyLong());
         verify(this.commentToCommentJpaConverter, times(0)).convert(any(Comment.class));
+        verify(this.commentsRepository, times(0)).save(any(CommentJpa.class));
+        verify(this.commentToCommentJpaConverter, times(0)).convertBack(any(CommentJpa.class));
+    }
+
+    @Test
+    void testUpdateCommentById_Success(){
+        String content = "Commento al post";
+        String newContent = "Commento al post modificato";
+        CommentPatch commentPatch = new CommentPatch(newContent);
+        Long commentId = 1L;
+        CommentJpa commentJpa = new CommentJpa(content);
+        commentJpa.setId(commentId);
+        commentJpa.setProfile(profileJpa);
+        commentJpa.setPost(this.savedPostJpa);
+
+        Comment convertedComment = new Comment(profileJpa.getId(), this.savedPostJpa.getId(), newContent);
+        convertedComment.setId(commentId);
+
+        when(this.commentsRepository.findNotDeletedById(anyLong())).thenReturn(Optional.of(commentJpa));
+        when(this.commentsRepository.save(any(CommentJpa.class))).thenReturn(commentJpa);
+        when(this.commentToCommentJpaConverter.convertBack(any(CommentJpa.class))).thenReturn(convertedComment);
+
+        Comment updatedComment = this.postsService.updateCommentById(commentId, commentPatch);
+
+        assertNotNull(updatedComment);
+        assertEquals(commentId, updatedComment.getId());
+        assertEquals(profileJpa.getId(), updatedComment.getProfileId());
+        assertEquals(this.savedPostJpa.getId(), updatedComment.getPostId());
+        assertEquals(newContent, updatedComment.getContent());
+        log.info("Comment's content-> "+commentJpa.getContent());
+        verify(this.commentsRepository, times(1)).findNotDeletedById(anyLong());
+        verify(this.commentsRepository, times(1)).save(any(CommentJpa.class));
+        verify(this.commentToCommentJpaConverter, times(1)).convertBack(any(CommentJpa.class));
+    }
+
+    @Test
+    void testUpdateCommentById_CommentNotFound_Failed(){
+        String newContent = "Commento al post modificato";
+        CommentPatch commentPatch = new CommentPatch(newContent);
+        Long commentId = 1L;
+
+        when(this.commentsRepository.findNotDeletedById(anyLong())).thenReturn(Optional.empty());
+
+        assertThrows(CommentNotFoundException.class, () -> this.postsService.updateCommentById(commentId, commentPatch));
+
+        verify(this.commentsRepository, times(1)).findNotDeletedById(anyLong());
         verify(this.commentsRepository, times(0)).save(any(CommentJpa.class));
         verify(this.commentToCommentJpaConverter, times(0)).convertBack(any(CommentJpa.class));
     }

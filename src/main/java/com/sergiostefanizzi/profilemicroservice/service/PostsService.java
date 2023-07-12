@@ -8,6 +8,7 @@ import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.LikesRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
+import com.sergiostefanizzi.profilemicroservice.system.exception.CommentNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import jakarta.transaction.Transactional;
@@ -163,7 +164,7 @@ public class PostsService {
     @Transactional
     public Comment addComment(Comment comment) {
         // TODO mi serve il JWT
-        // Controllo che chi vuole mettere il like abbia l'autorizzazione per farlo
+        // Controllo che chi vuole inserire il comment abbia l'autorizzazione per farlo
         // sia controllando il profilo
         // sia controllando che il profilo a cui appartiene il post sia visibile da chi vuole mettere like
         // Controllo prima l'esistenza del post
@@ -179,6 +180,23 @@ public class PostsService {
         commentJpa.setProfile(profileJpa);
         commentJpa.setPost(postJpa);
         commentJpa.setCreatedAt(LocalDateTime.now());
+
+        return this.commentToCommentJpaConverter.convertBack(
+                this.commentsRepository.save(commentJpa)
+        );
+    }
+
+    @Transactional
+    public Comment updateCommentById(Long commentId, CommentPatch commentPatch) {
+        if(commentId == null){
+            throw new CommentNotFoundException("null");
+        }
+
+        CommentJpa commentJpa = this.commentsRepository.findNotDeletedById(commentId)
+                .orElseThrow(() -> new CommentNotFoundException(commentId));
+
+        commentJpa.setContent(commentPatch.getContent());
+        commentJpa.setUpdatedAt(LocalDateTime.now());
 
         return this.commentToCommentJpaConverter.convertBack(
                 this.commentsRepository.save(commentJpa)

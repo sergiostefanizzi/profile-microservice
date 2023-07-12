@@ -73,8 +73,14 @@ public class PostsController implements PostsApi {
     }
 
     @Override
-    public ResponseEntity<Comment> updateCommentById(Long commentId, Boolean removeComment, CommentPatch commentPatch) {
-        return PostsApi.super.updateCommentById(commentId, removeComment, commentPatch);
+    public ResponseEntity<Comment> updateCommentById(Long commentId, CommentPatch commentPatch) {
+        Comment updatedComment = this.postsService.updateCommentById(commentId, commentPatch);
+        return new ResponseEntity<>(updatedComment, HttpStatus.OK);
+    }
+
+    @Override
+    public ResponseEntity<Comment> deleteCommentById(Long commentId) {
+        return PostsApi.super.deleteCommentById(commentId);
     }
 
     @Override
