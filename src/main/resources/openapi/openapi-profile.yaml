@@ -1245,10 +1245,11 @@ components:
         request_status:
           type: string
           enum: [ACCEPTED, PENDING, REJECTED]
+          readOnly: true
       required:
         - follower_id
         - followed_id
-        - accepted
+        - request_status
 
     Post:
       type: object
