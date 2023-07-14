@@ -21,7 +21,7 @@ import java.time.LocalDateTime;
 public class FollowsJpa {
     @EmbeddedId
     private final FollowsId followsId;
-    @Column(name = "accepted", nullable = false)
+    @Column(name = "request_status", nullable = false)
     @NotNull
     private Follows.RequestStatusEnum requestStatus;
     @Column(name = "followed_at")
@@ -36,9 +36,9 @@ public class FollowsJpa {
     @ManyToOne
     @MapsId("followerId")
     @JoinColumn(name = "follower_id", referencedColumnName = "id")
-    private Profile follower;
+    private ProfileJpa follower;
     @ManyToOne
     @MapsId("followedId")
     @JoinColumn(name = "followed_id", referencedColumnName = "id")
-    private Profile followed;
+    private ProfileJpa followed;
 }

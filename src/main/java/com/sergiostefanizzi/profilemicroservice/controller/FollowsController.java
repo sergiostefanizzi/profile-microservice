@@ -6,6 +6,7 @@ import com.sergiostefanizzi.profilemicroservice.model.Profile;
 import com.sergiostefanizzi.profilemicroservice.service.FollowsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.context.request.NativeWebRequest;
@@ -24,23 +25,24 @@ public class FollowsController implements FollowsApi {
     }
 
     @Override
-    public ResponseEntity<Void> acceptFollows(Long profileId, Long followerId) {
-        return FollowsApi.super.acceptFollows(profileId, followerId);
-    }
-
-    @Override
     public ResponseEntity<Follows> addFollows(Long profileId, Long followsId) {
-        return FollowsApi.super.addFollows(profileId, followsId);
-    }
-
-    @Override
-    public ResponseEntity<Void> deleteFollower(Long profileId, Long followerId) {
-        return FollowsApi.super.deleteFollower(profileId, followerId);
+        Follows follows = this.followsService.addFollows(profileId, followsId);
+        return new ResponseEntity<>(follows, HttpStatus.CREATED);
     }
 
     @Override
     public ResponseEntity<Void> deleteFollowing(Long profileId, Long followsId) {
         return FollowsApi.super.deleteFollowing(profileId, followsId);
+    }
+
+    @Override
+    public ResponseEntity<Void> acceptFollows(Long profileId, Long followerId) {
+        return FollowsApi.super.acceptFollows(profileId, followerId);
+    }
+
+    @Override
+    public ResponseEntity<Void> deleteFollower(Long profileId, Long followerId) {
+        return FollowsApi.super.deleteFollower(profileId, followerId);
     }
 
     @Override
