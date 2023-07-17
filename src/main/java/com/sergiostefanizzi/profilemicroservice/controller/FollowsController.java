@@ -4,6 +4,7 @@ import com.sergiostefanizzi.profilemicroservice.api.FollowsApi;
 import com.sergiostefanizzi.profilemicroservice.model.Follows;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
 import com.sergiostefanizzi.profilemicroservice.service.FollowsService;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -31,14 +32,17 @@ public class FollowsController implements FollowsApi {
     }
 
     @Override
+    public ResponseEntity<Void> acceptFollows(Long profileId, Long followerId, @NotNull Boolean rejectFollow) {
+        this.followsService.acceptFollows(profileId, followerId, rejectFollow);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+
+
+    @Override
     public ResponseEntity<Void> deleteFollowing(Long profileId, Long followsId) {
         return FollowsApi.super.deleteFollowing(profileId, followsId);
     }
 
-    @Override
-    public ResponseEntity<Void> acceptFollows(Long profileId, Long followerId) {
-        return FollowsApi.super.acceptFollows(profileId, followerId);
-    }
 
     @Override
     public ResponseEntity<Void> deleteFollower(Long profileId, Long followerId) {

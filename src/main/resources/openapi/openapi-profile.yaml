@@ -673,6 +673,12 @@ paths:
           schema:
             type: integer
             format: int64
+        - name: rejectFollow
+          in: query
+          description: Reject follow request
+          required: true
+          schema:
+            type: boolean
       responses:
         '204':
           description: Follow request accepted

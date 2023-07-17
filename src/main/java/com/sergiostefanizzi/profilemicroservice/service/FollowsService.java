@@ -64,4 +64,18 @@ public class FollowsService {
         return this.followsToFollowsJpaConverter.convertBack(
                 this.followsRepository.save(followsJpa));
     }
+
+    @Transactional
+    public void acceptFollows(Long profileId, Long followerId, Boolean rejectFollow) {
+        if(profileId == null || followerId == null){
+            throw new ProfileNotFoundException("null");
+        }
+        FollowsJpa followsJpa;
+        // Controllo l'esistenza dei due profili
+        ProfileJpa profileJpa = this.profilesRepository.findNotDeletedById(profileId)
+                .orElseThrow(() -> new ProfileNotFoundException(profileId));
+        ProfileJpa followerJpa = this.profilesRepository.findNotDeletedById(followerId)
+                .orElseThrow(() -> new ProfileNotFoundException(followerId));
+
+    }
 }
