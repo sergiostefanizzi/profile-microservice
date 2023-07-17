@@ -143,7 +143,7 @@ class FollowsServiceTest {
     }
 
     @Test
-    void testAddFollows_Accepted_or_Pending_Request_PENDING_Success(){
+    void testAddFollows_Accepted_or_Pending_Request_PENDING_Failed(){
         FollowsJpa followsJpa = new FollowsJpa(new FollowsId(this.openProfileJpa.getId(), this.privateProfileJpa.getId()));
         followsJpa.setRequestStatus(Follows.RequestStatusEnum.ACCEPTED);
         //followsJpa.setRequestStatus(Follows.RequestStatusEnum.PENDING);
