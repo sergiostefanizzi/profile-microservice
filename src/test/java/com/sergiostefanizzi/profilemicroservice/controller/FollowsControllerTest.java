@@ -10,6 +10,7 @@ import com.sergiostefanizzi.profilemicroservice.service.PostsService;
 import com.sergiostefanizzi.profilemicroservice.system.exception.FollowAlreadyCreatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import lombok.extern.slf4j.Slf4j;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -56,6 +57,11 @@ class FollowsControllerTest {
     @BeforeEach
     void setUp() {
         errors = new ArrayList<>();
+    }
+
+    @AfterEach
+    void tearDown() {
+        errors.clear();
     }
 
     @Test
@@ -142,7 +148,7 @@ class FollowsControllerTest {
     }
 
     @Test
-    void testAddFollows_ProfileNotFound_Then_409() throws Exception {
+    void testAddFollows_FollowAlreadyCreated_Then_409() throws Exception {
         // arrayList contenente i messaggi di errore
         errors.add("Conflict! Follows already created!");
         doThrow(new FollowAlreadyCreatedException()).when(this.followsService).addFollows(openProfileId1,openProfileId2);
