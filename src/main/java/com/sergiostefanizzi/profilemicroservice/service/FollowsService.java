@@ -31,12 +31,8 @@ public class FollowsService {
         if(profileId == null || followsId == null){
             throw new ProfileNotFoundException("null");
         }
+
         FollowsJpa followsJpa;
-        // Controllo l'esistenza dei due profili
-        ProfileJpa profileJpa = this.profilesRepository.findNotDeletedById(profileId)
-                .orElseThrow(() -> new ProfileNotFoundException(profileId));
-        ProfileJpa followingJpa = this.profilesRepository.findNotDeletedById(followsId)
-                .orElseThrow(() -> new ProfileNotFoundException(followsId));
         // Controllo che la risorsa non sia già stata creata
         Optional<FollowsJpa> optionalFollowsJpa = this.followsRepository.findById(new FollowsId(profileId, followsId));
         if (optionalFollowsJpa.isPresent()) {
@@ -44,14 +40,21 @@ public class FollowsService {
             if (followsJpa.getRequestStatus().equals(Follows.RequestStatusEnum.REJECTED) && !unfollow){
                 // Se la richiesta e' stata rifiutata imposta in approvazione
                 followsJpa.setRequestStatus(Follows.RequestStatusEnum.PENDING);
+                followsJpa.setUnfollowedAt(null);//reset a null eventuale data di unfollowed
             } else if (!followsJpa.getRequestStatus().equals(Follows.RequestStatusEnum.REJECTED) && unfollow) {
                 // Se la richiesta esiste ed e' gia' stata accettata o e' in approvazione
                 // la imposto a rejected che vuol dire sia che l'utente a cui e' stata
                 // mandata la richiesta l'ha rifiutata e sia che chi ha mandato la richiesta
                 // e segue o e' ancora in attesa di seguire, non vuole piu' farlo
                 followsJpa.setRequestStatus(Follows.RequestStatusEnum.REJECTED);
+                followsJpa.setUnfollowedAt(LocalDateTime.now());
             }
         } else {
+            // Controllo l'esistenza dei due profili
+            ProfileJpa profileJpa = this.profilesRepository.findNotDeletedById(profileId)
+                    .orElseThrow(() -> new ProfileNotFoundException(profileId));
+            ProfileJpa followingJpa = this.profilesRepository.findNotDeletedById(followsId)
+                    .orElseThrow(() -> new ProfileNotFoundException(followsId));
             if(!unfollow){
                 // Se la richiesta non esiste
                 followsJpa = new FollowsJpa(new FollowsId(profileId, followsId));
@@ -80,9 +83,9 @@ public class FollowsService {
         }
 
         // Controllo l'esistenza dei due profili
-        ProfileJpa profileJpa = this.profilesRepository.findNotDeletedById(profileId)
+        this.profilesRepository.findNotDeletedById(profileId)
                 .orElseThrow(() -> new ProfileNotFoundException(profileId));
-        ProfileJpa followerJpa = this.profilesRepository.findNotDeletedById(followerId)
+        this.profilesRepository.findNotDeletedById(followerId)
                 .orElseThrow(() -> new ProfileNotFoundException(followerId));
 
         FollowsJpa followsJpa = this.followsRepository.findById(new FollowsId(followerId, profileId))
@@ -91,11 +94,23 @@ public class FollowsService {
         // il profilo non puo' quindi accettare o rifiutare una richiesta inesistente
         // il follower puo' quindi ricreare una nuova richiesta che passa da rejected a pending in addFollows()
         // inoltre accetto anche le richieste di rimozione del follower
-        if (followsJpa.getRequestStatus().equals(Follows.RequestStatusEnum.PENDING) || (followsJpa.getRequestStatus().equals(Follows.RequestStatusEnum.ACCEPTED) && rejectFollow)){
 
-            followsJpa.setRequestStatus(rejectFollow ? Follows.RequestStatusEnum.REJECTED : Follows.RequestStatusEnum.ACCEPTED);
-
+        if (followsJpa.getRequestStatus().equals(Follows.RequestStatusEnum.PENDING)){
+            if(rejectFollow){
+                followsJpa.setRequestStatus(Follows.RequestStatusEnum.REJECTED);
+            }else{
+                followsJpa.setRequestStatus(Follows.RequestStatusEnum.ACCEPTED);
+                followsJpa.setFollowedAt(LocalDateTime.now());
+            }
         }
+
+        if (followsJpa.getRequestStatus().equals(Follows.RequestStatusEnum.ACCEPTED)){
+            if(rejectFollow){
+                followsJpa.setRequestStatus(Follows.RequestStatusEnum.REJECTED);
+                followsJpa.setUnfollowedAt(LocalDateTime.now());
+            }
+        }
+
 
         return this.followsToFollowsJpaConverter.convertBack(
                 this.followsRepository.save(followsJpa));

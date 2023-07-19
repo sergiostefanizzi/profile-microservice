@@ -3,6 +3,7 @@ package com.sergiostefanizzi.profilemicroservice.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sergiostefanizzi.profilemicroservice.model.Follows;
 import com.sergiostefanizzi.profilemicroservice.service.FollowsService;
+import com.sergiostefanizzi.profilemicroservice.system.exception.FollowNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.UnfollowOnCreationException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import lombok.extern.slf4j.Slf4j;
@@ -190,6 +191,93 @@ class FollowsControllerTest {
         log.info("Resolved Error ---> " + result.getResolvedException());
     }
 
+    @Test
+    void testAcceptFollows_Then_200() throws Exception {
+        Follows follows = new Follows(publicProfileId1, privateProfileId, Follows.RequestStatusEnum.ACCEPTED);
+        when(this.followsService.acceptFollows(privateProfileId, publicProfileId1, false)).thenReturn(follows);
+
+        MvcResult result = this.mockMvc.perform(put("/profiles/{profileId}/followedBy/{followsId}?rejectFollow={rejectFollow}",
+                        privateProfileId, publicProfileId1,false)
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.*", hasSize(3)))
+                .andExpect(jsonPath("$.follower_id").value(follows.getFollowerId()))
+                .andExpect(jsonPath("$.followed_id").value(follows.getFollowedId()))
+                .andExpect(jsonPath("$.request_status").value(follows.getRequestStatus().getValue()))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        Follows followsResult = this.objectMapper.readValue(resultAsString, Follows.class);
+
+        log.info(followsResult.toString());
+    }
+
+    @Test
+    void testAcceptFollows_Reject_Then_200() throws Exception {
+        Follows follows = new Follows(publicProfileId1, privateProfileId, Follows.RequestStatusEnum.REJECTED);
+        when(this.followsService.acceptFollows(privateProfileId, publicProfileId1, true)).thenReturn(follows);
+
+        MvcResult result = this.mockMvc.perform(put("/profiles/{profileId}/followedBy/{followsId}?rejectFollow={rejectFollow}",
+                        privateProfileId, publicProfileId1,true)
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.*", hasSize(3)))
+                .andExpect(jsonPath("$.follower_id").value(follows.getFollowerId()))
+                .andExpect(jsonPath("$.followed_id").value(follows.getFollowedId()))
+                .andExpect(jsonPath("$.request_status").value(follows.getRequestStatus().getValue()))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        Follows followsResult = this.objectMapper.readValue(resultAsString, Follows.class);
+
+        log.info(followsResult.toString());
+    }
+
+    @Test
+    void testAcceptFollows_InvalidId_Then_400() throws Exception {
+        // arrayList contenente i messaggi di errore
+        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        MvcResult result = this.mockMvc.perform(put("/profiles/{profileId}/followedBy/{followerId}","IdNotLong","IdNotLong")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                ))
+                .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+    }
+
+    //TODO 401, 403
+
+
+    @Test
+    void testAcceptFollows_FollowNotFound_Then_404() throws Exception {
+        // arrayList contenente i messaggi di errore
+        errors.add("Follows not found!");
+        doThrow(new FollowNotFoundException()).when(this.followsService).acceptFollows(privateProfileId, publicProfileId1,false);
+
+
+        MvcResult result = this.mockMvc.perform(put("/profiles/{profileId}/followedBy/{followsId}?rejectFollow={rejectFollow}",privateProfileId,publicProfileId1,false)
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof FollowNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value(errors.get(0)))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+    }
 
 
 }
