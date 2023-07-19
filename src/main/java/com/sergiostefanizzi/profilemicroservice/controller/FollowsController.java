@@ -20,33 +20,22 @@ import java.util.Optional;
 @Slf4j
 public class FollowsController implements FollowsApi {
     private final FollowsService followsService;
+
     @Override
     public Optional<NativeWebRequest> getRequest() {
         return FollowsApi.super.getRequest();
     }
 
     @Override
-    public ResponseEntity<Follows> addFollows(Long profileId, Long followsId) {
-        Follows follows = this.followsService.addFollows(profileId, followsId);
-        return new ResponseEntity<>(follows, HttpStatus.CREATED);
+    public ResponseEntity<Follows> addFollows(Long profileId, Long followsId, Boolean unfollow) {
+        Follows follows = this.followsService.addFollows(profileId, followsId, unfollow);
+        return new ResponseEntity<>(follows, HttpStatus.OK);
     }
 
     @Override
-    public ResponseEntity<Void> acceptFollows(Long profileId, Long followerId, @NotNull Boolean rejectFollow) {
-        this.followsService.acceptFollows(profileId, followerId, rejectFollow);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-    }
-
-
-    @Override
-    public ResponseEntity<Void> deleteFollowing(Long profileId, Long followsId) {
-        return FollowsApi.super.deleteFollowing(profileId, followsId);
-    }
-
-
-    @Override
-    public ResponseEntity<Void> deleteFollower(Long profileId, Long followerId) {
-        return FollowsApi.super.deleteFollower(profileId, followerId);
+    public ResponseEntity<Follows> acceptFollows(Long profileId, Long followerId, Boolean rejectFollow) {
+        Follows follows = this.followsService.acceptFollows(profileId, followerId, rejectFollow);
+        return new ResponseEntity<>(follows, HttpStatus.OK);
     }
 
     @Override

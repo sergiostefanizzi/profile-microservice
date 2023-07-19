@@ -570,10 +570,10 @@ paths:
           $ref: '#/components/responses/InternalServerError'
 
   /profiles/{profileId}/follows/{followsId}:
-    post:
+    put:
       tags:
         - follows
-      summary: A profile follows another profile
+      summary: A profile follows or unfollow another profile or
       description: A profile follows another profile
       operationId: addFollows
       security:
@@ -593,9 +593,14 @@ paths:
           schema:
             type: integer
             format: int64
+        - name: unfollow
+          in: query
+          description: unfollow
+          schema:
+            type: boolean
       responses:
-        '201':
-          description: You are following the profile
+        '200':
+          description: Follow Request
           content:
             application/json:
               schema:
@@ -612,49 +617,13 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-    delete:
-      tags:
-        - follows
-      summary: Delete a following
-      description: Delete a following
-      operationId: deleteFollowing
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: profileId
-          in: path
-          description: Id of the  profile
-          required: true
-          schema:
-            type: integer
-            format: int64
-        - name: followsId
-          in: path
-          description: Id of the profile that you want to unfollow
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '204':
-          description: Profile has been successfully unfollowed!
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
 
   /profiles/{profileId}/followedBy/{followerId}:
     put:
       tags:
         - follows
-      summary: Accept follow request for private profile
-      description: Accept follow request for private profile
+      summary: Accept or reject follow request
+      description: Accept or reject follow request
       operationId: acceptFollows
       security:
         - bearerAuth: []
@@ -676,12 +645,15 @@ paths:
         - name: rejectFollow
           in: query
           description: Reject follow request
-          required: true
           schema:
             type: boolean
       responses:
-        '204':
-          description: Follow request accepted
+        '200':
+          description: Follow Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Follows'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -694,42 +666,6 @@ paths:
           $ref: '#/components/responses/InternalServerError'
 
 
-    delete:
-      tags:
-        - follows
-      summary: Block a follower
-      description: Block a follower
-      operationId: deleteFollower
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: profileId
-          in: path
-          description: Id of the  profile
-          required: true
-          schema:
-            type: integer
-            format: int64
-        - name: followerId
-          in: path
-          description: Id of the profile that you want to block
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '204':
-          description: Profile has been successfully blocked!
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
 
   /profiles/{profileId}/followedBy:
     get:

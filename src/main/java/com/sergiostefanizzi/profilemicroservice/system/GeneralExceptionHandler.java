@@ -1,11 +1,9 @@
 package com.sergiostefanizzi.profilemicroservice.system;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sergiostefanizzi.profilemicroservice.system.exception.*;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.TypeMismatchException;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -28,13 +26,22 @@ import java.util.stream.Collectors;
 @Slf4j
 public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
 
-    @ExceptionHandler(FollowAlreadyCreatedException.class)
-    public ResponseEntity<Object> handleFollowAlreadyCreatedException(FollowAlreadyCreatedException ex, WebRequest request){
+    @ExceptionHandler(FollowNotFoundException.class)
+    public ResponseEntity<Object> handleFollowNotFoundException(FollowNotFoundException ex, WebRequest request){
         log.error(ex.getMessage(),ex);
-        String error = "Conflict! Follows already created!";
+        String error = "Follows not found!";
         Map<String, String> body = new HashMap<>();
         body.put("error", error);
-        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.CONFLICT, request);
+        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
+    }
+
+    @ExceptionHandler(UnfollowOnCreationException.class)
+    public ResponseEntity<Object> handleUnfollowOnCreationException(UnfollowOnCreationException ex, WebRequest request){
+        log.error(ex.getMessage(),ex);
+        String error = "Unfollows on creation is not possible!";
+        Map<String, String> body = new HashMap<>();
+        body.put("error", error);
+        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
     }
 
     @ExceptionHandler(CommentNotFoundException.class)
