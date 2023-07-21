@@ -13,5 +13,5 @@ public interface PostsRepository extends JpaRepository<PostJpa, Long> {
     Optional<List<PostJpa>> findAllByProfileId(Long profileId);
 
     @Query("SELECT p FROM PostJpa p WHERE p.id=:postId AND p.deletedAt IS NULL")
-    Optional<PostJpa> findNotDeletedById(Long postId);
+    Optional<PostJpa> findActiveById(Long postId);
 }

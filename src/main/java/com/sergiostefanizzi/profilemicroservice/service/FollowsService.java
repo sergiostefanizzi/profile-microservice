@@ -51,9 +51,9 @@ public class FollowsService {
             }
         } else {
             // Controllo l'esistenza dei due profili
-            ProfileJpa profileJpa = this.profilesRepository.findNotDeletedById(profileId)
+            ProfileJpa profileJpa = this.profilesRepository.findActiveById(profileId)
                     .orElseThrow(() -> new ProfileNotFoundException(profileId));
-            ProfileJpa followingJpa = this.profilesRepository.findNotDeletedById(followsId)
+            ProfileJpa followingJpa = this.profilesRepository.findActiveById(followsId)
                     .orElseThrow(() -> new ProfileNotFoundException(followsId));
             if(!unfollow){
                 // Se la richiesta non esiste
@@ -83,9 +83,9 @@ public class FollowsService {
         }
 
         // Controllo l'esistenza dei due profili
-        this.profilesRepository.findNotDeletedById(profileId)
+        this.profilesRepository.findActiveById(profileId)
                 .orElseThrow(() -> new ProfileNotFoundException(profileId));
-        this.profilesRepository.findNotDeletedById(followerId)
+        this.profilesRepository.findActiveById(followerId)
                 .orElseThrow(() -> new ProfileNotFoundException(followerId));
 
         FollowsJpa followsJpa = this.followsRepository.findById(new FollowsId(followerId, profileId))

@@ -70,8 +70,8 @@ class FollowsServiceTest {
                 this.publicProfileJpa.getId(),
                 this.publicProfileJpa2.getId(),
                 followsJpa.getRequestStatus());
-        when(this.profilesRepository.findNotDeletedById(anyLong())).thenReturn(Optional.of(this.publicProfileJpa));
-        when(this.profilesRepository.findNotDeletedById(anyLong())).thenReturn(Optional.of(this.publicProfileJpa2));
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.publicProfileJpa));
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.publicProfileJpa2));
         when(this.followsRepository.findById(any(FollowsId.class))).thenReturn(Optional.empty());
         when(this.followsRepository.save(any(FollowsJpa.class))).thenReturn(followsJpa);
         when(this.followsToFollowsJpaConverter.convertBack(any(FollowsJpa.class))).thenReturn(follows);
@@ -79,7 +79,7 @@ class FollowsServiceTest {
         Follows returnedFollows = this.followsService.addFollows(this.publicProfileJpa.getId(), this.publicProfileJpa2.getId(), false);
 
         assertEquals(follows, returnedFollows);
-        verify(this.profilesRepository, times(2)).findNotDeletedById(anyLong());
+        verify(this.profilesRepository, times(2)).findActiveById(anyLong());
         verify(this.followsRepository, times(1)).findById(any(FollowsId.class));
         verify(this.followsRepository, times(1)).save(any(FollowsJpa.class));
         verify(this.followsToFollowsJpaConverter, times(1)).convertBack(any(FollowsJpa.class));
@@ -98,8 +98,8 @@ class FollowsServiceTest {
                 this.publicProfileJpa.getId(),
                 this.privateProfileJpa.getId(),
                 followsJpa.getRequestStatus());
-        when(this.profilesRepository.findNotDeletedById(anyLong())).thenReturn(Optional.of(this.publicProfileJpa));
-        when(this.profilesRepository.findNotDeletedById(anyLong())).thenReturn(Optional.of(this.privateProfileJpa));
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.publicProfileJpa));
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.privateProfileJpa));
         when(this.followsRepository.findById(any(FollowsId.class))).thenReturn(Optional.empty());
         when(this.followsRepository.save(any(FollowsJpa.class))).thenReturn(followsJpa);
         when(this.followsToFollowsJpaConverter.convertBack(any(FollowsJpa.class))).thenReturn(follows);
@@ -107,7 +107,7 @@ class FollowsServiceTest {
         Follows returnedFollows = this.followsService.addFollows(this.publicProfileJpa.getId(), this.privateProfileJpa.getId(), false);
 
         assertEquals(follows, returnedFollows);
-        verify(this.profilesRepository, times(2)).findNotDeletedById(anyLong());
+        verify(this.profilesRepository, times(2)).findActiveById(anyLong());
         verify(this.followsRepository, times(1)).findById(any(FollowsId.class));
         verify(this.followsRepository, times(1)).save(any(FollowsJpa.class));
         verify(this.followsToFollowsJpaConverter, times(1)).convertBack(any(FollowsJpa.class));
@@ -124,14 +124,14 @@ class FollowsServiceTest {
         followsJpa.setFollower(this.publicProfileJpa);
         followsJpa.setFollowed(this.privateProfileJpa);
 
-        when(this.profilesRepository.findNotDeletedById(anyLong())).thenReturn(Optional.of(this.publicProfileJpa));
-        when(this.profilesRepository.findNotDeletedById(anyLong())).thenReturn(Optional.empty());
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.publicProfileJpa));
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.empty());
         when(this.followsRepository.findById(any(FollowsId.class))).thenReturn(Optional.empty());
 
         assertThrows(ProfileNotFoundException.class,
                 () -> this.followsService.addFollows(this.publicProfileJpa.getId(), this.privateProfileJpa.getId(), true));
 
-        verify(this.profilesRepository, times(1)).findNotDeletedById(anyLong());
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
         verify(this.followsRepository, times(1)).findById(any(FollowsId.class));
         verify(this.followsRepository, times(0)).save(any(FollowsJpa.class));
         verify(this.followsToFollowsJpaConverter, times(0)).convertBack(any(FollowsJpa.class));
@@ -145,14 +145,14 @@ class FollowsServiceTest {
         followsJpa.setFollower(this.publicProfileJpa);
         followsJpa.setFollowed(this.privateProfileJpa);
 
-        when(this.profilesRepository.findNotDeletedById(anyLong())).thenReturn(Optional.of(this.publicProfileJpa));
-        when(this.profilesRepository.findNotDeletedById(anyLong())).thenReturn(Optional.of(this.privateProfileJpa));
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.publicProfileJpa));
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.privateProfileJpa));
         when(this.followsRepository.findById(any(FollowsId.class))).thenReturn(Optional.empty());
 
         assertThrows(UnfollowOnCreationException.class,
                 () -> this.followsService.addFollows(this.publicProfileJpa.getId(), this.privateProfileJpa.getId(), true));
 
-        verify(this.profilesRepository, times(2)).findNotDeletedById(anyLong());
+        verify(this.profilesRepository, times(2)).findActiveById(anyLong());
         verify(this.followsRepository, times(1)).findById(any(FollowsId.class));
         verify(this.followsRepository, times(0)).save(any(FollowsJpa.class));
         verify(this.followsToFollowsJpaConverter, times(0)).convertBack(any(FollowsJpa.class));
@@ -178,7 +178,7 @@ class FollowsServiceTest {
         Follows returnedFollows = this.followsService.addFollows(this.publicProfileJpa.getId(), this.privateProfileJpa.getId(), false);
 
         assertEquals(follows, returnedFollows);
-        verify(this.profilesRepository, times(0)).findNotDeletedById(anyLong());
+        verify(this.profilesRepository, times(0)).findActiveById(anyLong());
         verify(this.followsRepository, times(1)).findById(any(FollowsId.class));
         verify(this.followsRepository, times(1)).save(any(FollowsJpa.class));
         verify(this.followsToFollowsJpaConverter, times(1)).convertBack(any(FollowsJpa.class));
@@ -205,7 +205,7 @@ class FollowsServiceTest {
         Follows returnedFollows = this.followsService.addFollows(this.publicProfileJpa.getId(), this.privateProfileJpa.getId(), true);
 
         assertEquals(follows, returnedFollows);
-        verify(this.profilesRepository, times(0)).findNotDeletedById(anyLong());
+        verify(this.profilesRepository, times(0)).findActiveById(anyLong());
         verify(this.followsRepository, times(1)).findById(any(FollowsId.class));
         verify(this.followsRepository, times(1)).save(any(FollowsJpa.class));
         verify(this.followsToFollowsJpaConverter, times(1)).convertBack(any(FollowsJpa.class));
@@ -232,7 +232,7 @@ class FollowsServiceTest {
         Follows returnedFollows = this.followsService.addFollows(this.publicProfileJpa.getId(), this.privateProfileJpa.getId(), true);
 
         assertEquals(follows, returnedFollows);
-        verify(this.profilesRepository, times(0)).findNotDeletedById(anyLong());
+        verify(this.profilesRepository, times(0)).findActiveById(anyLong());
         verify(this.followsRepository, times(1)).findById(any(FollowsId.class));
         verify(this.followsRepository, times(1)).save(any(FollowsJpa.class));
         verify(this.followsToFollowsJpaConverter, times(1)).convertBack(any(FollowsJpa.class));
@@ -259,7 +259,7 @@ class FollowsServiceTest {
         Follows returnedFollows = this.followsService.addFollows(this.publicProfileJpa.getId(), this.privateProfileJpa.getId(), true);
 
         assertEquals(follows, returnedFollows);
-        verify(this.profilesRepository, times(0)).findNotDeletedById(anyLong());
+        verify(this.profilesRepository, times(0)).findActiveById(anyLong());
         verify(this.followsRepository, times(1)).findById(any(FollowsId.class));
         verify(this.followsRepository, times(1)).save(any(FollowsJpa.class));
         verify(this.followsToFollowsJpaConverter, times(1)).convertBack(any(FollowsJpa.class));

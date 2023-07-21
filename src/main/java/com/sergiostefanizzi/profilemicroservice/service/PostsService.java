@@ -154,7 +154,7 @@ public class PostsService {
         // sia controllando che il profilo a cui appartiene il post sia visibile da chi vuole mettere like
 
         // Controllo prima l'esistenza del post
-        PostJpa postJpa = this.postsRepository.findNotDeletedById(postId)
+        PostJpa postJpa = this.postsRepository.findActiveById(postId)
                 .orElseThrow(() -> new PostNotFoundException(postId));
 
         return this.likesRepository.findAllActiveByPost(postJpa)
@@ -168,11 +168,11 @@ public class PostsService {
         // sia controllando il profilo
         // sia controllando che il profilo a cui appartiene il post sia visibile da chi vuole mettere like
         // Controllo prima l'esistenza del post
-        PostJpa postJpa = this.postsRepository.findNotDeletedById(comment.getPostId())
+        PostJpa postJpa = this.postsRepository.findActiveById(comment.getPostId())
                 .orElseThrow(() -> new PostNotFoundException(comment.getPostId()));
 
         // Controllo l'esistenza del profilo che vuole commentare il post
-        ProfileJpa profileJpa = this.profilesRepository.findNotDeletedById(comment.getProfileId())
+        ProfileJpa profileJpa = this.profilesRepository.findActiveById(comment.getProfileId())
                 .orElseThrow(() -> new ProfileNotFoundException(comment.getProfileId()));
 
         CommentJpa commentJpa = this.commentToCommentJpaConverter.convert(comment);
@@ -192,7 +192,7 @@ public class PostsService {
             throw new CommentNotFoundException("null");
         }
 
-        CommentJpa commentJpa = this.commentsRepository.findNotDeletedById(commentId)
+        CommentJpa commentJpa = this.commentsRepository.findActiveById(commentId)
                 .orElseThrow(() -> new CommentNotFoundException(commentId));
 
         commentJpa.setContent(commentPatch.getContent());
@@ -209,7 +209,7 @@ public class PostsService {
             throw new CommentNotFoundException("null");
         }
 
-        CommentJpa commentJpa = this.commentsRepository.findNotDeletedById(commentId)
+        CommentJpa commentJpa = this.commentsRepository.findActiveById(commentId)
                 .orElseThrow(() -> new CommentNotFoundException(commentId));
 
         commentJpa.setDeletedAt(LocalDateTime.now());
@@ -222,7 +222,7 @@ public class PostsService {
             throw new PostNotFoundException("null");
         }
 
-        PostJpa postJpa = this.postsRepository.findNotDeletedById(postId)
+        PostJpa postJpa = this.postsRepository.findActiveById(postId)
                 .orElseThrow(() -> new PostNotFoundException(postId));
 
         return this.commentsRepository.findAllActiveByPost(postJpa)

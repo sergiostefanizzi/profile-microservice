@@ -1,7 +1,6 @@
 package com.sergiostefanizzi.profilemicroservice.repository;
 
 import com.sergiostefanizzi.profilemicroservice.model.CommentJpa;
-import com.sergiostefanizzi.profilemicroservice.model.LikeJpa;
 import com.sergiostefanizzi.profilemicroservice.model.PostJpa;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -13,7 +12,7 @@ import java.util.Optional;
 @Repository
 public interface CommentsRepository extends JpaRepository<CommentJpa, Long> {
     @Query("SELECT c FROM CommentJpa c WHERE c.id=:commentId AND c.deletedAt IS NULL")
-    Optional<CommentJpa> findNotDeletedById(Long commentId);
+    Optional<CommentJpa> findActiveById(Long commentId);
 
     @Query("SELECT c FROM CommentJpa c WHERE c.post = :post AND c.deletedAt IS NULL")
     List<CommentJpa> findAllActiveByPost(PostJpa post);
