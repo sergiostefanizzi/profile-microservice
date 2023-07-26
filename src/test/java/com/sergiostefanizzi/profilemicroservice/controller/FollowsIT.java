@@ -40,9 +40,6 @@ class FollowsIT {
     private TestRestTemplate testRestTemplate;
     @Autowired
     private ObjectMapper objectMapper;
-    Long openProfileId1 = 1L;
-    Long openProfileId2 = 2L;
-    Long privateProfileId = 3L;
     Long invalidProfileId = Long.MIN_VALUE;
     List<String> errors;
 
@@ -544,6 +541,97 @@ class FollowsIT {
 
         ResponseEntity<String> response = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/followedBy",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class,
+                invalidProfileId);
+
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
+    void testFindAllFollowings_Then_200() throws Exception {
+        Profile publicProfile1 = createProfile("pincoPallino25", false);
+        Profile publicProfile2 = createProfile("pincoPallino26", false);
+        Profile publicProfile3 = createProfile("pincoPallino27", false);
+        createFollow(publicProfile1, publicProfile2);
+        createFollow(publicProfile1, publicProfile3);
+
+        ResponseEntity<ProfileFollowList> responseFollowerList = this.testRestTemplate.exchange(
+                this.baseUrl+"/{profileId}/follows",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                ProfileFollowList.class,
+                publicProfile1.getId());
+
+        assertEquals(HttpStatus.OK, responseFollowerList.getStatusCode());
+        assertNotNull(responseFollowerList.getBody());
+        ProfileFollowList profileFollowList = responseFollowerList.getBody();
+        assertEquals(2,profileFollowList.getProfileCount());
+        assertEquals(publicProfile2, profileFollowList.getProfiles().get(0));
+        assertEquals(publicProfile3, profileFollowList.getProfiles().get(1));
+
+        log.info(responseFollowerList.toString());
+    }
+
+    @Test
+    void testFindAllFollowings_NoFollowings_Then_200() throws Exception {
+        Profile publicProfile1 = createProfile("pincoPallino28", false);
+
+
+        ResponseEntity<ProfileFollowList> responseFollowerList = this.testRestTemplate.exchange(
+                this.baseUrl+"/{profileId}/follows",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                ProfileFollowList.class,
+                publicProfile1.getId());
+
+        assertEquals(HttpStatus.OK, responseFollowerList.getStatusCode());
+        assertNotNull(responseFollowerList.getBody());
+        ProfileFollowList profileFollowList = responseFollowerList.getBody();
+        assertEquals(0,profileFollowList.getProfileCount());
+        assertTrue(profileFollowList.getProfiles().isEmpty());
+
+
+        log.info(responseFollowerList.toString());
+    }
+
+    @Test
+    void testFindAllFollowings_Then_400() throws Exception {
+        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+
+        ResponseEntity<String> response = this.testRestTemplate.exchange(
+                this.baseUrl+"/{profileId}/follows",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class,
+                "IdNotLong");
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    //TODO 401
+
+    @Test
+    void testFindAllFollowings_ProfileNotFound_Then_404() throws Exception {
+        // messaggio d'errore che mi aspetto d'ottenere
+        errors.add("Profile "+invalidProfileId+" not found!");
+
+
+        ResponseEntity<String> response = this.testRestTemplate.exchange(
+                this.baseUrl+"/{profileId}/follows",
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
                 String.class,
