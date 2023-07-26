@@ -1,10 +1,8 @@
 package com.sergiostefanizzi.profilemicroservice.service;
 
-import com.sergiostefanizzi.profilemicroservice.model.Follows;
-import com.sergiostefanizzi.profilemicroservice.model.FollowsId;
-import com.sergiostefanizzi.profilemicroservice.model.FollowsJpa;
-import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
+import com.sergiostefanizzi.profilemicroservice.model.*;
 import com.sergiostefanizzi.profilemicroservice.model.converter.FollowsToFollowsJpaConverter;
+import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfileJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.repository.FollowsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.system.exception.FollowNotFoundException;
@@ -20,8 +18,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -39,6 +40,8 @@ class FollowsServiceTest {
     private ProfilesRepository profilesRepository;
     @Mock
     private FollowsToFollowsJpaConverter followsToFollowsJpaConverter;
+    @Mock
+    private ProfileToProfileJpaConverter profileToProfileJpaConverter;
     private ProfileJpa publicProfileJpa;
     private ProfileJpa privateProfileJpa;
     private ProfileJpa publicProfileJpa2;
@@ -366,6 +369,7 @@ class FollowsServiceTest {
                 this.privateProfileJpa.getId(),
                 Follows.RequestStatusEnum.ACCEPTED);
 
+
         when(this.followsRepository.findById(any(FollowsId.class))).thenReturn(Optional.of(followsJpa));
         when(this.followsRepository.save(any(FollowsJpa.class))).thenReturn(followsJpa);
         when(this.followsToFollowsJpaConverter.convertBack(any(FollowsJpa.class))).thenReturn(follows);
@@ -388,13 +392,133 @@ class FollowsServiceTest {
         followsJpa.setFollower(this.publicProfileJpa);
         followsJpa.setFollowed(this.privateProfileJpa);
 
+        when(this.profilesRepository.findActiveById(this.publicProfileJpa.getId())).thenReturn(Optional.of(this.publicProfileJpa));
+        when(this.profilesRepository.findActiveById(this.privateProfileJpa.getId())).thenReturn(Optional.of(this.privateProfileJpa));
         when(this.followsRepository.findById(any(FollowsId.class))).thenReturn(Optional.empty());
 
         assertThrows(FollowNotFoundException.class,
                 () -> this.followsService.acceptFollows(this.publicProfileJpa.getId(), this.privateProfileJpa.getId(), false));
 
+        //verify(this.profilesRepository, times(2)).findActiveById(anyLong());
         verify(this.followsRepository, times(1)).findById(any(FollowsId.class));
         verify(this.followsRepository, times(0)).save(any(FollowsJpa.class));
         verify(this.followsToFollowsJpaConverter, times(0)).convertBack(any(FollowsJpa.class));
     }
+
+    @Test
+    void testFindAllFollowers_Success(){
+        Profile publicProfile2 = new Profile("pinco_pallino",false,2L);
+        publicProfile2.setId(2L);
+        Profile privateProfile = new Profile("pinco_pallino2",false,3L);
+        privateProfile.setId(3L);
+        List<Profile> followerList = asList(publicProfile2, privateProfile);
+        ProfileFollowList returnedProfileFollowList = new ProfileFollowList(followerList, followerList.size());
+
+
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.publicProfileJpa));
+        when(this.followsRepository.findActiveFollowers(any(ProfileJpa.class))).thenReturn(asList(
+                this.publicProfileJpa2,
+                this.privateProfileJpa
+        ));
+        when(this.profileToProfileJpaConverter.convertBack(this.publicProfileJpa2)).thenReturn(publicProfile2);
+        when(this.profileToProfileJpaConverter.convertBack(this.privateProfileJpa)).thenReturn(privateProfile);
+
+        ProfileFollowList profileFollowList = this.followsService.findAllFollowers(this.publicProfileJpa.getId());
+
+        log.info(profileFollowList.toString());
+
+        assertEquals(returnedProfileFollowList,profileFollowList);
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.followsRepository, times(1)).findActiveFollowers(any(ProfileJpa.class));
+        verify(this.profileToProfileJpaConverter, times(2)).convertBack(any(ProfileJpa.class));
+    }
+
+    @Test
+    void testFindAllFollowers_NoFollowers_Success(){
+        List<Profile> followerList = Collections.emptyList();
+        ProfileFollowList returnedProfileFollowList = new ProfileFollowList(followerList, 0);
+
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.publicProfileJpa));
+        when(this.followsRepository.findActiveFollowers(any(ProfileJpa.class))).thenReturn(Collections.emptyList());
+
+        ProfileFollowList profileFollowList = this.followsService.findAllFollowers(this.publicProfileJpa.getId());
+
+        log.info(profileFollowList.toString());
+
+        assertEquals(returnedProfileFollowList,profileFollowList);
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.followsRepository, times(1)).findActiveFollowers(any(ProfileJpa.class));
+        verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
+    }
+
+    //TODO Ritorno il numero di followers ma non la lista dei profili dati che non ho accesso a tale profilo
+
+    @Test
+    void testFindAllFollowers_Failed(){
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.empty());
+
+        assertThrows(ProfileNotFoundException.class, () -> this.followsService.findAllFollowers(this.publicProfileJpa.getId()));
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.followsRepository, times(0)).findActiveFollowers(any(ProfileJpa.class));
+        verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
+    }
+
+    @Test
+    void testFindAllFollowings_Success(){
+        Profile publicProfile2 = new Profile("pinco_pallino",false,2L);
+        publicProfile2.setId(2L);
+        Profile privateProfile = new Profile("pinco_pallino2",false,3L);
+        privateProfile.setId(3L);
+        List<Profile> followerList = asList(publicProfile2, privateProfile);
+        ProfileFollowList returnedProfileFollowList = new ProfileFollowList(followerList, followerList.size());
+
+
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.publicProfileJpa));
+        when(this.followsRepository.findActiveFollowings(any(ProfileJpa.class))).thenReturn(asList(
+                this.publicProfileJpa2,
+                this.privateProfileJpa
+        ));
+        when(this.profileToProfileJpaConverter.convertBack(this.publicProfileJpa2)).thenReturn(publicProfile2);
+        when(this.profileToProfileJpaConverter.convertBack(this.privateProfileJpa)).thenReturn(privateProfile);
+
+        ProfileFollowList profileFollowList = this.followsService.findAllFollowings(this.publicProfileJpa.getId());
+
+        log.info(profileFollowList.toString());
+
+        assertEquals(returnedProfileFollowList,profileFollowList);
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.followsRepository, times(1)).findActiveFollowings(any(ProfileJpa.class));
+        verify(this.profileToProfileJpaConverter, times(2)).convertBack(any(ProfileJpa.class));
+    }
+
+    @Test
+    void testFindAllFollowings_NoFollowings_Success(){
+        List<Profile> followerList = Collections.emptyList();
+        ProfileFollowList returnedProfileFollowList = new ProfileFollowList(followerList, 0);
+
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.publicProfileJpa));
+        when(this.followsRepository.findActiveFollowings(any(ProfileJpa.class))).thenReturn(Collections.emptyList());
+
+        ProfileFollowList profileFollowList = this.followsService.findAllFollowings(this.publicProfileJpa.getId());
+
+        log.info(profileFollowList.toString());
+
+        assertEquals(returnedProfileFollowList,profileFollowList);
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.followsRepository, times(1)).findActiveFollowings(any(ProfileJpa.class));
+        verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
+    }
+
+    //TODO Ritorno il numero di followers ma non la lista dei profili dati che non ho accesso a tale profilo
+
+    @Test
+    void testFindAllFollowings_Failed(){
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.empty());
+
+        assertThrows(ProfileNotFoundException.class, () -> this.followsService.findAllFollowings(this.publicProfileJpa.getId()));
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.followsRepository, times(0)).findActiveFollowings(any(ProfileJpa.class));
+        verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
+    }
+
 }

@@ -690,7 +690,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProfileList'
+                $ref: '#/components/schemas/ProfileFollowList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -723,7 +723,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ProfileList'
+                $ref: '#/components/schemas/ProfileFollowList'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1318,6 +1318,21 @@ components:
           format: int64
       required:
         - managed_by
+
+    ProfileFollowList:
+      type: object
+      properties:
+        profiles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Profile'
+        profile_count:
+          type: integer
+          format: int32
+      required:
+        - profiles
+        - profile_count
+
 
     ProfileList:
       type: array

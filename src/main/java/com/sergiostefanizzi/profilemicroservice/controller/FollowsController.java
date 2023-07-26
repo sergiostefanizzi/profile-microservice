@@ -3,6 +3,7 @@ package com.sergiostefanizzi.profilemicroservice.controller;
 import com.sergiostefanizzi.profilemicroservice.api.FollowsApi;
 import com.sergiostefanizzi.profilemicroservice.model.Follows;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
+import com.sergiostefanizzi.profilemicroservice.model.ProfileFollowList;
 import com.sergiostefanizzi.profilemicroservice.service.FollowsService;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -39,12 +40,14 @@ public class FollowsController implements FollowsApi {
     }
 
     @Override
-    public ResponseEntity<List<Profile>> findAllFollowers(Long profileId) {
-        return FollowsApi.super.findAllFollowers(profileId);
+    public ResponseEntity<ProfileFollowList> findAllFollowers(Long profileId) {
+        ProfileFollowList profileFollowList = this.followsService.findAllFollowers(profileId);
+        return new ResponseEntity<>(profileFollowList, HttpStatus.OK);
     }
 
     @Override
-    public ResponseEntity<List<Profile>> findAllFollowings(Long profileId) {
-        return FollowsApi.super.findAllFollowings(profileId);
+    public ResponseEntity<ProfileFollowList> findAllFollowings(Long profileId) {
+        ProfileFollowList profileFollowList = this.followsService.findAllFollowings(profileId);
+        return new ResponseEntity<>(profileFollowList, HttpStatus.OK);
     }
 }

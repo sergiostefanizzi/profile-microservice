@@ -2,6 +2,8 @@ package com.sergiostefanizzi.profilemicroservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sergiostefanizzi.profilemicroservice.model.Follows;
+import com.sergiostefanizzi.profilemicroservice.model.Profile;
+import com.sergiostefanizzi.profilemicroservice.model.ProfileFollowList;
 import com.sergiostefanizzi.profilemicroservice.service.FollowsService;
 import com.sergiostefanizzi.profilemicroservice.system.exception.FollowNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.UnfollowOnCreationException;
@@ -22,15 +24,15 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.in;
+import static java.util.Arrays.asList;
+import static org.hamcrest.Matchers.*;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -270,6 +272,136 @@ class FollowsControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof FollowNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value(errors.get(0)))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+    }
+
+    @Test
+    void testFindAllFollowers_Then_200() throws Exception {
+        Profile publicProfile2 = new Profile("pinco_pallino",false,2L);
+        publicProfile2.setId(2L);
+        Profile privateProfile = new Profile("pinco_pallino2",false,3L);
+        privateProfile.setId(3L);
+        List<Profile> followerList = asList(publicProfile2, privateProfile);
+        ProfileFollowList returnedProfileFollowList = new ProfileFollowList(followerList, followerList.size());
+
+        when(this.followsService.findAllFollowers(publicProfileId1)).thenReturn(returnedProfileFollowList);
+
+        MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}/followedBy",publicProfileId1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.*", hasSize(2)))
+                .andExpect(jsonPath("$.profiles").isArray())
+                .andExpect(jsonPath("$.profiles", hasSize(2)))
+                .andExpect(jsonPath("$.profiles[0].id").value(followerList.get(0).getId()))
+                .andExpect(jsonPath("$.profiles[0].profile_name").value(followerList.get(0).getProfileName()))
+                .andExpect(jsonPath("$.profiles[0].bio").doesNotExist())
+                .andExpect(jsonPath("$.profiles[0].picture_url").doesNotExist())
+                .andExpect(jsonPath("$.profiles[0].is_private").value(followerList.get(0).getIsPrivate()))
+                .andExpect(jsonPath("$.profiles[0].account_id").value(followerList.get(0).getAccountId()))
+                .andExpect(jsonPath("$.profiles[1].id").value(followerList.get(1).getId()))
+                .andExpect(jsonPath("$.profiles[1].profile_name").value(followerList.get(1).getProfileName()))
+                .andExpect(jsonPath("$.profiles[1].bio").doesNotExist())
+                .andExpect(jsonPath("$.profiles[1].picture_url").doesNotExist())
+                .andExpect(jsonPath("$.profiles[1].is_private").value(followerList.get(1).getIsPrivate()))
+                .andExpect(jsonPath("$.profiles[1].account_id").value(followerList.get(1).getAccountId()))
+                .andExpect(jsonPath("$.profile_count").value(followerList.size()))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        ProfileFollowList followerListResult = this.objectMapper.readValue(resultAsString, ProfileFollowList.class);
+
+        log.info(followerListResult.toString());
+    }
+
+    @Test
+    void testFindAllFollowers_NoFollowers_Then_200() throws Exception {
+        List<Profile> followerList = Collections.emptyList();
+        ProfileFollowList returnedProfileFollowList = new ProfileFollowList(followerList, 0);
+
+        when(this.followsService.findAllFollowers(publicProfileId1)).thenReturn(returnedProfileFollowList);
+
+        MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}/followedBy",publicProfileId1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.*", hasSize(2)))
+                .andExpect(jsonPath("$.profiles").isArray())
+                .andExpect(jsonPath("$.profiles").isEmpty())
+                .andExpect(jsonPath("$.profile_count").value(0))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        ProfileFollowList followerListResult = this.objectMapper.readValue(resultAsString, ProfileFollowList.class);
+
+        log.info(followerListResult.toString());
+    }
+
+    @Test
+    void testFindAllFollowers_ProfileNotGranted_Then_200() throws Exception {
+        List<Profile> followerList = Collections.emptyList();
+        ProfileFollowList returnedProfileFollowList = new ProfileFollowList(followerList, 50);
+
+        when(this.followsService.findAllFollowers(publicProfileId1)).thenReturn(returnedProfileFollowList);
+
+        MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}/followedBy",publicProfileId1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.*", hasSize(2)))
+                .andExpect(jsonPath("$.profiles").isArray())
+                .andExpect(jsonPath("$.profiles").isEmpty())
+                .andExpect(jsonPath("$.profile_count").value(50))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        ProfileFollowList followerListResult = this.objectMapper.readValue(resultAsString, ProfileFollowList.class);
+
+        log.info(followerListResult.toString());
+    }
+
+    @Test
+    void testFindAllFollowers_Then_400() throws Exception {
+        // arrayList contenente i messaggi di errore
+        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}/followedBy","IdNotLong")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                ))
+                .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+    }
+
+    //TODO 401
+
+
+    @Test
+    void testFindAllFollowers_ProfileNotFound_Then_404() throws Exception {
+        // arrayList contenente i messaggi di errore
+        errors.add("Profile " + invalidProfileId + " not found!");
+        doThrow(new ProfileNotFoundException(invalidProfileId)).when(this.followsService).findAllFollowers(publicProfileId1);
+
+
+        MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}/followedBy",publicProfileId1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof ProfileNotFoundException
                 ))
                 .andExpect(jsonPath("$.error").value(errors.get(0)))
                 .andReturn();

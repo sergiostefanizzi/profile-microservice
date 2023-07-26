@@ -1,10 +1,8 @@
 package com.sergiostefanizzi.profilemicroservice.service;
 
-import com.sergiostefanizzi.profilemicroservice.model.Follows;
-import com.sergiostefanizzi.profilemicroservice.model.FollowsId;
-import com.sergiostefanizzi.profilemicroservice.model.FollowsJpa;
-import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
+import com.sergiostefanizzi.profilemicroservice.model.*;
 import com.sergiostefanizzi.profilemicroservice.model.converter.FollowsToFollowsJpaConverter;
+import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfileJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.repository.FollowsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.system.exception.UnfollowOnCreationException;
@@ -16,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -25,6 +24,7 @@ public class FollowsService {
     private final FollowsRepository followsRepository;
     private final ProfilesRepository profilesRepository;
     private final FollowsToFollowsJpaConverter followsToFollowsJpaConverter;
+    private final ProfileToProfileJpaConverter profileToProfileJpaConverter;
 
     @Transactional
     public Follows addFollows(Long profileId, Long followsId, Boolean unfollow) {
@@ -114,5 +114,35 @@ public class FollowsService {
 
         return this.followsToFollowsJpaConverter.convertBack(
                 this.followsRepository.save(followsJpa));
+    }
+
+    @Transactional
+    public ProfileFollowList findAllFollowers(Long profileId) {
+        if(profileId == null){
+            throw new ProfileNotFoundException("null");
+        }
+
+        //controllo l'esistenza del profilo
+        ProfileJpa profileJpa = this.profilesRepository.findActiveById(profileId)
+                .orElseThrow(() -> new ProfileNotFoundException(profileId));
+        // Ritorno la lista dei profili dei follower
+        List<Profile> followerList = this.followsRepository.findActiveFollowers(profileJpa)
+                .stream().map(this.profileToProfileJpaConverter::convertBack).toList();
+        return new ProfileFollowList(followerList, followerList.size());
+    }
+
+    @Transactional
+    public ProfileFollowList findAllFollowings(Long profileId) {
+        if(profileId == null){
+            throw new ProfileNotFoundException("null");
+        }
+
+        //controllo l'esistenza del profilo
+        ProfileJpa profileJpa = this.profilesRepository.findActiveById(profileId)
+                .orElseThrow(() -> new ProfileNotFoundException(profileId));
+        // Ritorno la lista dei profili dei follower
+        List<Profile> followerList = this.followsRepository.findActiveFollowings(profileJpa)
+                .stream().map(this.profileToProfileJpaConverter::convertBack).toList();
+        return new ProfileFollowList(followerList, followerList.size());
     }
 }
