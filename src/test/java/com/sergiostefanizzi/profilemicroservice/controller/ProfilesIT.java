@@ -81,6 +81,7 @@ class ProfilesIT {
         assertEquals(this.newProfile.getPictureUrl(), savedProfile.getPictureUrl());
         assertEquals(this.newProfile.getIsPrivate(), savedProfile.getIsPrivate());
         assertEquals(this.newProfile.getAccountId(), savedProfile.getAccountId());
+        this.profileId = savedProfile.getId();
 
         // visulazzo il profilo salvato
         log.info(savedProfile.toString());
@@ -360,7 +361,8 @@ class ProfilesIT {
     @Test
     void testDeleteProfileById_Then_400() throws Exception{
         // messaggio d'errore che mi aspetto d'ottenere
-        String error = "Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"";
+        //String error = "Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"";
+        String error = "Profile ID is not valid!";
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/IdNotLong",
                 HttpMethod.DELETE,
                 HttpEntity.EMPTY,
@@ -445,7 +447,8 @@ class ProfilesIT {
 
     @Test
     void testUpdateProfile_InvalidId_Then_400() throws Exception{
-        String error = "Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"";
+        //String error = "Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"";
+        String error = "Profile ID is not valid!";
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();
 
@@ -467,6 +470,8 @@ class ProfilesIT {
 
     @Test
     void testUpdateProfile_BioLength_Then_400() throws Exception {
+        addProfile("_c1");
+
         String error = "bio size must be between 0 and 150";
 
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
@@ -478,7 +483,7 @@ class ProfilesIT {
                 HttpMethod.PATCH,
                 requestPatch,
                 String.class,
-                Long.MIN_VALUE);
+                this.profileId);
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
 
@@ -492,6 +497,7 @@ class ProfilesIT {
 
     @Test
     void testUpdateProfile_InvalidPictureUrl_Then_400() throws Exception{
+        addProfile("_c2");
         String error = "pictureUrl must be a valid URL";
 
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
@@ -505,7 +511,7 @@ class ProfilesIT {
                 HttpMethod.PATCH,
                 requestPatch,
                 String.class,
-                Long.MIN_VALUE);
+                this.profileId);
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
 
@@ -519,6 +525,7 @@ class ProfilesIT {
 
     @Test
     void testUpdateProfile_InvalidIsPrivate_Then_400() throws Exception{
+        addProfile("_c3");
         String error = "JSON parse error: Cannot deserialize value of type `java.lang.Boolean` from String \"FalseString\": only \"true\" or \"false\" recognized";
 
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
@@ -539,7 +546,7 @@ class ProfilesIT {
                 HttpMethod.PATCH,
                 requestPatch,
                 String.class,
-                Long.MIN_VALUE);
+                this.profileId);
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
 
@@ -613,7 +620,7 @@ class ProfilesIT {
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
                 String.class,
-                "giu");
+                "gius");
 
         assertEquals(HttpStatus.OK, responseGet.getStatusCode());
         assertNotNull(responseGet.getBody());
@@ -717,6 +724,30 @@ class ProfilesIT {
         // In questo caso l'errore NON è un array di dimensione 1
         assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
+    }
+
+    void addProfile(String x){
+        this.newProfile.setProfileName(this.profileName+x);
+        HttpEntity<Profile> request = new HttpEntity<>(this.newProfile);
+        ResponseEntity<Profile> response = this.testRestTemplate.exchange(this.baseUrl,
+                HttpMethod.POST,
+                request,
+                Profile.class);
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        assertNotNull(response.getBody());
+        assertInstanceOf(Profile.class, response.getBody());
+        Profile savedProfile = response.getBody();
+        assertNotNull(savedProfile.getId());
+        assertEquals(this.newProfile.getProfileName(), savedProfile.getProfileName());
+        assertEquals(this.newProfile.getBio(), savedProfile.getBio());
+        assertEquals(this.newProfile.getPictureUrl(), savedProfile.getPictureUrl());
+        assertEquals(this.newProfile.getIsPrivate(), savedProfile.getIsPrivate());
+        assertEquals(this.newProfile.getAccountId(), savedProfile.getAccountId());
+        this.profileId = savedProfile.getId();
+
+        // visulazzo il profilo salvato
+        log.info(savedProfile.toString());
     }
 
 }

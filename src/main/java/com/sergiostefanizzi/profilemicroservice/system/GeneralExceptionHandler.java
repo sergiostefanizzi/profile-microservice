@@ -91,6 +91,15 @@ public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
     }
 
+    @ExceptionHandler(NumberFormatException.class)
+    public ResponseEntity<Object> handleNumberFormatException(NumberFormatException ex, WebRequest request){
+        log.error(ex.getMessage(),ex);
+        String error = "Profile ID is not valid!";
+        Map<String, String> body = new HashMap<>();
+        body.put("error", error);
+        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
+    }
+
     // INTERNAL SERVER ERROR
     @ExceptionHandler({RuntimeException.class, Exception.class})
     public ResponseEntity<Object> handleNotManagedException(RuntimeException ex, WebRequest request){

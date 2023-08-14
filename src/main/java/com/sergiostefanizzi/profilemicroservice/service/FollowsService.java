@@ -8,9 +8,13 @@ import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.system.exception.UnfollowOnCreationException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.FollowNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
+import com.sergiostefanizzi.profilemicroservice.system.util.ProfileContext;
+import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.SessionFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -25,6 +29,11 @@ public class FollowsService {
     private final ProfilesRepository profilesRepository;
     private final FollowsToFollowsJpaConverter followsToFollowsJpaConverter;
     private final ProfileToProfileJpaConverter profileToProfileJpaConverter;
+    @Autowired
+    EntityManager entityManager;
+
+    @Autowired
+    ProfileContext profileContext;
 
     @Transactional
     public Follows addFollows(Long profileId, Long followsId, Boolean unfollow) {
@@ -66,7 +75,12 @@ public class FollowsService {
                     followsJpa.setRequestStatus(Follows.RequestStatusEnum.ACCEPTED);
                     followsJpa.setFollowedAt(LocalDateTime.now());
                 }
-                followsJpa.setFollower(profileJpa);
+
+                ProfileJpa profileJpaTemp = new ProfileJpa();
+
+                entityManager.flush();
+                profileJpaTemp = entityManager.getReference(ProfileJpa.class, profileContext.getProfileJpa().getId());
+                followsJpa.setFollower(profileJpaTemp);
                 followsJpa.setFollowed(followingJpa);
             }else {
                 throw new UnfollowOnCreationException();

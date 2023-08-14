@@ -33,11 +33,11 @@ public class FollowsJpa {
     @Version
     @Column(name = "version", nullable = false)
     private Long version;
-    @ManyToOne
+    @ManyToOne()
     @MapsId("followerId")
     @JoinColumn(name = "follower_id", referencedColumnName = "id")
     private ProfileJpa follower;
-    @ManyToOne
+    @ManyToOne()
     @MapsId("followedId")
     @JoinColumn(name = "followed_id", referencedColumnName = "id")
     private ProfileJpa followed;
