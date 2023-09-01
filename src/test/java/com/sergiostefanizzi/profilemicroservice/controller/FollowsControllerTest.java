@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sergiostefanizzi.profilemicroservice.model.Follows;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
 import com.sergiostefanizzi.profilemicroservice.model.ProfileFollowList;
+import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.service.FollowsService;
 import com.sergiostefanizzi.profilemicroservice.system.exception.FollowNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.UnfollowOnCreationException;
@@ -45,6 +46,8 @@ class FollowsControllerTest {
     private FollowsService followsService;
     @Autowired
     private MockMvc mockMvc;
+    @MockBean
+    private ProfilesRepository profilesRepository;
     @Autowired
     private ObjectMapper objectMapper;
     Long publicProfileId1 = 1L;

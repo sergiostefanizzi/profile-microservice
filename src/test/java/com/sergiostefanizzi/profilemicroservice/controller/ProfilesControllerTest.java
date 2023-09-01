@@ -3,10 +3,8 @@ package com.sergiostefanizzi.profilemicroservice.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.sergiostefanizzi.profilemicroservice.model.FullProfile;
-import com.sergiostefanizzi.profilemicroservice.model.Post;
-import com.sergiostefanizzi.profilemicroservice.model.Profile;
-import com.sergiostefanizzi.profilemicroservice.model.ProfilePatch;
+import com.sergiostefanizzi.profilemicroservice.model.*;
+import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.service.ProfilesService;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
@@ -30,8 +28,10 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.*;
@@ -48,6 +48,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class ProfilesControllerTest {
     @MockBean
     private ProfilesService profilesService;
+    @MockBean
+    private ProfilesRepository profilesRepository;
     @Autowired
     private MockMvc mockMvc;
     @Autowired
@@ -314,6 +316,13 @@ class ProfilesControllerTest {
     }
     @Test
     void testDeleteProfileById_Then_204() throws Exception{
+        ProfileJpa profileJpa = new ProfileJpa(profileName, isPrivate, accountId);
+        profileJpa.setBio(bio);
+        profileJpa.setPictureUrl(pictureUrl);
+        profileJpa.setId(profileId);
+        profileJpa.setCreatedAt(LocalDateTime.MIN);
+
+        when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.of(profileId));
         doNothing().when(this.profilesService).remove(profileId);
 
         this.mockMvc.perform(delete("/profiles/{profileId}",profileId))
@@ -325,9 +334,8 @@ class ProfilesControllerTest {
         MvcResult result = this.mockMvc.perform(delete("/profiles/IdNotLong"))
                 .andExpect(status().isBadRequest())
                 .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
-                ))
-                .andExpect(jsonPath("$.error").value("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"")).andReturn();
+                        res.getResolvedException() instanceof NumberFormatException
+                )).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n"+resultAsString);
@@ -357,6 +365,12 @@ class ProfilesControllerTest {
     
     @Test
     void testUpdateProfile_Then_200() throws Exception{
+        ProfileJpa profileJpa = new ProfileJpa(profileName, isPrivate, accountId);
+        profileJpa.setBio(bio);
+        profileJpa.setPictureUrl(pictureUrl);
+        profileJpa.setId(profileId);
+        profileJpa.setCreatedAt(LocalDateTime.MIN);
+
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();
         profilePatch.setBio(updatedBio);
@@ -374,6 +388,7 @@ class ProfilesControllerTest {
         
         
         when(this.profilesService.update(profileId, profilePatch)).thenReturn(updatedProfile);
+        when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.of(profileId));
         
         MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",profileId)
                 .accept(MediaType.APPLICATION_JSON)
@@ -412,9 +427,8 @@ class ProfilesControllerTest {
                         .content(profilePatchJson))
                 .andExpect(status().isBadRequest())
                 .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
-                ))
-                .andExpect(jsonPath("$.error").value("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"")).andReturn();
+                        res.getResolvedException() instanceof NumberFormatException
+                )).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n"+resultAsString);
@@ -425,11 +439,19 @@ class ProfilesControllerTest {
     void testUpdateProfile_BioLength_Then_400() throws Exception{
         String error = "bio size must be between 0 and 150";
 
+        ProfileJpa profileJpa = new ProfileJpa(profileName, isPrivate, accountId);
+        profileJpa.setBio(bio);
+        profileJpa.setPictureUrl(pictureUrl);
+        profileJpa.setId(profileId);
+        profileJpa.setCreatedAt(LocalDateTime.MIN);
+
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();
         profilePatch.setBio("Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient.");
 
         String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
+
+        when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.of(profileId));
 
         MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",profileId)
                         .accept(MediaType.APPLICATION_JSON)
@@ -451,12 +473,20 @@ class ProfilesControllerTest {
     void testUpdateProfile_InvalidPictureUrl_Then_400() throws Exception{
         String error = "pictureUrl must be a valid URL";
 
+        ProfileJpa profileJpa = new ProfileJpa(profileName, isPrivate, accountId);
+        profileJpa.setBio(bio);
+        profileJpa.setPictureUrl(pictureUrl);
+        profileJpa.setId(profileId);
+        profileJpa.setCreatedAt(LocalDateTime.MIN);
+
         ProfilePatch profilePatch = new ProfilePatch();
         profilePatch.setPictureUrl("https://upload.wikimedia.o/ ra-%%$^&& iuyi");
         //Test XSS
         //profilePatch.setPictureUrl(pictureUrlXSS);
 
         String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
+
+        when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.of(profileId));
 
         MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",profileId)
                         .accept(MediaType.APPLICATION_JSON)
@@ -476,6 +506,12 @@ class ProfilesControllerTest {
 
     @Test
     void testUpdateProfile_InvalidIsPrivate_Then_400() throws Exception{
+        ProfileJpa profileJpa = new ProfileJpa(profileName, isPrivate, accountId);
+        profileJpa.setBio(bio);
+        profileJpa.setPictureUrl(pictureUrl);
+        profileJpa.setId(profileId);
+        profileJpa.setCreatedAt(LocalDateTime.MIN);
+
         ProfilePatch profilePatch = new ProfilePatch();
         profilePatch.setIsPrivate(false);
 
@@ -484,6 +520,8 @@ class ProfilesControllerTest {
         JsonNode jsonNode = this.objectMapper.readTree(profilePatchJson);
         ((ObjectNode) jsonNode).put("is_private", "FalseString");
         profilePatchJson = this.objectMapper.writeValueAsString(jsonNode);
+
+        when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.of(profileId));
 
         MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",profileId)
                         .accept(MediaType.APPLICATION_JSON)
@@ -586,6 +624,13 @@ class ProfilesControllerTest {
 
     @Test
     void testFindFull_Then_200() throws Exception{
+        ProfileJpa profileJpa = new ProfileJpa(profileName, isPrivate, accountId);
+        profileJpa.setBio(bio);
+        profileJpa.setPictureUrl(pictureUrl);
+        profileJpa.setId(profileId);
+        profileJpa.setCreatedAt(LocalDateTime.MIN);
+
+
         Profile convertedProfile = new Profile(profileName, isPrivate, accountId);
         convertedProfile.setBio(bio);
         convertedProfile.setPictureUrl(pictureUrl);
@@ -611,6 +656,7 @@ class ProfilesControllerTest {
                 true
         );
 
+        when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.of(profileId));
         when(this.profilesService.findFull(profileId)).thenReturn(convertedFullProfile);
 
         MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}",profileId)
@@ -632,6 +678,12 @@ class ProfilesControllerTest {
 
     @Test
     void testFindFull_NoPost_Then_200() throws Exception{
+        ProfileJpa profileJpa = new ProfileJpa(profileName, isPrivate, accountId);
+        profileJpa.setBio(bio);
+        profileJpa.setPictureUrl(pictureUrl);
+        profileJpa.setId(profileId);
+        profileJpa.setCreatedAt(LocalDateTime.MIN);
+
         Profile convertedProfile = new Profile(profileName, isPrivate, accountId);
         convertedProfile.setBio(bio);
         convertedProfile.setPictureUrl(pictureUrl);
@@ -645,7 +697,7 @@ class ProfilesControllerTest {
                 0,
                 true
         );
-
+        when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.of(profileId));
         when(this.profilesService.findFull(profileId)).thenReturn(convertedFullProfile);
 
         MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}",profileId)
@@ -669,13 +721,13 @@ class ProfilesControllerTest {
     void testFindFull_Then_400() throws Exception{
         List<String> errors = new ArrayList<>();
 
+
         MvcResult result = this.mockMvc.perform(patch("/profiles/IdNotLong")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
                 .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
-                ))
-                .andExpect(jsonPath("$.error").value("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"")).andReturn();
+                        res.getResolvedException() instanceof NumberFormatException
+                )).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n"+resultAsString);
@@ -686,7 +738,8 @@ class ProfilesControllerTest {
 
     @Test
     void testFindFull_Then_404() throws Exception{
-        doThrow(new ProfileNotFoundException(profileName)).when(this.profilesService).findFull(profileId);
+        //doThrow(new ProfileNotFoundException(profileId)).when(this.profilesService).findFull(profileId);
+        doThrow(new ProfileNotFoundException(profileId)).when(this.profilesRepository).findActiveById(profileId);
 
         MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}",profileId)
                         .contentType(MediaType.APPLICATION_JSON))
@@ -694,7 +747,7 @@ class ProfilesControllerTest {
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof ProfileNotFoundException
                 ))
-                .andExpect(jsonPath("$.error").value("Profile "+profileName+" not found!"))
+                .andExpect(jsonPath("$.error").value("Profile "+profileId+" not found!"))
                 .andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();

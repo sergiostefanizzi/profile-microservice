@@ -8,7 +8,6 @@ import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.system.exception.UnfollowOnCreationException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.FollowNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
-import com.sergiostefanizzi.profilemicroservice.system.util.ProfileContext;
 import jakarta.persistence.EntityManager;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -32,18 +31,17 @@ public class FollowsService {
     @Autowired
     EntityManager entityManager;
 
-    @Autowired
-    ProfileContext profileContext;
 
     @Transactional
     public Follows addFollows(Long profileId, Long followsId, Boolean unfollow) {
         if(profileId == null || followsId == null){
-            throw new ProfileNotFoundException("null");
+            throw new ProfileNotFoundException("Missing input parameter");
         }
 
         FollowsJpa followsJpa;
         // Controllo che la risorsa non sia già stata creata
         Optional<FollowsJpa> optionalFollowsJpa = this.followsRepository.findById(new FollowsId(profileId, followsId));
+        // TODO scompongo l'if in due metodi privati
         if (optionalFollowsJpa.isPresent()) {
             followsJpa = optionalFollowsJpa.get();
             if (followsJpa.getRequestStatus().equals(Follows.RequestStatusEnum.REJECTED) && !unfollow){
@@ -60,10 +58,11 @@ public class FollowsService {
             }
         } else {
             // Controllo l'esistenza dei due profili
-            ProfileJpa profileJpa = this.profilesRepository.findActiveById(profileId)
-                    .orElseThrow(() -> new ProfileNotFoundException(profileId));
+            // ProfileJpa profileJpa = this.profilesRepository.findActiveById(profileId)
+            //        .orElseThrow(() -> new ProfileNotFoundException(profileId));
             ProfileJpa followingJpa = this.profilesRepository.findActiveById(followsId)
                     .orElseThrow(() -> new ProfileNotFoundException(followsId));
+            // il profileId esiste perche' verificato nell'interceptor
             if(!unfollow){
                 // Se la richiesta non esiste
                 followsJpa = new FollowsJpa(new FollowsId(profileId, followsId));
@@ -76,10 +75,8 @@ public class FollowsService {
                     followsJpa.setFollowedAt(LocalDateTime.now());
                 }
 
-                ProfileJpa profileJpaTemp = new ProfileJpa();
-
                 entityManager.flush();
-                profileJpaTemp = entityManager.getReference(ProfileJpa.class, profileContext.getProfileJpa().getId());
+                ProfileJpa profileJpaTemp = entityManager.getReference(ProfileJpa.class, profileId);
                 followsJpa.setFollower(profileJpaTemp);
                 followsJpa.setFollowed(followingJpa);
             }else {

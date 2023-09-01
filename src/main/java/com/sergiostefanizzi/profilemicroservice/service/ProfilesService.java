@@ -32,26 +32,22 @@ public class ProfilesService {
 
     @Transactional
     public Profile save(@NotNull Profile profile){
-        if(this.profilesRepository.findByProfileName(profile.getProfileName()).isPresent()){
+        if(this.profilesRepository.checkActiveByProfileName(profile.getProfileName()).isPresent()){
             throw new ProfileAlreadyCreatedException(profile.getProfileName());
         }
         ProfileJpa newProfileJpa = this.profileToProfileJpaConverter.convert(profile);
         Objects.requireNonNull(newProfileJpa).setCreatedAt(LocalDateTime.now());
-        ProfileJpa savedProfileJpa = this.profilesRepository.save(newProfileJpa);
-        log.info("PROFILEJPA NAME ---> "+savedProfileJpa.getProfileName());
-        log.info("PROFILEJPA id ---> "+savedProfileJpa.getId());
-        return this.profileToProfileJpaConverter.convertBack(savedProfileJpa);
+        return this.profileToProfileJpaConverter.convertBack(this.profilesRepository.save(newProfileJpa));
     }
 
     @Transactional
     public void remove(Long profileId) {
         if (profileId == null){
-            throw new ProfileNotFoundException("null");
+            throw new ProfileNotFoundException("Missing input parameter");
         }
 
         // cerco profili che non siano gia' stati eliminati o che non esistano proprio
-        ProfileJpa profileJpa = this.profilesRepository.findById(profileId)
-                .filter(profile-> profile.getDeletedAt() == null)
+        ProfileJpa profileJpa = this.profilesRepository.findActiveById(profileId)
                 .orElseThrow(() -> new ProfileNotFoundException(profileId));
 
         //imposto a questo istante la data e l'ora di rimozione del profilo
@@ -64,12 +60,11 @@ public class ProfilesService {
     @Transactional
     public Profile update(Long profileId,@NotNull ProfilePatch profilePatch) {
         if (profileId == null){
-            throw new ProfileNotFoundException("null");
+            throw new ProfileNotFoundException("Missing input parameter");
         }
 
         // cerco profili che non siano gia' stati eliminati o che non esistano proprio
-        ProfileJpa profileJpa = this.profilesRepository.findById(profileId)
-                .filter(profile-> profile.getDeletedAt() == null)
+        ProfileJpa profileJpa = this.profilesRepository.findActiveById(profileId)
                 .orElseThrow(() -> new ProfileNotFoundException(profileId));
         // modifico solo i campi che devono essere aggiornati
         if (StringUtils.hasText(profilePatch.getBio())) profileJpa.setBio(profilePatch.getBio());
@@ -87,9 +82,12 @@ public class ProfilesService {
 
     @Transactional
     public List<Profile> findByProfileName(String profileName) {
-        return this.profilesRepository.findAllByProfileName(profileName)
-                .stream().filter(profileJpa -> profileJpa.getDeletedAt() == null)
-                .map(this.profileToProfileJpaConverter::convertBack).toList();
+        if (!StringUtils.hasText(profileName)){
+            throw new ProfileNotFoundException("Missing input parameter");
+        }
+
+        return this.profilesRepository.findAllActiveByProfileName(profileName)
+                .stream().map(this.profileToProfileJpaConverter::convertBack).toList();
 
     }
 
@@ -97,20 +95,18 @@ public class ProfilesService {
     @Transactional
     public FullProfile findFull(Long profileId) {
         if (profileId == null){
-            throw new ProfileNotFoundException("null");
+            throw new ProfileNotFoundException("Missing input parameter");
         }
         List<Post> postList = new ArrayList<>();
-        int postCount = 0;
+
 
         // controllo che il profilo non sia gia' stato eliminato o che non sia mai esistito
-        ProfileJpa profileJpa = this.profilesRepository.findById(profileId)
-                .filter(profile-> profile.getDeletedAt() == null)
+        ProfileJpa profileJpa = this.profilesRepository.findActiveById(profileId)
                 .orElseThrow(() -> new ProfileNotFoundException(profileId));
         // cerco i post pubblicati dal profilo
         Optional<List<PostJpa>> postJpaList = this.postsRepository.findAllByProfileId(profileId);
         if (postJpaList.isPresent()){
             postList = postJpaList.get().stream().map(this.postToPostJpaConverter::convertBack).collect(Collectors.toList());
-            postCount = postList.size();
         }
 
         //TODO Devo controllare che il posso accedere al profilo
@@ -118,7 +114,7 @@ public class ProfilesService {
         return new FullProfile(
                 this.profileToProfileJpaConverter.convertBack(profileJpa),
                 postList,
-                postCount,
+                postList.size(),
                 true
         );
     }

@@ -22,24 +22,21 @@ import java.util.TreeMap;
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@NoArgsConstructor(force = true)
 public class ProfileInterceptor implements HandlerInterceptor {
     @Autowired
-    private final ProfilesRepository profilesRepository;
+    private ProfilesRepository profilesRepository;
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         log.info("\n\tInterceptor -> "+request.getRequestURI());
+        // Esco se e' un metodo post
         if (request.getMethod().equalsIgnoreCase("POST")) return true;
-        //Long profileId = Long.valueOf(request.getParameter("profileId"));
-
 
         Map pathVariables = (Map) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
         Long profileId = Long.valueOf((String) pathVariables.get("profileId"));
-        //String profileName = (String) pathVariables.get("profileName");
 
-        ProfileJpa profileJpa = this.profilesRepository.findActiveById(profileId)
+        Long checkId = this.profilesRepository.checkActiveById(profileId)
                 .orElseThrow(() -> new ProfileNotFoundException(profileId));
-        log.info("\nInterceptor Profile id-> "+profileJpa.getId());
+        log.info("\nInterceptor Profile id-> "+checkId);
         return true;
     }
 
