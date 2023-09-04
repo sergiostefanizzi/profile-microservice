@@ -618,7 +618,7 @@ paths:
           $ref: '#/components/responses/InternalServerError'
 
 
-  /profiles/{profileId}/followedBy/{followerId}:
+  /profiles/{profileId}/followedBy/{followsId}:
     put:
       tags:
         - follows
@@ -635,7 +635,7 @@ paths:
           schema:
             type: integer
             format: int64
-        - name: followerId
+        - name: followsId
           in: path
           description: Id of the profile that sent the follow request
           required: true

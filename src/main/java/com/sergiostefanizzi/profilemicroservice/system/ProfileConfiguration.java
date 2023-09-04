@@ -1,5 +1,6 @@
 package com.sergiostefanizzi.profilemicroservice.system;
 
+import com.sergiostefanizzi.profilemicroservice.system.util.FollowsInterceptor;
 import com.sergiostefanizzi.profilemicroservice.system.util.ProfileInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -22,11 +23,15 @@ public class ProfileConfiguration implements WebMvcConfigurer {
      */
     @Autowired
     ProfileInterceptor profileInterceptor;
+    @Autowired
+    FollowsInterceptor followsInterceptor;
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(profileInterceptor)
                 .addPathPatterns("/profiles/**")
                 .excludePathPatterns("/profiles/search")
                 .excludePathPatterns("/profiles/{profileId}/f*/**");
+        registry.addInterceptor(followsInterceptor)
+                .addPathPatterns("/profiles/{profileId}/f*/**");
     }
 }

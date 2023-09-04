@@ -182,7 +182,7 @@ class FollowsIT {
     }
     @Test
     void testAddFollows_InvalidId_Then_400() throws Exception {
-        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        errors.add("Profile ID is not valid!");
 
         Profile publicProfile = createProfile("pincoPallino9", false);
 
@@ -257,7 +257,7 @@ class FollowsIT {
         log.info(savedFollows.toString());
 
         ResponseEntity<Follows> responseAccept = this.testRestTemplate.exchange(
-                this.baseUrl+"/{profileId}/followedBy/{followerId}?rejectFollow={rejectFollow}",
+                this.baseUrl+"/{profileId}/followedBy/{followsId}?rejectFollow={rejectFollow}",
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 Follows.class,
@@ -302,7 +302,7 @@ class FollowsIT {
         log.info(savedFollows.toString());
 
         ResponseEntity<Follows> responseAccept = this.testRestTemplate.exchange(
-                this.baseUrl+"/{profileId}/followedBy/{followerId}?rejectFollow={rejectFollow}",
+                this.baseUrl+"/{profileId}/followedBy/{followsId}?rejectFollow={rejectFollow}",
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 Follows.class,
@@ -347,7 +347,7 @@ class FollowsIT {
         log.info(savedFollows.toString());
 
         ResponseEntity<Follows> responseReject = this.testRestTemplate.exchange(
-                this.baseUrl+"/{profileId}/followedBy/{followerId}?rejectFollow={rejectFollow}",
+                this.baseUrl+"/{profileId}/followedBy/{followsId}?rejectFollow={rejectFollow}",
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 Follows.class,
@@ -393,7 +393,7 @@ class FollowsIT {
         log.info(savedFollows.toString());
 
         ResponseEntity<Follows> responseReject = this.testRestTemplate.exchange(
-                this.baseUrl+"/{profileId}/followedBy/{followerId}?rejectFollow={rejectFollow}",
+                this.baseUrl+"/{profileId}/followedBy/{followsId}?rejectFollow={rejectFollow}",
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 Follows.class,
@@ -415,15 +415,15 @@ class FollowsIT {
 
     @Test
     void testAcceptFollows_InvalidId_Then_400() throws Exception {
-        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
-
-
+        errors.add("Profile ID is not valid!");
+        // Creo un primo profilo
+        Profile publicProfile1 = createProfile("pincoPallino19", false);
         ResponseEntity<String> response = this.testRestTemplate.exchange(
-                this.baseUrl+"/{profileId}/followedBy/{followerId}?rejectFollow={rejectFollow}",
+                this.baseUrl+"/{profileId}/followedBy/{followsId}?rejectFollow={rejectFollow}",
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 String.class,
-                Long.MIN_VALUE,
+                publicProfile1.getId(),
                 "IdNotLong",
                 false);
 
@@ -443,10 +443,10 @@ class FollowsIT {
     void testAcceptFollows_FollowNotFound_Then_404() throws Exception {
         errors.add("Follows not found!");
         // Creo un primo profilo
-        Profile publicProfile1 = createProfile("pincoPallino19", false);
-        Profile publicProfile2 = createProfile("pincoPallino20", false);
+        Profile publicProfile1 = createProfile("pincoPallino20", false);
+        Profile publicProfile2 = createProfile("pincoPallino21", false);
         ResponseEntity<String> responseReject = this.testRestTemplate.exchange(
-                this.baseUrl+"/{profileId}/followedBy/{followerId}?rejectFollow={rejectFollow}",
+                this.baseUrl+"/{profileId}/followedBy/{followsId}?rejectFollow={rejectFollow}",
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 String.class,
@@ -465,9 +465,9 @@ class FollowsIT {
 
     @Test
     void testFindAllFollowers_Then_200() throws Exception {
-        Profile publicProfile1 = createProfile("pincoPallino21", false);
-        Profile publicProfile2 = createProfile("pincoPallino22", false);
-        Profile publicProfile3 = createProfile("pincoPallino23", false);
+        Profile publicProfile1 = createProfile("pincoPallino22", false);
+        Profile publicProfile2 = createProfile("pincoPallino23", false);
+        Profile publicProfile3 = createProfile("pincoPallino24", false);
         createFollow(publicProfile2, publicProfile1);
         createFollow(publicProfile3, publicProfile1);
 
@@ -490,7 +490,7 @@ class FollowsIT {
 
     @Test
     void testFindAllFollowers_NoFollowers_Then_200() throws Exception {
-        Profile publicProfile1 = createProfile("pincoPallino24", false);
+        Profile publicProfile1 = createProfile("pincoPallino25", false);
 
 
         ResponseEntity<ProfileFollowList> responseFollowerList = this.testRestTemplate.exchange(
@@ -513,7 +513,7 @@ class FollowsIT {
 
     @Test
     void testFindAllFollowers_Then_400() throws Exception {
-        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        errors.add("Profile ID is not valid!");
 
         ResponseEntity<String> response = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/followedBy",
@@ -557,9 +557,9 @@ class FollowsIT {
 
     @Test
     void testFindAllFollowings_Then_200() throws Exception {
-        Profile publicProfile1 = createProfile("pincoPallino25", false);
-        Profile publicProfile2 = createProfile("pincoPallino26", false);
-        Profile publicProfile3 = createProfile("pincoPallino27", false);
+        Profile publicProfile1 = createProfile("pincoPallino26", false);
+        Profile publicProfile2 = createProfile("pincoPallino27", false);
+        Profile publicProfile3 = createProfile("pincoPallino28", false);
         createFollow(publicProfile1, publicProfile2);
         createFollow(publicProfile1, publicProfile3);
 
@@ -582,7 +582,7 @@ class FollowsIT {
 
     @Test
     void testFindAllFollowings_NoFollowings_Then_200() throws Exception {
-        Profile publicProfile1 = createProfile("pincoPallino28", false);
+        Profile publicProfile1 = createProfile("pincoPallino29", false);
 
 
         ResponseEntity<ProfileFollowList> responseFollowerList = this.testRestTemplate.exchange(
@@ -604,8 +604,7 @@ class FollowsIT {
 
     @Test
     void testFindAllFollowings_Then_400() throws Exception {
-        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
-
+        errors.add("Profile ID is not valid!");
         ResponseEntity<String> response = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/follows",
                 HttpMethod.GET,
