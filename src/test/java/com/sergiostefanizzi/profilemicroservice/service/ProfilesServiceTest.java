@@ -6,7 +6,6 @@ import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfile
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
-import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.validator.routines.UrlValidator;
 import org.junit.jupiter.api.AfterEach;
@@ -18,7 +17,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -137,7 +135,7 @@ class ProfilesServiceTest {
     // REMOVE A PROFILE
     @Test
     void testRemoveSuccess(){
-        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedProfileJpa));
+        when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.savedProfileJpa);
         when(this.profilesRepository.save(any(ProfileJpa.class))).thenReturn(this.savedProfileJpa);
 
         // l'istante di rimozione deve essere nullo prima della rimozione
@@ -147,21 +145,10 @@ class ProfilesServiceTest {
 
         // l'istante di rimozione deve essere NON nullo DOPO la rimozione
         assertNotNull(this.savedProfileJpa.getDeletedAt());
-        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
         verify(this.profilesRepository, times(1)).save(any(ProfileJpa.class));
     }
 
-    @Test
-    void testRemove_ProfileNot_Found_Failed(){
-        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.empty());
-
-        assertThrows(ProfileNotFoundException.class,
-                () -> this.profilesService.remove(profileId)
-        );
-
-        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
-        verify(this.profilesRepository, times(0)).save(any(ProfileJpa.class));
-    }
 
 
     // UPDATE A PROFILE
@@ -181,7 +168,7 @@ class ProfilesServiceTest {
         convertedProfile.setPictureUrl(profilePatch.getPictureUrl() != null ? profilePatch.getPictureUrl() : pictureUrl);
         convertedProfile.setIsPrivate(profilePatch.getIsPrivate() != null ? profilePatch.getIsPrivate() : isPrivate);
 
-        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedProfileJpa));
+        when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.savedProfileJpa);
         when(this.profilesRepository.save(any(ProfileJpa.class))).thenReturn(this.savedProfileJpa);
         when(this.profileToProfileJpaConverter.convertBack(any(ProfileJpa.class))).thenReturn(convertedProfile);
 
@@ -195,42 +182,12 @@ class ProfilesServiceTest {
         assertEquals(updatedIsPrivate, updatedProfile.getIsPrivate());
 
 
-        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
         verify(this.profilesRepository, times(1)).save(any(ProfileJpa.class));
         verify(this.profileToProfileJpaConverter, times(1)).convertBack(any(ProfileJpa.class));
     }
 
-    @Test
-    void testUpdate_ProfileNotFound_Failed(){
-        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.empty());
 
-        assertThrows(ProfileNotFoundException.class,
-                () -> this.profilesService.update(profileId, any(ProfilePatch.class))
-        );
-
-
-        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
-        verify(this.profilesRepository, times(0)).save(any(ProfileJpa.class));
-        verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
-    }
-
-    @Test
-    void testUpdate_ProfileAlreadyRemoved_Failed(){
-        // Imposto una data passata
-        this.savedProfileJpa.setDeletedAt(LocalDateTime.MIN);
-        log.info("Deleted At"+this.savedProfileJpa.getDeletedAt());
-
-        when(this.profilesRepository.findActiveById(profileId)).thenReturn(Optional.empty());
-
-        assertThrows(ProfileNotFoundException.class,
-                () -> this.profilesService.update(profileId, any(ProfilePatch.class))
-        );
-
-
-        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
-        verify(this.profilesRepository, times(0)).save(any(ProfileJpa.class));
-        verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
-    }
 
     @Test
     void testFindByNameSuccess(){
@@ -323,7 +280,7 @@ class ProfilesServiceTest {
                 true
         );
 
-        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedProfileJpa));
+        when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.savedProfileJpa);
         when(this.postsRepository.findAllByProfileId(anyLong())).thenReturn(Optional.of(postJpaList));
         when(this.postToPostJpaConverter.convertBack(postJpaList.get(0))).thenReturn(newPost1);
         when(this.postToPostJpaConverter.convertBack(postJpaList.get(1))).thenReturn(newPost2);
@@ -333,7 +290,7 @@ class ProfilesServiceTest {
 
         assertNotNull(fullProfile);
         assertEquals(convertedFullProfile, fullProfile);
-        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
         verify(this.postsRepository, times(1)).findAllByProfileId(anyLong());
         verify(this.postToPostJpaConverter, times(2)).convertBack(any(PostJpa.class));
         verify(this.profileToProfileJpaConverter, times(1)).convertBack(any(ProfileJpa.class));
@@ -359,7 +316,7 @@ class ProfilesServiceTest {
                 true
         );
 
-        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedProfileJpa));
+        when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.savedProfileJpa);
         when(this.postsRepository.findAllByProfileId(anyLong())).thenReturn(Optional.of(new ArrayList<>()));
         when(this.profileToProfileJpaConverter.convertBack(any(ProfileJpa.class))).thenReturn(convertedProfile);
 
@@ -368,7 +325,7 @@ class ProfilesServiceTest {
         assertNotNull(fullProfile);
         assertEquals(convertedFullProfile, fullProfile);
         assertTrue(fullProfile.getProfileGranted());
-        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
         verify(this.postsRepository, times(1)).findAllByProfileId(anyLong());
         verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
         verify(this.profileToProfileJpaConverter, times(1)).convertBack(any(ProfileJpa.class));
@@ -376,18 +333,6 @@ class ProfilesServiceTest {
         log.info(fullProfile.toString());
     }
 
-    @Test
-    void testFindFull_NotFound_Failed(){
-        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.empty());
-        assertThrows(ProfileNotFoundException.class,
-                () -> this.profilesService.findFull(profileId)
-        );
-
-        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
-        verify(this.postsRepository, times(0)).findAllByProfileId(anyLong());
-        verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
-        verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
-    }
 
 
 }

@@ -47,8 +47,7 @@ public class ProfilesService {
         }
 
         // cerco profili che non siano gia' stati eliminati o che non esistano proprio
-        ProfileJpa profileJpa = this.profilesRepository.findActiveById(profileId)
-                .orElseThrow(() -> new ProfileNotFoundException(profileId));
+        ProfileJpa profileJpa = this.profilesRepository.getReferenceById(profileId);
 
         //imposto a questo istante la data e l'ora di rimozione del profilo
         profileJpa.setDeletedAt(LocalDateTime.now());
@@ -64,8 +63,7 @@ public class ProfilesService {
         }
 
         // cerco profili che non siano gia' stati eliminati o che non esistano proprio
-        ProfileJpa profileJpa = this.profilesRepository.findActiveById(profileId)
-                .orElseThrow(() -> new ProfileNotFoundException(profileId));
+        ProfileJpa profileJpa = this.profilesRepository.getReferenceById(profileId);
         // modifico solo i campi che devono essere aggiornati
         if (StringUtils.hasText(profilePatch.getBio())) profileJpa.setBio(profilePatch.getBio());
         if (StringUtils.hasText(profilePatch.getPictureUrl())) profileJpa.setPictureUrl(profilePatch.getPictureUrl());
@@ -101,8 +99,7 @@ public class ProfilesService {
 
 
         // controllo che il profilo non sia gia' stato eliminato o che non sia mai esistito
-        ProfileJpa profileJpa = this.profilesRepository.findActiveById(profileId)
-                .orElseThrow(() -> new ProfileNotFoundException(profileId));
+        ProfileJpa profileJpa = this.profilesRepository.getReferenceById(profileId);
         // cerco i post pubblicati dal profilo
         Optional<List<PostJpa>> postJpaList = this.postsRepository.findAllByProfileId(profileId);
         if (postJpaList.isPresent()){
