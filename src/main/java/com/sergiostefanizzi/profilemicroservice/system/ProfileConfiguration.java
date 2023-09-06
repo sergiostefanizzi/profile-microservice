@@ -1,6 +1,9 @@
 package com.sergiostefanizzi.profilemicroservice.system;
 
+import com.sergiostefanizzi.profilemicroservice.system.util.CommentsInterceptor;
 import com.sergiostefanizzi.profilemicroservice.system.util.FollowsInterceptor;
+
+import com.sergiostefanizzi.profilemicroservice.system.util.PostsInterceptor;
 import com.sergiostefanizzi.profilemicroservice.system.util.ProfileInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
@@ -22,16 +25,27 @@ public class ProfileConfiguration implements WebMvcConfigurer {
 
      */
     @Autowired
-    ProfileInterceptor profileInterceptor;
+    private ProfileInterceptor profileInterceptor;
     @Autowired
-    FollowsInterceptor followsInterceptor;
+    private FollowsInterceptor followsInterceptor;
+    @Autowired
+    private PostsInterceptor postsInterceptor;
+    @Autowired
+    private CommentsInterceptor commentsInterceptor;
+
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        registry.addInterceptor(profileInterceptor)
+        registry.addInterceptor(this.profileInterceptor)
                 .addPathPatterns("/profiles/**")
                 .excludePathPatterns("/profiles/search")
-                .excludePathPatterns("/profiles/{profileId}/f*/**");
-        registry.addInterceptor(followsInterceptor)
-                .addPathPatterns("/profiles/{profileId}/f*/**");
+                .excludePathPatterns("/profiles/*/f*/**");
+        registry.addInterceptor(this.followsInterceptor)
+                .addPathPatterns("/profiles/*/f*/**");
+        registry.addInterceptor(this.postsInterceptor)
+                .addPathPatterns("/posts/*")
+                .addPathPatterns("/posts/likes/*")
+                .excludePathPatterns("/posts/comments/*");
+        registry.addInterceptor(this.commentsInterceptor)
+                .addPathPatterns("/posts/comments/*");
     }
 }

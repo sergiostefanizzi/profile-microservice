@@ -1,7 +1,6 @@
 package com.sergiostefanizzi.profilemicroservice.repository;
 
 import com.sergiostefanizzi.profilemicroservice.model.PostJpa;
-import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -17,4 +16,7 @@ public interface PostsRepository extends JpaRepository<PostJpa, Long> {
 
     @Query("SELECT p FROM PostJpa p WHERE p.id=:postId AND p.deletedAt IS NULL")
     Optional<PostJpa> findActiveById(Long postId);
+
+    @Query("SELECT p.id FROM PostJpa p WHERE p.id=:postId AND p.deletedAt IS NULL")
+    Optional<Long> checkActiveById(Long postId);
 }

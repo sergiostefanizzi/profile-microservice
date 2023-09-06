@@ -94,7 +94,7 @@ public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(NumberFormatException.class)
     public ResponseEntity<Object> handleNumberFormatException(NumberFormatException ex, WebRequest request){
         log.error(ex.getMessage(),ex);
-        String error = "Profile ID is not valid!";
+        String error = "ID is not valid!";
         Map<String, String> body = new HashMap<>();
         body.put("error", error);
         return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);

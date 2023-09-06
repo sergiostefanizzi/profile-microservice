@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sergiostefanizzi.profilemicroservice.model.*;
+import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
+import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.service.ProfilesService;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
@@ -50,6 +52,10 @@ class ProfilesControllerTest {
     private ProfilesService profilesService;
     @MockBean
     private ProfilesRepository profilesRepository;
+    @MockBean
+    private PostsRepository postsRepository;
+    @MockBean
+    private CommentsRepository commentsRepository;
     @Autowired
     private MockMvc mockMvc;
     @Autowired

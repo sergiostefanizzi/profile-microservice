@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sergiostefanizzi.profilemicroservice.model.*;
+import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.service.PostsService;
@@ -30,10 +31,11 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.*;
@@ -50,6 +52,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class PostsControllerTest {
     @MockBean
     private PostsService postsService;
+    @MockBean
+    private ProfilesRepository profilesRepository;
+    @MockBean
+    private PostsRepository postsRepository;
+    @MockBean
+    private CommentsRepository commentsRepository;
     @Autowired
     private MockMvc mockMvc;
     @Autowired
@@ -288,6 +296,7 @@ class PostsControllerTest {
 
     @Test
     void testDeletePostById_Then_204() throws Exception {
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         doNothing().when(this.postsService).remove(postId);
 
         this.mockMvc.perform(delete("/posts/{postId}", postId))
@@ -296,11 +305,11 @@ class PostsControllerTest {
 
     @Test
     void testDeletePostById_Then_400() throws Exception {
-        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        errors.add("ID is not valid!");
         MvcResult result = this.mockMvc.perform(delete("/posts/IdNotLong"))
                 .andExpect(status().isBadRequest())
                 .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                        res.getResolvedException() instanceof NumberFormatException
                 ))
                 .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
         // Visualizzo l'errore
@@ -336,10 +345,11 @@ class PostsControllerTest {
 
         String postPatchJson = this.objectMapper.writeValueAsString(postPatch);
 
+
         // Aggiorno il post che verra' restituito dal service con il nuovo valore
         this.savedPost.setCaption(newCaption);
 
-
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.postsService.update(postId, postPatch)).thenReturn(this.savedPost);
 
         MvcResult result = this.mockMvc.perform(patch("/posts/{postId}",postId)
@@ -364,7 +374,7 @@ class PostsControllerTest {
 
     @Test
     void testUpdatePost_InvalidId_Then_400() throws Exception{
-        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        errors.add("ID is not valid!");
         // Definisco la caption da aggiornare tramite l'oggetto PostPatch
         String newCaption = "Nuova caption del post";
         PostPatch postPatch = new PostPatch(newCaption);
@@ -381,7 +391,7 @@ class PostsControllerTest {
                         .content(postPatchJson))
                 .andExpect(status().isBadRequest())
                 .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                        res.getResolvedException() instanceof NumberFormatException
                 ))
                 .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
         // Visualizzo l'errore
@@ -393,6 +403,7 @@ class PostsControllerTest {
     @Test
     void testUpdatePost_CaptionLength_Then_400() throws Exception{
         errors.add("caption size must be between 0 and 2200");
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
 
         // genero una caption di 2210 caratteri, superando di 10 il limite
         PostPatch postPatch = new PostPatch(RandomStringUtils.randomAlphabetic(2210));
@@ -445,6 +456,7 @@ class PostsControllerTest {
 
     @Test
     void testFindPostById_Then_200() throws Exception{
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.postsService.find(postId)).thenReturn(this.savedPost);
 
         MvcResult result = this.mockMvc.perform(get("/posts/{postId}",postId)
@@ -467,13 +479,12 @@ class PostsControllerTest {
 
     @Test
     void testFindPostById_Then_400() throws Exception{
-        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
-
+        errors.add("ID is not valid!");
         MvcResult result = this.mockMvc.perform(get("/posts/{postId}","IdNotLong")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
                 .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                        res.getResolvedException() instanceof NumberFormatException
                 ))
                 .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
         // Visualizzo l'errore
@@ -615,6 +626,7 @@ class PostsControllerTest {
                 new Like(2L,postId),
                 new Like(3L,postId)
         );
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.postsService.findAllLikesByPostId(postId)).thenReturn(likeList);
 
         MvcResult result = this.mockMvc.perform(get("/posts/likes/{postId}",postId)
@@ -639,6 +651,7 @@ class PostsControllerTest {
     @Test
     void testFindAllLikesByPostId_Empty_Then_200() throws Exception {
         List<Like> likeList = new ArrayList<>();
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.postsService.findAllLikesByPostId(postId)).thenReturn(likeList);
 
         MvcResult result = this.mockMvc.perform(get("/posts/likes/{postId}",postId)
@@ -656,13 +669,12 @@ class PostsControllerTest {
 
     @Test
     void testFindAllLikesByPostId_Then_400() throws Exception {
-        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
-
+        errors.add("ID is not valid!");
         MvcResult result = this.mockMvc.perform(get("/posts/likes/{postId}","IdNotLong")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
                 .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                        res.getResolvedException() instanceof NumberFormatException
                 ))
                 .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
         // Visualizzo l'errore
@@ -862,7 +874,7 @@ class PostsControllerTest {
         updatedComment.setId(commentId);
         String commentPatchJson = this.objectMapper.writeValueAsString(commentPatch);
 
-
+        when(this.commentsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(commentId));
         when(this.postsService.updateCommentById(commentId, commentPatch)).thenReturn(updatedComment);
 
         MvcResult result = this.mockMvc.perform(patch("/posts/comments/{commentId}",commentId)
@@ -886,13 +898,12 @@ class PostsControllerTest {
 
     @Test
     void testUpdatedCommentById_Then_400() throws Exception {
-        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
-
+        errors.add("ID is not valid!");
         MvcResult result = this.mockMvc.perform(get("/posts/comments/{commentId}","IdNotLong")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
                 .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                        res.getResolvedException() instanceof NumberFormatException
                 ))
                 .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
         // Visualizzo l'errore
@@ -910,6 +921,8 @@ class PostsControllerTest {
         CommentPatch commentPatch = new CommentPatch(content);
 
         String commentPatchJson = this.objectMapper.writeValueAsString(commentPatch);
+
+        when(this.commentsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(commentId));
 
         MvcResult result = this.mockMvc.perform(patch("/posts/comments/{commentId}",commentId)
                         .accept(MediaType.APPLICATION_JSON)
@@ -959,6 +972,7 @@ class PostsControllerTest {
     @Test
     void testDeleteCommentById_Then_204() throws Exception {
         Long commentId = 1L;
+        when(this.commentsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(commentId));
         doNothing().when(this.postsService).deleteCommentById(commentId);
 
         this.mockMvc.perform(delete("/posts/comments/{commentId}", commentId))
@@ -967,11 +981,11 @@ class PostsControllerTest {
 
     @Test
     void testDeleteCommentById_Then_400() throws Exception {
-        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        errors.add("ID is not valid!");
         MvcResult result = this.mockMvc.perform(delete("/posts/comments/IdNotLong"))
                 .andExpect(status().isBadRequest())
                 .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                        res.getResolvedException() instanceof NumberFormatException
                 ))
                 .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
         // Visualizzo l'errore
@@ -986,7 +1000,7 @@ class PostsControllerTest {
         Long invalidCommentId = Long.MIN_VALUE;
         doThrow(new CommentNotFoundException(invalidCommentId)).when(this.postsService).deleteCommentById(invalidCommentId);
 
-        MvcResult result = this.mockMvc.perform(delete("/posts/comments/{postId}",invalidCommentId))
+        MvcResult result = this.mockMvc.perform(delete("/posts/comments/{commentId}",invalidCommentId))
                 .andExpect(status().isNotFound())
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof CommentNotFoundException
@@ -1009,6 +1023,7 @@ class PostsControllerTest {
         commentList.get(0).setId(1L);
         commentList.get(1).setId(2L);
         commentList.get(2).setId(3L);
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.postsService.findAllCommentsByPostId(postId)).thenReturn(commentList);
 
         MvcResult result = this.mockMvc.perform(get("/posts/comments/{postId}",postId)
@@ -1038,13 +1053,12 @@ class PostsControllerTest {
 
     @Test
     void testFindAllCommentsByPostId_InvalidId_Then_400() throws Exception {
-        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
-
+        errors.add("ID is not valid!");
         MvcResult result = this.mockMvc.perform(get("/posts/comments/IdNotLong")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
                 .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                        res.getResolvedException() instanceof NumberFormatException
                 ))
                 .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
         // Visualizzo l'errore
@@ -1056,6 +1070,7 @@ class PostsControllerTest {
     //TODO 401,403
     @Test
     void testFindAllCommentsByPostId_PostNotFound_Then_404() throws Exception {
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.empty());
         doThrow(new PostNotFoundException(invalidPostId)).when(this.postsService).findAllCommentsByPostId(invalidPostId);
 
         MvcResult result = this.mockMvc.perform(get("/posts/comments/{postId}",invalidPostId))

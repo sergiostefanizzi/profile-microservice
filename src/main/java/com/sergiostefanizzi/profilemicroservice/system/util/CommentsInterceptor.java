@@ -1,12 +1,11 @@
 package com.sergiostefanizzi.profilemicroservice.system.util;
 
-import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
+import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
-import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
-import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.CommentNotFoundException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,30 +14,35 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.ModelAndView;
 
-import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.TreeMap;
 
 @Slf4j
 @Component
 @RequiredArgsConstructor
-public class ProfileInterceptor implements HandlerInterceptor {
+public class CommentsInterceptor implements HandlerInterceptor {
     @Autowired
-    private ProfilesRepository profilesRepository;
-
+    private CommentsRepository commentsRepository;
+    @Autowired
+    private PostsRepository postsRepository;
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        log.info("\n\tProfile Interceptor -> "+request.getRequestURI());
+        log.info("\n\tComment Interceptor -> "+request.getRequestURI());
         // Esco se e' un metodo post
-        if (request.getMethod().equalsIgnoreCase("POST")) return true;
-
+        String requestMethod = request.getMethod();
         Map pathVariables = (Map) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
-        Long profileId = Long.valueOf((String) pathVariables.get("profileId"));
-
-        Long checkId = this.profilesRepository.checkActiveById(profileId)
-                .orElseThrow(() -> new ProfileNotFoundException(profileId));
-        log.info("\n\tProfile Interceptor: Profile ID-> "+checkId);
+        if (!requestMethod.equalsIgnoreCase("POST")) {
+            Long checkId;
+            if (requestMethod.equalsIgnoreCase("GET")) {
+                Long postId = Long.valueOf((String) pathVariables.get("postId"));
+                checkId = this.postsRepository.checkActiveById(postId)
+                        .orElseThrow(() -> new PostNotFoundException(postId));
+            } else {
+                Long commentId = Long.valueOf((String) pathVariables.get("commentId"));
+                checkId = this.commentsRepository.checkActiveById(commentId)
+                        .orElseThrow(() -> new CommentNotFoundException(commentId));
+            }
+            log.info("\n\tComment Interceptor: ID-> " + checkId);
+        }
         return true;
     }
 
@@ -51,6 +55,4 @@ public class ProfileInterceptor implements HandlerInterceptor {
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
         HandlerInterceptor.super.afterCompletion(request, response, handler, ex);
     }
-
-
 }

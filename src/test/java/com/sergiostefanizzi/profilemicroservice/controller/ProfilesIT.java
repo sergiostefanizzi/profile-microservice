@@ -362,7 +362,7 @@ class ProfilesIT {
     void testDeleteProfileById_Then_400() throws Exception{
         // messaggio d'errore che mi aspetto d'ottenere
         //String error = "Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"";
-        String error = "Profile ID is not valid!";
+        String error = "ID is not valid!";
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/IdNotLong",
                 HttpMethod.DELETE,
                 HttpEntity.EMPTY,
@@ -448,7 +448,7 @@ class ProfilesIT {
     @Test
     void testUpdateProfile_InvalidId_Then_400() throws Exception{
         //String error = "Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"";
-        String error = "Profile ID is not valid!";
+        String error = "ID is not valid!";
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();
 

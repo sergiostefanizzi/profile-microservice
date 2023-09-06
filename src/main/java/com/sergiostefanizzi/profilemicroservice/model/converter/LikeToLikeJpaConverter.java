@@ -14,6 +14,6 @@ public class LikeToLikeJpaConverter implements Converter<Like, LikeJpa> {
     }
 
     public Like convertBack(LikeJpa source){
-        return new Like(source.getLikesId().getProfileId(), source.getLikesId().getPostId());
+        return new Like(source.getLikeId().getProfileId(), source.getLikeId().getPostId());
     }
 }

@@ -178,7 +178,7 @@ class FollowsIT {
     }
     @Test
     void testAddFollows_InvalidId_Then_400() throws Exception {
-        errors.add("Profile ID is not valid!");
+        errors.add("ID is not valid!");
 
         Profile publicProfile = createProfile("pincoPallino9", false);
 
@@ -411,7 +411,7 @@ class FollowsIT {
 
     @Test
     void testAcceptFollows_InvalidId_Then_400() throws Exception {
-        errors.add("Profile ID is not valid!");
+        errors.add("ID is not valid!");
         // Creo un primo profilo
         Profile publicProfile1 = createProfile("pincoPallino19", false);
         ResponseEntity<String> response = this.testRestTemplate.exchange(
@@ -509,7 +509,7 @@ class FollowsIT {
 
     @Test
     void testFindAllFollowers_Then_400() throws Exception {
-        errors.add("Profile ID is not valid!");
+        errors.add("ID is not valid!");
 
         ResponseEntity<String> response = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/followedBy",
@@ -600,7 +600,7 @@ class FollowsIT {
 
     @Test
     void testFindAllFollowings_Then_400() throws Exception {
-        errors.add("Profile ID is not valid!");
+        errors.add("ID is not valid!");
         ResponseEntity<String> response = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/follows",
                 HttpMethod.GET,

@@ -58,9 +58,7 @@ public class PostsService {
             throw new PostNotFoundException("null");
         }
         // Controllo prima l'esistenza del post
-        PostJpa postJpa = this.postsRepository.findById(postId)
-                .filter(post -> post.getDeletedAt() == null)
-                .orElseThrow(() -> new PostNotFoundException(postId));
+        PostJpa postJpa = this.postsRepository.getReferenceById(postId);
         // TODO mi serve il JWT
         // Controllo che chi richiede la rimozione abbia l'autorizzazione per farlo
         /*
@@ -83,9 +81,7 @@ public class PostsService {
         }
 
         // Controllo prima l'esistenza del post
-        PostJpa postJpa = this.postsRepository.findById(postId)
-                .filter(post -> post.getDeletedAt() == null)
-                .orElseThrow(() -> new PostNotFoundException(postId));
+        PostJpa postJpa = this.postsRepository.getReferenceById(postId);
         // TODO mi serve il JWT
         // Controllo che chi richiede l'aggiornamento abbia l'autorizzazione per farlo
         /*
@@ -107,9 +103,7 @@ public class PostsService {
         }
 
         return this.postToPostJpaConverter.convertBack(
-                this.postsRepository.findById(postId)
-                .filter(post -> post.getDeletedAt() == null)
-                .orElseThrow(() -> new PostNotFoundException(postId))
+                this.postsRepository.getReferenceById(postId)
         );
     }
 
@@ -121,29 +115,35 @@ public class PostsService {
         // sia controllando che il profilo a cui appartiene il posto sia visibile da chi vuole mettere like
 
         // Controllo prima l'esistenza del post
-        PostJpa postJpa = this.postsRepository.findById(like.getPostId())
-                .filter(post -> post.getDeletedAt() == null)
+        PostJpa postJpa = this.postsRepository.findActiveById(like.getPostId())
                 .orElseThrow(() -> new PostNotFoundException(like.getPostId()));
         // Controllo poi l'esistenza del profilo di chi vuole mettere like
-        ProfileJpa profileJpa = this.profilesRepository.findById(like.getProfileId())
-                .filter(profile -> profile.getDeletedAt() == null)
+        ProfileJpa profileJpa = this.profilesRepository.findActiveById(like.getProfileId())
                 .orElseThrow(() -> new ProfileNotFoundException(like.getProfileId()));
 
         // Controllo l'esistenza del like, se non esiste lo creo con il like ottenuto dal controller
-        Optional<LikeJpa> optionalLikeJpa = this.likesRepository.findById(new LikeId(profileJpa.getId(), postJpa.getId()));
+        Optional<LikeJpa> optionalLikeJpa = this.likesRepository.findActiveById(new LikeId(profileJpa.getId(), postJpa.getId()));
         if (optionalLikeJpa.isPresent() && removeLike){
-            LikeJpa likeJpa = optionalLikeJpa.get();
-            likeJpa.setDeletedAt(LocalDateTime.now());
-            this.likesRepository.save(likeJpa);
+            removeLike(optionalLikeJpa.get());
         } else if (optionalLikeJpa.isEmpty() && !removeLike){
-            LikeJpa likeJpa = this.likeToLikeJpaConverter.convert(like);
-            assert likeJpa != null;
-            likeJpa.setCreatedAt(LocalDateTime.now());
-            likeJpa.setDeletedAt(null);
-            likeJpa.setProfile(profileJpa);
-            likeJpa.setPost(postJpa);
-            this.likesRepository.save(likeJpa);
+            createLike(like, profileJpa, postJpa);
         }
+    }
+
+    private void createLike(Like like, ProfileJpa profileJpa, PostJpa postJpa) {
+        LikeJpa likeJpa;
+        likeJpa = this.likeToLikeJpaConverter.convert(like);
+        assert likeJpa != null;
+        likeJpa.setCreatedAt(LocalDateTime.now());
+        likeJpa.setDeletedAt(null);
+        likeJpa.setProfile(profileJpa);
+        likeJpa.setPost(postJpa);
+        this.likesRepository.save(likeJpa);
+    }
+
+    private void removeLike(LikeJpa likeJpa) {
+        likeJpa.setDeletedAt(LocalDateTime.now());
+        this.likesRepository.save(likeJpa);
     }
 
     @Transactional
@@ -154,10 +154,9 @@ public class PostsService {
         // sia controllando che il profilo a cui appartiene il post sia visibile da chi vuole mettere like
 
         // Controllo prima l'esistenza del post
-        PostJpa postJpa = this.postsRepository.findActiveById(postId)
-                .orElseThrow(() -> new PostNotFoundException(postId));
+        //PostJpa postJpa = this.postsRepository.getReferenceById(postId);
 
-        return this.likesRepository.findAllActiveByPost(postJpa)
+        return this.likesRepository.findAllActiveByPostId(postId)
                 .stream().map(this.likeToLikeJpaConverter::convertBack).toList();
     }
 

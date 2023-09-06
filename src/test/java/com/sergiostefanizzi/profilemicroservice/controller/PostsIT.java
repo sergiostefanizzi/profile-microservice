@@ -375,7 +375,7 @@ class PostsIT {
     @Test
     void testDeletePostById_Then_400() throws Exception {
         // messaggio d'errore che mi aspetto d'ottenere
-        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        errors.add("ID is not valid!");
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/IdNotLong",
                 HttpMethod.DELETE,
                 HttpEntity.EMPTY,
@@ -471,7 +471,7 @@ class PostsIT {
 
     @Test
     void testUpdatePost_InvalidId_Then_400() throws Exception{
-        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        errors.add("ID is not valid!");
         // Definisco la caption da aggiornare tramite l'oggetto PostPatch
         String newCaption = "Nuova caption del post";
         PostPatch postPatch = new PostPatch(newCaption);
@@ -495,6 +495,35 @@ class PostsIT {
     @Test
     void testUpdatePost_CaptionLength_Then_400() throws Exception {
         errors.add("caption size must be between 0 and 2200");
+        // Creo prima un profilo
+        newProfile.setProfileName(profileName+"_3b");
+        HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);
+        ResponseEntity<Profile> responseProfile = this.testRestTemplate.exchange(
+                this.baseUrlProfile,
+                HttpMethod.POST,
+                requestProfile,
+                Profile.class);
+        assertEquals(HttpStatus.CREATED, responseProfile.getStatusCode());
+        assertNotNull(responseProfile.getBody());
+        Profile savedProfile = responseProfile.getBody();
+        assertNotNull(savedProfile.getId());
+        profileId = savedProfile.getId();
+        this.newPost.setProfileId(profileId);
+
+        // creo un nuovo post
+        HttpEntity<Post> request = new HttpEntity<>(this.newPost);
+        ResponseEntity<Post> responsePost = this.testRestTemplate.exchange(this.baseUrl,
+                HttpMethod.POST,
+                request,
+                Post.class);
+        // controllo che l'inserimento sia andato a buon fine
+        assertEquals(HttpStatus.CREATED, responsePost.getStatusCode());
+        assertNotNull(responsePost.getBody());
+        assertInstanceOf(Post.class, responsePost.getBody());
+        Post savedPost = responsePost.getBody();
+        assertNotNull(savedPost.getId());
+        // salvo l'id generato dal post inserito
+        Long savedPostId = savedPost.getId();
 
         // genero una caption di 2210 caratteri, superando di 10 il limite
         PostPatch postPatch = new PostPatch(RandomStringUtils.randomAlphabetic(2210));
@@ -504,7 +533,7 @@ class PostsIT {
                 HttpMethod.PATCH,
                 requestPatch,
                 String.class,
-                Long.MIN_VALUE);
+                savedPostId);
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
 
@@ -595,7 +624,7 @@ class PostsIT {
 
     @Test
     void testFindPostById_Then_400() throws Exception{
-        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        errors.add("ID is not valid!");
 
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
                 HttpMethod.GET,
@@ -992,7 +1021,7 @@ class PostsIT {
     @Test
     void testFindAllLikesByPostId_Then_400() throws Exception {
         // messaggio d'errore che mi aspetto d'ottenere
-        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        errors.add("ID is not valid!");
         ResponseEntity<String> responseLikeList = this.testRestTemplate.exchange(this.baseUrlLike + "/{postId}",
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
@@ -1353,7 +1382,7 @@ class PostsIT {
 
     @Test
     void testUpdatedCommentById_Then_400() throws Exception {
-        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        errors.add("ID is not valid!");
 
         String newContent = RandomStringUtils.randomAlphabetic(2210);
         CommentPatch commentPatch = new CommentPatch(newContent);
@@ -1539,7 +1568,7 @@ class PostsIT {
     @Test
     void testDeleteCommentById_Then_400() throws Exception {
         // messaggio d'errore che mi aspetto d'ottenere
-        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        errors.add("ID is not valid!");
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrlComment+"/IdNotLong",
                 HttpMethod.DELETE,
                 HttpEntity.EMPTY,
@@ -1660,7 +1689,7 @@ class PostsIT {
 
     @Test
     void testFindAllCommentsByPostId_InvalidId_Then_400() throws Exception {
-        errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"");
+        errors.add("ID is not valid!");
 
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrlComment+"/{postId}",
                 HttpMethod.GET,

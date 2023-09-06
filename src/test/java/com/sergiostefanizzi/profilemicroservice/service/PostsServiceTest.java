@@ -20,7 +20,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -125,7 +124,7 @@ class PostsServiceTest {
 
     @Test
     void testRemoveSuccess(){
-        when(this.postsRepository.findById(postId)).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.postsRepository.getReferenceById(postId)).thenReturn(this.savedPostJpa);
         when(this.postsRepository.save(this.savedPostJpa)).thenReturn(this.savedPostJpa);
 
         // l'istante di rimozione deve essere nullo prima della rimozione
@@ -135,36 +134,11 @@ class PostsServiceTest {
 
         // l'istante di rimozione deve essere NON nullo DOPO la rimozione
         assertNotNull(this.savedPostJpa.getDeletedAt());
-        verify(this.postsRepository, times(1)).findById(postId);
+        verify(this.postsRepository, times(1)).getReferenceById(postId);
         verify(this.postsRepository, times(1)).save(this.savedPostJpa);
     }
 
-    @Test
-    void testRemove_PostNot_Found_Failed(){
-        when(this.postsRepository.findById(postId)).thenReturn(Optional.empty());
-        assertThrows(PostNotFoundException.class,
-                () -> this.postsService.remove(postId)
-        );
 
-        verify(this.postsRepository, times(1)).findById(postId);
-        verify(this.postsRepository, times(0)).save(any(PostJpa.class));
-    }
-
-    @Test
-    void testRemove_PostAlreadyRemoved_Failed(){
-        // Imposto una data passata
-        this.savedPostJpa.setDeletedAt(LocalDateTime.MIN);
-        log.info("Deleted At"+this.savedPostJpa.getDeletedAt());
-
-        when(this.postsRepository.findById(postId)).thenReturn(Optional.of(this.savedPostJpa));
-
-        assertThrows(PostNotFoundException.class,
-                () -> this.postsService.remove(postId)
-        );
-
-        verify(this.postsRepository, times(1)).findById(postId);
-        verify(this.postsRepository, times(0)).save(any(PostJpa.class));
-    }
 
     //TODO fare test rimozione post con controllo autorizzazione
 
@@ -178,7 +152,7 @@ class PostsServiceTest {
         convertedPost.setCaption(newCaption);
         convertedPost.setId(postId);
 
-        when(this.postsRepository.findById(postId)).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.postsRepository.getReferenceById(postId)).thenReturn(this.savedPostJpa);
         when(this.postsRepository.save(this.savedPostJpa)).thenReturn(this.savedPostJpa);
         when(this.postToPostJpaConverter.convertBack(this.savedPostJpa)).thenReturn(convertedPost);
 
@@ -190,37 +164,12 @@ class PostsServiceTest {
         assertEquals(newCaption, updatedPost.getCaption());
         assertEquals(postType, updatedPost.getPostType());
         assertEquals(profileId, updatedPost.getProfileId());
-        verify(this.postsRepository, times(1)).findById(postId);
+        verify(this.postsRepository, times(1)).getReferenceById(postId);
         verify(this.postsRepository, times(1)).save(this.savedPostJpa);
         verify(this.postToPostJpaConverter, times(1)).convertBack(this.savedPostJpa);
     }
 
-    @Test
-    void testUpdate_PostNot_Found_Failed(){
-        when(this.postsRepository.findById(postId)).thenReturn(Optional.empty());
-        assertThrows(PostNotFoundException.class,
-                () -> this.postsService.update(postId, any(PostPatch.class))
-        );
 
-        verify(this.postsRepository, times(1)).findById(postId);
-        verify(this.postsRepository, times(0)).save(any(PostJpa.class));
-    }
-
-    @Test
-    void testUpdate_PostAlreadyRemoved_Failed(){
-        // Imposto una data passata
-        this.savedPostJpa.setDeletedAt(LocalDateTime.MIN);
-        log.info("Deleted At"+this.savedPostJpa.getDeletedAt());
-
-        when(this.postsRepository.findById(postId)).thenReturn(Optional.of(this.savedPostJpa));
-
-        assertThrows(PostNotFoundException.class,
-                () -> this.postsService.update(postId, any(PostPatch.class))
-        );
-
-        verify(this.postsRepository, times(1)).findById(postId);
-        verify(this.postsRepository, times(0)).save(any(PostJpa.class));
-    }
 
     @Test
     void testFindSuccess(){
@@ -229,7 +178,7 @@ class PostsServiceTest {
         convertedPost.setCaption(caption);
         convertedPost.setId(postId);
 
-        when(this.postsRepository.findById(postId)).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.postsRepository.getReferenceById(postId)).thenReturn(this.savedPostJpa);
         when(this.postToPostJpaConverter.convertBack((this.savedPostJpa))).thenReturn(convertedPost);
 
         Post post = this.postsService.find(postId);
@@ -240,44 +189,18 @@ class PostsServiceTest {
         assertEquals(caption, post.getCaption());
         assertEquals(postType, post.getPostType());
         assertEquals(profileId, post.getProfileId());
-        verify(this.postsRepository, times(1)).findById(postId);
+        verify(this.postsRepository, times(1)).getReferenceById(postId);
         verify(this.postToPostJpaConverter, times(1)).convertBack(this.savedPostJpa);
     }
 
-    @Test
-    void testFind_NotFound_Failed(){
-        when(this.postsRepository.findById(postId)).thenReturn(Optional.empty());
-        assertThrows(PostNotFoundException.class,
-                () -> this.postsService.find(postId)
-        );
-
-        verify(this.postsRepository, times(1)).findById(postId);
-        verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
-    }
-
-    @Test
-    void testFind_PostAlreadyRemoved_Failed(){
-        // Imposto una data passata
-        this.savedPostJpa.setDeletedAt(LocalDateTime.MIN);
-        log.info("Deleted At"+this.savedPostJpa.getDeletedAt());
-
-        when(this.postsRepository.findById(postId)).thenReturn(Optional.of(this.savedPostJpa));
-
-        assertThrows(PostNotFoundException.class,
-                () -> this.postsService.find(postId)
-        );
-
-        verify(this.postsRepository, times(1)).findById(postId);
-        verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
-    }
 
     @Test
     void testAddLikeSuccess(){
         LikeJpa likeJpa = new LikeJpa(new LikeId(this.newLike.getProfileId(), this.newLike.getPostId()));
 
-        when(this.postsRepository.findById(any(Long.class))).thenReturn(Optional.of(this.savedPostJpa));
-        when(this.profilesRepository.findById(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
-        when(this.likesRepository.findById(any(LikeId.class))).thenReturn(Optional.empty());
+        when(this.postsRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.profilesRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
+        when(this.likesRepository.findActiveById(any(LikeId.class))).thenReturn(Optional.empty());
         when(this.likeToLikeJpaConverter.convert(any(Like.class))).thenReturn(likeJpa);
         when(this.likesRepository.save(any(LikeJpa.class))).thenReturn(likeJpa);
 
@@ -286,9 +209,9 @@ class PostsServiceTest {
         log.info("Like Created at -> "+likeJpa.getCreatedAt());
         assertNotNull(likeJpa.getCreatedAt());
         assertNull(likeJpa.getDeletedAt());
-        verify(this.postsRepository, times(1)).findById(any(Long.class));
-        verify(this.profilesRepository, times(1)).findById(any(Long.class));
-        verify(this.likesRepository, times(1)).findById(any(LikeId.class));
+        verify(this.postsRepository, times(1)).findActiveById(any(Long.class));
+        verify(this.profilesRepository, times(1)).findActiveById(any(Long.class));
+        verify(this.likesRepository, times(1)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(1)).convert(any(Like.class));
         verify(this.likesRepository, times(1)).save(any(LikeJpa.class));
     }
@@ -297,31 +220,31 @@ class PostsServiceTest {
     void testAddLike_RemoveLike_Success(){
         LikeJpa likeJpa = new LikeJpa(new LikeId(this.newLike.getProfileId(), this.newLike.getPostId()));
 
-        when(this.postsRepository.findById(any(Long.class))).thenReturn(Optional.of(this.savedPostJpa));
-        when(this.profilesRepository.findById(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
-        when(this.likesRepository.findById(any(LikeId.class))).thenReturn(Optional.of(likeJpa));
+        when(this.postsRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.profilesRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
+        when(this.likesRepository.findActiveById(any(LikeId.class))).thenReturn(Optional.of(likeJpa));
         when(this.likesRepository.save(likeJpa)).thenReturn(likeJpa);
 
         this.postsService.addLike(true, this.newLike);
 
         log.info("Like Deleted at -> "+likeJpa.getDeletedAt());
         assertNotNull(likeJpa.getDeletedAt());
-        verify(this.postsRepository, times(1)).findById(any(Long.class));
-        verify(this.profilesRepository, times(1)).findById(any(Long.class));
-        verify(this.likesRepository, times(1)).findById(any(LikeId.class));
+        verify(this.postsRepository, times(1)).findActiveById(any(Long.class));
+        verify(this.profilesRepository, times(1)).findActiveById(any(Long.class));
+        verify(this.likesRepository, times(1)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(0)).convert(any(Like.class));
         verify(this.likesRepository, times(1)).save(any(LikeJpa.class));
     }
 
     @Test
     void testAddLike_PostNotFound_Success(){
-        when(this.postsRepository.findById(any(Long.class))).thenReturn(Optional.empty());
+        when(this.postsRepository.findActiveById(any(Long.class))).thenReturn(Optional.empty());
 
         assertThrows(PostNotFoundException.class, () -> this.postsService.addLike(false, this.newLike));
 
-        verify(this.postsRepository, times(1)).findById(any(Long.class));
-        verify(this.profilesRepository, times(0)).findById(any(Long.class));
-        verify(this.likesRepository, times(0)).findById(any(LikeId.class));
+        verify(this.postsRepository, times(1)).findActiveById(any(Long.class));
+        verify(this.profilesRepository, times(0)).findActiveById(any(Long.class));
+        verify(this.likesRepository, times(0)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(0)).convert(any(Like.class));
         verify(this.likesRepository, times(0)).save(any(LikeJpa.class));
 
@@ -329,14 +252,14 @@ class PostsServiceTest {
 
     @Test
     void testAddLike_ProfileNotFound_Success(){
-        when(this.postsRepository.findById(any(Long.class))).thenReturn(Optional.of(this.savedPostJpa));
-        when(this.profilesRepository.findById(any(Long.class))).thenReturn(Optional.empty());
+        when(this.postsRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.profilesRepository.findActiveById(any(Long.class))).thenReturn(Optional.empty());
 
         assertThrows(ProfileNotFoundException.class, () -> this.postsService.addLike(false, this.newLike));
 
-        verify(this.postsRepository, times(1)).findById(any(Long.class));
-        verify(this.profilesRepository, times(1)).findById(any(Long.class));
-        verify(this.likesRepository, times(0)).findById(any(LikeId.class));
+        verify(this.postsRepository, times(1)).findActiveById(any(Long.class));
+        verify(this.profilesRepository, times(1)).findActiveById(any(Long.class));
+        verify(this.likesRepository, times(0)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(0)).convert(any(Like.class));
         verify(this.likesRepository, times(0)).save(any(LikeJpa.class));
     }
@@ -352,8 +275,8 @@ class PostsServiceTest {
                 new Like(3L,1L),
                 new Like(4L,1L));
 
-        when(this.postsRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.savedPostJpa));
-        when(this.likesRepository.findAllActiveByPost(any(PostJpa.class))).thenReturn(likeJpaList);
+        //when(this.postsRepository.getReferenceById(any(Long.class))).thenReturn(this.savedPostJpa);
+        when(this.likesRepository.findAllActiveByPostId(anyLong())).thenReturn(likeJpaList);
         when(this.likeToLikeJpaConverter.convertBack(likeJpaList.get(0))).thenReturn(likeList.get(0));
         when(this.likeToLikeJpaConverter.convertBack(likeJpaList.get(1))).thenReturn(likeList.get(1));
         when(this.likeToLikeJpaConverter.convertBack(likeJpaList.get(2))).thenReturn(likeList.get(2));
@@ -361,8 +284,8 @@ class PostsServiceTest {
         List<Like> returnedLikeList = this.postsService.findAllLikesByPostId(1L);
 
         assertEquals(3,returnedLikeList.size());
-        verify(this.postsRepository, times(1)).findActiveById(anyLong());
-        verify(this.likesRepository, times(1)).findAllActiveByPost(any(PostJpa.class));
+
+        verify(this.likesRepository, times(1)).findAllActiveByPostId(anyLong());
         verify(this.likeToLikeJpaConverter, times(3)).convertBack(any(LikeJpa.class));
     }
 
@@ -370,25 +293,14 @@ class PostsServiceTest {
     void testFindAllLikesByPostId_Empty_Success(){
         List<LikeJpa> likeJpaList = new ArrayList<>();
 
-        when(this.postsRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.savedPostJpa));
-        when(this.likesRepository.findAllActiveByPost(any(PostJpa.class))).thenReturn(likeJpaList);
+        //when(this.postsRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.likesRepository.findAllActiveByPostId(anyLong())).thenReturn(likeJpaList);
 
         List<Like> returnedLikeList = this.postsService.findAllLikesByPostId(1L);
 
         assertEquals(0,returnedLikeList.size());
-        verify(this.postsRepository, times(1)).findActiveById(anyLong());
-        verify(this.likesRepository, times(1)).findAllActiveByPost(any(PostJpa.class));
-        verify(this.likeToLikeJpaConverter, times(0)).convertBack(any(LikeJpa.class));
-    }
 
-    @Test
-    void testFindAllLikesByPostId_NotFound_Failed(){
-        when(this.postsRepository.findActiveById(any(Long.class))).thenReturn(Optional.empty());
-
-        assertThrows(PostNotFoundException.class, () -> this.postsService.findAllLikesByPostId(1L));
-
-        verify(this.postsRepository, times(1)).findActiveById(anyLong());
-        verify(this.likesRepository, times(0)).findAllActiveByPost(any(PostJpa.class));
+        verify(this.likesRepository, times(1)).findAllActiveByPostId(anyLong());
         verify(this.likeToLikeJpaConverter, times(0)).convertBack(any(LikeJpa.class));
     }
 

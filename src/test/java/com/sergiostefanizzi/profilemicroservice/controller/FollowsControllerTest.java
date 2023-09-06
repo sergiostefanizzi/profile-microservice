@@ -4,6 +4,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sergiostefanizzi.profilemicroservice.model.Follows;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
 import com.sergiostefanizzi.profilemicroservice.model.ProfileFollowList;
+import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
+import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.service.FollowsService;
 import com.sergiostefanizzi.profilemicroservice.system.exception.FollowNotFoundException;
@@ -48,6 +50,10 @@ class FollowsControllerTest {
     private MockMvc mockMvc;
     @MockBean
     private ProfilesRepository profilesRepository;
+    @MockBean
+    private PostsRepository postsRepository;
+    @MockBean
+    private CommentsRepository commentsRepository;
     @Autowired
     private ObjectMapper objectMapper;
     Long publicProfileId1 = 1L;
@@ -169,7 +175,7 @@ class FollowsControllerTest {
     @Test
     void testAddFollows_InvalidId_Then_400() throws Exception {
         // arrayList contenente i messaggi di errore
-        errors.add("Profile ID is not valid!");
+        errors.add("ID is not valid!");
 
         MvcResult result = this.mockMvc.perform(put("/profiles/{profileId}/follows/{followsId}","IdNotLong","IdNotLong")
                         .contentType(MediaType.APPLICATION_JSON))
@@ -289,7 +295,7 @@ class FollowsControllerTest {
     @Test
     void testAcceptFollows_InvalidId_Then_400() throws Exception {
         // arrayList contenente i messaggi di errore
-        errors.add("Profile ID is not valid!");
+        errors.add("ID is not valid!");
         MvcResult result = this.mockMvc.perform(put("/profiles/{profileId}/followedBy/{followerId}","IdNotLong","IdNotLong")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
@@ -424,7 +430,7 @@ class FollowsControllerTest {
     @Test
     void testFindAllFollowers_Then_400() throws Exception {
         // arrayList contenente i messaggi di errore
-        errors.add("Profile ID is not valid!");
+        errors.add("ID is not valid!");
         MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}/followedBy","IdNotLong")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
@@ -558,7 +564,7 @@ class FollowsControllerTest {
     @Test
     void testFindAllFollowings_Then_400() throws Exception {
         // arrayList contenente i messaggi di errore
-        errors.add("Profile ID is not valid!");
+        errors.add("ID is not valid!");
         MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}/follows","IdNotLong")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())

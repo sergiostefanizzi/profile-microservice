@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(force = true)
 public class LikeJpa{
     @EmbeddedId
-    private final LikeId likesId;
+    private final LikeId likeId;
     @Column(name = "created_at", nullable = false)
     @PastOrPresent
     @NotNull
