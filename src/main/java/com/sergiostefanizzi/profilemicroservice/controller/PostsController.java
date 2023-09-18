@@ -49,10 +49,11 @@ public class PostsController implements PostsApi {
     }
 
 
-    //TODO dopo aver fatto i follower
+    //TODO fare i test
     @Override
-    public ResponseEntity<List<Post>> profileFeedById(Long profileId) {
-        return PostsApi.super.profileFeedById(profileId);
+    public ResponseEntity<List<Post>> profileFeedByProfileId(Long profileId, Boolean onlyPost) {
+        List<Post> postList = this.postsService.profileFeedByProfileId(profileId, onlyPost);
+        return new ResponseEntity<>(postList, HttpStatus.OK);
     }
 
     @Override

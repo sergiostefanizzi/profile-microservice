@@ -55,7 +55,7 @@ public class PostsService {
     @Transactional
     public void remove(Long postId) {
         if(postId == null){
-            throw new PostNotFoundException("null");
+            throw new PostNotFoundException("Missing input parameter");
         }
         // Controllo prima l'esistenza del post
         PostJpa postJpa = this.postsRepository.getReferenceById(postId);
@@ -77,7 +77,7 @@ public class PostsService {
     @Transactional
     public Post update(Long postId, PostPatch postPatch) {
         if(postId == null){
-            throw new PostNotFoundException("null");
+            throw new PostNotFoundException("Missing input parameter");
         }
 
         // Controllo prima l'esistenza del post
@@ -99,7 +99,7 @@ public class PostsService {
     @Transactional
     public Post find(Long postId) {
         if(postId == null){
-            throw new PostNotFoundException("null");
+            throw new PostNotFoundException("Missing input parameter");
         }
 
         return this.postToPostJpaConverter.convertBack(
@@ -188,7 +188,7 @@ public class PostsService {
     @Transactional
     public Comment updateCommentById(Long commentId, CommentPatch commentPatch) {
         if(commentId == null){
-            throw new CommentNotFoundException("null");
+            throw new CommentNotFoundException("Missing input parameter");
         }
 
         CommentJpa commentJpa = this.commentsRepository.findActiveById(commentId)
@@ -205,7 +205,7 @@ public class PostsService {
     @Transactional
     public void deleteCommentById(Long commentId) {
         if(commentId == null){
-            throw new CommentNotFoundException("null");
+            throw new CommentNotFoundException("Missing input parameter");
         }
 
         CommentJpa commentJpa = this.commentsRepository.findActiveById(commentId)
@@ -218,7 +218,7 @@ public class PostsService {
     @Transactional
     public List<Comment> findAllCommentsByPostId(Long postId) {
         if (postId == null){
-            throw new PostNotFoundException("null");
+            throw new PostNotFoundException("Missing input parameter");
         }
 
         PostJpa postJpa = this.postsRepository.findActiveById(postId)
@@ -226,5 +226,21 @@ public class PostsService {
 
         return this.commentsRepository.findAllActiveByPost(postJpa)
                 .stream().map(this.commentToCommentJpaConverter::convertBack).toList();
+    }
+
+    @Transactional
+    public List<Post> profileFeedByProfileId(Long profileId, Boolean onlyPost) {
+        if (onlyPost == null){
+            return this.postsRepository.getFeedByProfileId(profileId, LocalDateTime.now().minusDays(1))
+                    .stream().map(this.postToPostJpaConverter::convertBack).toList();
+        } else {
+            if (onlyPost) {
+                return this.postsRepository.getPostFeedByProfileId(profileId)
+                        .stream().map(this.postToPostJpaConverter::convertBack).toList();
+            }else {
+                return this.postsRepository.getStoryFeedByProfileId(profileId, LocalDateTime.now().minusDays(1))
+                        .stream().map(this.postToPostJpaConverter::convertBack).toList();
+            }
+        }
     }
 }

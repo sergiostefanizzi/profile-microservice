@@ -20,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -496,6 +497,123 @@ class PostsServiceTest {
         verify(this.postsRepository, times(1)).findActiveById(anyLong());
         verify(this.commentsRepository, times(0)).findAllActiveByPost(any(PostJpa.class));
         verify(this.commentToCommentJpaConverter, times(0)).convertBack(any(CommentJpa.class));
+    }
+
+    @Test
+    void testProfileFeedByProfileId_Null_OnlyPost_Success(){
+        List<PostJpa> postJpaList = createPostJpaList();
+
+        List<Post> convertedPostList = createConvertedPostList();
+
+        when(this.postsRepository.getFeedByProfileId(anyLong(), any(LocalDateTime.class))).thenReturn(postJpaList);
+        when(this.postToPostJpaConverter.convertBack(postJpaList.get(0))).thenReturn(convertedPostList.get(0));
+        when(this.postToPostJpaConverter.convertBack(postJpaList.get(1))).thenReturn(convertedPostList.get(1));
+        when(this.postToPostJpaConverter.convertBack(postJpaList.get(2))).thenReturn(convertedPostList.get(2));
+        when(this.postToPostJpaConverter.convertBack(postJpaList.get(3))).thenReturn(convertedPostList.get(3));
+
+        List<Post> postList = this.postsService.profileFeedByProfileId(profileId, null);
+
+        assertEquals(convertedPostList, postList);
+        verify(this.postsRepository, times(1)).getFeedByProfileId(anyLong(), any(LocalDateTime.class));
+        verify(this.postToPostJpaConverter, times(4)).convertBack(any(PostJpa.class));
+        verify(this.postsRepository, times(0)).getPostFeedByProfileId(anyLong());
+        verify(this.postsRepository, times(0)).getStoryFeedByProfileId(anyLong(), any(LocalDateTime.class));
+
+        log.info(postList.toString());
+    }
+
+    @Test
+    void testProfileFeedByProfileId_True_OnlyPost_Success(){
+        List<PostJpa> postJpaList = createPostJpaList().stream().filter(postJpa -> postJpa.getPostType().equals(Post.PostTypeEnum.POST)).toList();
+
+        List<Post> convertedPostList = createConvertedPostList().stream().filter(post -> post.getPostType().equals(Post.PostTypeEnum.POST)).toList();
+
+        when(this.postsRepository.getPostFeedByProfileId(anyLong())).thenReturn(postJpaList);
+        when(this.postToPostJpaConverter.convertBack(postJpaList.get(0))).thenReturn(convertedPostList.get(0));
+        when(this.postToPostJpaConverter.convertBack(postJpaList.get(1))).thenReturn(convertedPostList.get(1));
+
+        List<Post> postList = this.postsService.profileFeedByProfileId(profileId, true);
+
+        assertEquals(convertedPostList, postList);
+        verify(this.postsRepository, times(0)).getFeedByProfileId(anyLong(), any(LocalDateTime.class));
+        verify(this.postToPostJpaConverter, times(2)).convertBack(any(PostJpa.class));
+        verify(this.postsRepository, times(1)).getPostFeedByProfileId(anyLong());
+        verify(this.postsRepository, times(0)).getStoryFeedByProfileId(anyLong(), any(LocalDateTime.class));
+
+        log.info(postList.toString());
+    }
+
+    @Test
+    void testProfileFeedByProfileId_False_OnlyPost_Success(){
+        List<PostJpa> postJpaList = createPostJpaList().stream().filter(postJpa -> postJpa.getPostType().equals(Post.PostTypeEnum.STORY)).toList();
+
+        List<Post> convertedPostList = createConvertedPostList().stream().filter(post -> post.getPostType().equals(Post.PostTypeEnum.STORY)).toList();
+
+        when(this.postsRepository.getStoryFeedByProfileId(anyLong(), any(LocalDateTime.class))).thenReturn(postJpaList);
+        when(this.postToPostJpaConverter.convertBack(postJpaList.get(0))).thenReturn(convertedPostList.get(0));
+        when(this.postToPostJpaConverter.convertBack(postJpaList.get(1))).thenReturn(convertedPostList.get(1));
+
+        List<Post> postList = this.postsService.profileFeedByProfileId(profileId, false);
+
+        assertEquals(convertedPostList, postList);
+        verify(this.postsRepository, times(0)).getFeedByProfileId(anyLong(), any(LocalDateTime.class));
+        verify(this.postToPostJpaConverter, times(2)).convertBack(any(PostJpa.class));
+        verify(this.postsRepository, times(0)).getPostFeedByProfileId(anyLong());
+        verify(this.postsRepository, times(1)).getStoryFeedByProfileId(anyLong(), any(LocalDateTime.class));
+
+        log.info(postList.toString());
+    }
+
+
+    private List<Post> createConvertedPostList() {
+        Post newPost1 = new Post(contentUrl, Post.PostTypeEnum.POST, profileId);
+        newPost1.setCaption("First Post Caption");
+        newPost1.setId(1L);
+
+        Post newPost2 = new Post(contentUrl, Post.PostTypeEnum.STORY, profileId);
+        newPost2.setId(2L);
+
+        Post newPost3 = new Post(contentUrl, Post.PostTypeEnum.POST, profileId);
+        newPost3.setCaption("Second Post Caption");
+        newPost3.setId(3L);
+
+        Post newPost4 = new Post(contentUrl, Post.PostTypeEnum.STORY, profileId);
+        newPost4.setId(4L);
+
+
+        List<Post> convertedPostList = new ArrayList<>();
+        convertedPostList.add(newPost1);
+        convertedPostList.add(newPost2);
+        convertedPostList.add(newPost3);
+        convertedPostList.add(newPost4);
+        return convertedPostList;
+    }
+
+    private List<PostJpa> createPostJpaList() {
+        PostJpa newPostJpa1 = new PostJpa(contentUrl, Post.PostTypeEnum.POST);
+        newPostJpa1.setCaption("First Post Caption");
+        newPostJpa1.setProfile(profileJpa);
+        newPostJpa1.setId(1L);
+
+        PostJpa newPostJpa2 = new PostJpa(contentUrl, Post.PostTypeEnum.STORY);
+        newPostJpa2.setProfile(profileJpa);
+        newPostJpa2.setId(2L);
+
+        PostJpa newPostJpa3 = new PostJpa(contentUrl, Post.PostTypeEnum.POST);
+        newPostJpa3.setCaption("Second Post Caption");
+        newPostJpa3.setProfile(profileJpa);
+        newPostJpa3.setId(3L);
+
+        PostJpa newPostJpa4 = new PostJpa(contentUrl, Post.PostTypeEnum.STORY);
+        newPostJpa4.setProfile(profileJpa);
+        newPostJpa4.setId(4L);
+
+        List<PostJpa> postJpaList = new ArrayList<>();
+        postJpaList.add(newPostJpa1);
+        postJpaList.add(newPostJpa2);
+        postJpaList.add(newPostJpa3);
+        postJpaList.add(newPostJpa4);
+        return postJpaList;
     }
 
 }

@@ -31,8 +31,10 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -1084,6 +1086,143 @@ class PostsControllerTest {
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n"+resultAsString);
         log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    @Test
+    void testProfileFeedByProfileId_Then_200() throws Exception{
+        List<Post> postList = createPostList();
+        when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(profileId));
+        when(this.postsService.profileFeedByProfileId(profileId, null)).thenReturn(postList);
+
+        MvcResult result = this.mockMvc.perform(get("/posts/feed/{profileId}?onlyPost={onlyPost}", profileId,null))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$", hasSize(4)))
+                .andExpect(jsonPath("$[0].id").value(postList.get(0).getId()))
+                .andExpect(jsonPath("$[1].id").value(postList.get(1).getId()))
+                .andExpect(jsonPath("$[2].id").value(postList.get(2).getId()))
+                .andExpect(jsonPath("$[3].id").value(postList.get(3).getId()))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+
+        log.info(resultAsString);
+    }
+
+    @Test
+    void testProfileFeedByProfileId_OnlyPost_Then_200() throws Exception{
+        List<Post> postList = createPostList().stream().filter(post -> post.getPostType().equals(Post.PostTypeEnum.POST)).toList();
+        when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(profileId));
+        when(this.postsService.profileFeedByProfileId(anyLong(), anyBoolean())).thenReturn(postList);
+
+        MvcResult result = this.mockMvc.perform(get("/posts/feed/{profileId}?onlyPost={onlyPost}", profileId,  true))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].id").value(postList.get(0).getId()))
+                .andExpect(jsonPath("$[0].post_type").value(postList.get(0).getPostType().getValue()))
+                .andExpect(jsonPath("$[1].id").value(postList.get(1).getId()))
+                .andExpect(jsonPath("$[1].post_type").value(postList.get(1).getPostType().getValue()))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+
+        log.info(resultAsString);
+    }
+
+    @Test
+    void testProfileFeedByProfileId_OnlyStories_Then_200() throws Exception{
+        List<Post> postList = createPostList().stream().filter(post -> post.getPostType().equals(Post.PostTypeEnum.STORY)).toList();
+        when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(profileId));
+        when(this.postsService.profileFeedByProfileId(anyLong(), anyBoolean())).thenReturn(postList);
+
+        MvcResult result = this.mockMvc.perform(get("/posts/feed/{profileId}?onlyPost={onlyPost}", profileId,  false))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$", hasSize(2)))
+                .andExpect(jsonPath("$[0].id").value(postList.get(0).getId()))
+                .andExpect(jsonPath("$[0].post_type").value(postList.get(0).getPostType().getValue()))
+                .andExpect(jsonPath("$[1].id").value(postList.get(1).getId()))
+                .andExpect(jsonPath("$[1].post_type").value(postList.get(1).getPostType().getValue()))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+
+        log.info(resultAsString);
+    }
+
+    @Test
+    void testProfileFeedByProfileId_InvalidId_Then_400() throws Exception {
+        errors.add("ID is not valid!");
+        MvcResult result = this.mockMvc.perform(get("/posts/feed/IdNotLong"))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof NumberFormatException
+                ))
+                .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+    }
+
+    @Test
+    void testProfileFeedByProfileId_Then_400() throws Exception {
+        when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(profileId));
+        MvcResult result = this.mockMvc.perform(get("/posts/feed/{profileId}?onlyPost={onlyPost}", profileId, "NotBoolean")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                ))
+                .andReturn();
+
+        // salvo risposta in result solo per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+    }
+
+    @Test
+    void testProfileFeedByProfileId_Then_404() throws Exception {
+        when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.empty());
+        MvcResult result = this.mockMvc.perform(get("/posts/feed/{profileId}?onlyPost={onlyPost}", profileId, null)
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof ProfileNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value("Profile " + profileId + " not found!"))
+                .andReturn();
+
+        // salvo risposta in result solo per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+    }
+
+    private List<Post> createPostList() {
+        Post post1 = new Post(contentUrl, Post.PostTypeEnum.POST, 3L);
+        post1.setCaption("First Post Caption");
+        post1.setId(1L);
+
+        Post post2 = new Post(contentUrl, Post.PostTypeEnum.POST, 4L);
+        post2.setCaption("Second Post Caption");
+        post2.setId(2L);
+
+        Post post3 = new Post(contentUrl, Post.PostTypeEnum.STORY, 3L);
+        post3.setId(3L);
+
+        Post post4 = new Post(contentUrl, Post.PostTypeEnum.STORY, 8L);
+        post4.setId(4L);
+
+        List<Post> postList = new ArrayList<>();
+        postList.add(post1);
+        postList.add(post2);
+        postList.add(post3);
+        postList.add(post4);
+        return postList;
     }
 
 }

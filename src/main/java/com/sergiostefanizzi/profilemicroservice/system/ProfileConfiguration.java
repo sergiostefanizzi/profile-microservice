@@ -37,6 +37,7 @@ public class ProfileConfiguration implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(this.profileInterceptor)
                 .addPathPatterns("/profiles/**")
+                .addPathPatterns("/posts/feed/*")
                 .excludePathPatterns("/profiles/search")
                 .excludePathPatterns("/profiles/*/f*/**");
         registry.addInterceptor(this.followsInterceptor)
@@ -44,6 +45,7 @@ public class ProfileConfiguration implements WebMvcConfigurer {
         registry.addInterceptor(this.postsInterceptor)
                 .addPathPatterns("/posts/*")
                 .addPathPatterns("/posts/likes/*")
+                .excludePathPatterns("/posts/feed/*")
                 .excludePathPatterns("/posts/comments/*");
         registry.addInterceptor(this.commentsInterceptor)
                 .addPathPatterns("/posts/comments/*");

@@ -336,7 +336,7 @@ paths:
         - posts
       summary: Feed of the profile
       description: Feed of the profile
-      operationId: profileFeedById
+      operationId: profileFeedByProfileId
       security:
         - bearerAuth: []
       parameters:
@@ -347,6 +347,11 @@ paths:
           schema:
             type: integer
             format: int64
+        - name: onlyPost
+          in: query
+          description: get only post
+          schema:
+            type: boolean
       responses:
         '200':
           description: Feed found and returned
