@@ -3,8 +3,7 @@ package com.sergiostefanizzi.profilemicroservice.service;
 import com.sergiostefanizzi.profilemicroservice.model.*;
 import com.sergiostefanizzi.profilemicroservice.model.converter.PostToPostJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfileJpaConverter;
-import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
-import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
+import com.sergiostefanizzi.profilemicroservice.repository.*;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.validator.routines.UrlValidator;
@@ -34,6 +33,12 @@ class ProfilesServiceTest {
     private ProfilesRepository profilesRepository;
     @Mock
     private PostsRepository postsRepository;
+    @Mock
+    private LikesRepository likesRepository;
+    @Mock
+    private CommentsRepository commentsRepository;
+    @Mock
+    private FollowsRepository followsRepository;
     @Mock
     private ProfileToProfileJpaConverter profileToProfileJpaConverter;
     @Mock
@@ -136,18 +141,22 @@ class ProfilesServiceTest {
     // REMOVE A PROFILE
     @Test
     void testRemoveSuccess(){
-        when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.savedProfileJpa);
-        when(this.profilesRepository.save(any(ProfileJpa.class))).thenReturn(this.savedProfileJpa);
-
-        // l'istante di rimozione deve essere nullo prima della rimozione
-        assertNull(this.savedProfileJpa.getDeletedAt());
+        doNothing().when(this.profilesRepository).removeProfileByProfileId(anyLong(), any(LocalDateTime.class));
+        doNothing().when(this.postsRepository).removePostByProfileId(anyLong(), any(LocalDateTime.class));
+        doNothing().when(this.likesRepository).removeLikeByProfileId(anyLong(), any(LocalDateTime.class));
+        doNothing().when(this.commentsRepository).removeCommentByProfileId(anyLong(), any(LocalDateTime.class));
+        doNothing().when(this.followsRepository).removeFollowByProfileId(anyLong(), any(LocalDateTime.class));
 
         this.profilesService.remove(profileId);
 
         // l'istante di rimozione deve essere NON nullo DOPO la rimozione
-        assertNotNull(this.savedProfileJpa.getDeletedAt());
-        verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
-        verify(this.profilesRepository, times(1)).save(any(ProfileJpa.class));
+
+        verify(this.profilesRepository, times(1)).removeProfileByProfileId(anyLong(), any(LocalDateTime.class));
+        verify(this.postsRepository, times(1)).removePostByProfileId(anyLong(), any(LocalDateTime.class));
+        verify(this.likesRepository, times(1)).removeLikeByProfileId(anyLong(), any(LocalDateTime.class));
+        verify(this.commentsRepository, times(1)).removeCommentByProfileId(anyLong(), any(LocalDateTime.class));
+        verify(this.followsRepository, times(1)).removeFollowByProfileId(anyLong(), any(LocalDateTime.class));
+
     }
 
 

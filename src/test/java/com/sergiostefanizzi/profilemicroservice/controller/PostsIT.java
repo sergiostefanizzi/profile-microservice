@@ -1740,8 +1740,8 @@ class PostsIT {
         List<Comment> returnedCommentList = responseGetAllComment.getBody();
         log.info(returnedCommentList.toString());
         assertEquals(2, returnedCommentList.size());
-        assertEquals(newComment2, returnedCommentList.get(0));
-        assertEquals(newComment, returnedCommentList.get(1));
+        assertEquals(newComment, returnedCommentList.get(0));
+        assertEquals(newComment2, returnedCommentList.get(1));
 
     }
 

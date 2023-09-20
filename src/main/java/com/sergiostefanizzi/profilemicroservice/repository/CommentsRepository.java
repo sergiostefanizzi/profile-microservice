@@ -18,7 +18,7 @@ public interface CommentsRepository extends JpaRepository<CommentJpa, Long> {
     @Query("SELECT c.id FROM CommentJpa c WHERE c.id=:commentId AND c.deletedAt IS NULL")
     Optional<Long> checkActiveById(Long commentId);
 
-    @Query("SELECT c FROM CommentJpa c WHERE c.post.id = :postId AND c.deletedAt IS NULL ORDER BY c.createdAt DESC")
+    @Query("SELECT c FROM CommentJpa c WHERE c.post.id = :postId AND c.deletedAt IS NULL ORDER BY c.createdAt ASC")
     List<CommentJpa> findAllActiveByPostId(Long postId);
 
     @Modifying
