@@ -9,6 +9,7 @@ import com.sergiostefanizzi.profilemicroservice.repository.LikesRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.system.exception.CommentNotFoundException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.CommentOnStoryException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import lombok.extern.slf4j.Slf4j;
@@ -125,18 +126,15 @@ class PostsServiceTest {
 
     @Test
     void testRemoveSuccess(){
-        when(this.postsRepository.getReferenceById(postId)).thenReturn(this.savedPostJpa);
-        when(this.postsRepository.save(this.savedPostJpa)).thenReturn(this.savedPostJpa);
-
-        // l'istante di rimozione deve essere nullo prima della rimozione
-        assertNull(this.savedPostJpa.getDeletedAt());
+        doNothing().when(this.postsRepository).removePostByPostId(anyLong(), any(LocalDateTime.class));
+        doNothing().when(this.likesRepository).removeLikeByPostId(anyLong(), any(LocalDateTime.class));
+        doNothing().when(this.commentsRepository).removeCommentByPostId(anyLong(), any(LocalDateTime.class));
 
         this.postsService.remove(postId);
 
-        // l'istante di rimozione deve essere NON nullo DOPO la rimozione
-        assertNotNull(this.savedPostJpa.getDeletedAt());
-        verify(this.postsRepository, times(1)).getReferenceById(postId);
-        verify(this.postsRepository, times(1)).save(this.savedPostJpa);
+        verify(this.postsRepository, times(1)).removePostByPostId(anyLong(), any(LocalDateTime.class));
+        verify(this.likesRepository, times(1)).removeLikeByPostId(anyLong(), any(LocalDateTime.class));
+        verify(this.commentsRepository, times(1)).removeCommentByPostId(anyLong(), any(LocalDateTime.class));
     }
 
 
@@ -199,7 +197,7 @@ class PostsServiceTest {
     void testAddLikeSuccess(){
         LikeJpa likeJpa = new LikeJpa(new LikeId(this.newLike.getProfileId(), this.newLike.getPostId()));
 
-        when(this.postsRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.postsRepository.findActiveById(anyLong(), any(LocalDateTime.class))).thenReturn(Optional.of(this.savedPostJpa));
         when(this.profilesRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
         when(this.likesRepository.findActiveById(any(LikeId.class))).thenReturn(Optional.empty());
         when(this.likeToLikeJpaConverter.convert(any(Like.class))).thenReturn(likeJpa);
@@ -210,7 +208,7 @@ class PostsServiceTest {
         log.info("Like Created at -> "+likeJpa.getCreatedAt());
         assertNotNull(likeJpa.getCreatedAt());
         assertNull(likeJpa.getDeletedAt());
-        verify(this.postsRepository, times(1)).findActiveById(any(Long.class));
+        verify(this.postsRepository, times(1)).findActiveById(anyLong(), any(LocalDateTime.class));
         verify(this.profilesRepository, times(1)).findActiveById(any(Long.class));
         verify(this.likesRepository, times(1)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(1)).convert(any(Like.class));
@@ -221,29 +219,27 @@ class PostsServiceTest {
     void testAddLike_RemoveLike_Success(){
         LikeJpa likeJpa = new LikeJpa(new LikeId(this.newLike.getProfileId(), this.newLike.getPostId()));
 
-        when(this.postsRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.postsRepository.findActiveById(anyLong(), any(LocalDateTime.class))).thenReturn(Optional.of(this.savedPostJpa));
         when(this.profilesRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
         when(this.likesRepository.findActiveById(any(LikeId.class))).thenReturn(Optional.of(likeJpa));
-        when(this.likesRepository.save(likeJpa)).thenReturn(likeJpa);
+        doNothing().when(this.likesRepository).removeLikeByLikeId(any(LikeId.class), any(LocalDateTime.class));
 
         this.postsService.addLike(true, this.newLike);
 
-        log.info("Like Deleted at -> "+likeJpa.getDeletedAt());
-        assertNotNull(likeJpa.getDeletedAt());
-        verify(this.postsRepository, times(1)).findActiveById(any(Long.class));
+        verify(this.postsRepository, times(1)).findActiveById(anyLong(), any(LocalDateTime.class));
         verify(this.profilesRepository, times(1)).findActiveById(any(Long.class));
         verify(this.likesRepository, times(1)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(0)).convert(any(Like.class));
-        verify(this.likesRepository, times(1)).save(any(LikeJpa.class));
+        verify(this.likesRepository, times(1)).removeLikeByLikeId(any(LikeId.class), any(LocalDateTime.class));
     }
 
     @Test
     void testAddLike_PostNotFound_Success(){
-        when(this.postsRepository.findActiveById(any(Long.class))).thenReturn(Optional.empty());
+        when(this.postsRepository.findActiveById(anyLong(), any(LocalDateTime.class))).thenReturn(Optional.empty());
 
         assertThrows(PostNotFoundException.class, () -> this.postsService.addLike(false, this.newLike));
 
-        verify(this.postsRepository, times(1)).findActiveById(any(Long.class));
+        verify(this.postsRepository, times(1)).findActiveById(anyLong(), any(LocalDateTime.class));
         verify(this.profilesRepository, times(0)).findActiveById(any(Long.class));
         verify(this.likesRepository, times(0)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(0)).convert(any(Like.class));
@@ -253,12 +249,12 @@ class PostsServiceTest {
 
     @Test
     void testAddLike_ProfileNotFound_Success(){
-        when(this.postsRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.postsRepository.findActiveById(anyLong(), any(LocalDateTime.class))).thenReturn(Optional.of(this.savedPostJpa));
         when(this.profilesRepository.findActiveById(any(Long.class))).thenReturn(Optional.empty());
 
         assertThrows(ProfileNotFoundException.class, () -> this.postsService.addLike(false, this.newLike));
 
-        verify(this.postsRepository, times(1)).findActiveById(any(Long.class));
+        verify(this.postsRepository, times(1)).findActiveById(anyLong(), any(LocalDateTime.class));
         verify(this.profilesRepository, times(1)).findActiveById(any(Long.class));
         verify(this.likesRepository, times(0)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(0)).convert(any(Like.class));
@@ -317,7 +313,7 @@ class PostsServiceTest {
         );
         comment.setId(commentId);
 
-        when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.postsRepository.findActiveById(anyLong(), any(LocalDateTime.class))).thenReturn(Optional.of(this.savedPostJpa));
         when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
         when(this.commentToCommentJpaConverter.convert(any(Comment.class))).thenReturn(commentJpa);
         when(this.commentsRepository.save(any(CommentJpa.class))).thenReturn(commentJpa);
@@ -331,7 +327,7 @@ class PostsServiceTest {
         assertEquals(this.savedPostJpa.getId(), savedComment.getPostId());
         assertEquals(content, savedComment.getContent());
         log.info("Comment created at -> "+commentJpa.getCreatedAt());
-        verify(this.postsRepository, times(1)).findActiveById(anyLong());
+        verify(this.postsRepository, times(1)).findActiveById(anyLong(), any(LocalDateTime.class));
         verify(this.profilesRepository, times(1)).findActiveById(anyLong());
         verify(this.commentToCommentJpaConverter, times(1)).convert(any(Comment.class));
         verify(this.commentsRepository, times(1)).save(any(CommentJpa.class));
@@ -340,11 +336,11 @@ class PostsServiceTest {
 
     @Test
     void testAddComment_PostNotFound_Failed(){
-        when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.empty());
+        when(this.postsRepository.findActiveById(anyLong(), any(LocalDateTime.class))).thenReturn(Optional.empty());
 
         assertThrows(PostNotFoundException.class, () -> this.postsService.addComment(new Comment(this.profileJpa.getId(), this.savedPostJpa.getId(), "Commento al post")));
 
-        verify(this.postsRepository, times(1)).findActiveById(anyLong());
+        verify(this.postsRepository, times(1)).findActiveById(anyLong(), any(LocalDateTime.class));
         verify(this.profilesRepository, times(0)).findActiveById(anyLong());
         verify(this.commentToCommentJpaConverter, times(0)).convert(any(Comment.class));
         verify(this.commentsRepository, times(0)).save(any(CommentJpa.class));
@@ -353,15 +349,33 @@ class PostsServiceTest {
 
     @Test
     void testAddComment_ProfileNotFound_Failed(){
-        when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.postsRepository.findActiveById(anyLong(), any(LocalDateTime.class))).thenReturn(Optional.of(this.savedPostJpa));
         when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.empty());
         assertThrows(ProfileNotFoundException.class, () -> this.postsService.addComment(new Comment(this.profileJpa.getId(), this.savedPostJpa.getId(), "Commento al post")));
 
-        verify(this.postsRepository, times(1)).findActiveById(anyLong());
+        verify(this.postsRepository, times(1)).findActiveById(anyLong(), any(LocalDateTime.class));
         verify(this.profilesRepository, times(1)).findActiveById(anyLong());
         verify(this.commentToCommentJpaConverter, times(0)).convert(any(Comment.class));
         verify(this.commentsRepository, times(0)).save(any(CommentJpa.class));
         verify(this.commentToCommentJpaConverter, times(0)).convertBack(any(CommentJpa.class));
+
+    }
+
+    @Test
+    void testAddComment_CommentOnStory_Failed(){
+        PostJpa savedStoryPostJpa = new PostJpa(contentUrl, Post.PostTypeEnum.STORY);
+        savedStoryPostJpa.setCaption(caption);
+        savedStoryPostJpa.setProfile(profileJpa);
+        savedStoryPostJpa.setId(postId);
+        when(this.postsRepository.findActiveById(anyLong(), any(LocalDateTime.class))).thenReturn(Optional.of(savedStoryPostJpa));
+        assertThrows(CommentOnStoryException.class, () -> this.postsService.addComment(new Comment(this.profileJpa.getId(), this.savedPostJpa.getId(), "Commento al post")));
+
+        verify(this.postsRepository, times(1)).findActiveById(anyLong(), any(LocalDateTime.class));
+        verify(this.profilesRepository, times(0)).findActiveById(anyLong());
+        verify(this.commentToCommentJpaConverter, times(0)).convert(any(Comment.class));
+        verify(this.commentsRepository, times(0)).save(any(CommentJpa.class));
+        verify(this.commentToCommentJpaConverter, times(0)).convertBack(any(CommentJpa.class));
+
     }
 
     @Test
@@ -378,7 +392,7 @@ class PostsServiceTest {
         Comment convertedComment = new Comment(profileJpa.getId(), this.savedPostJpa.getId(), newContent);
         convertedComment.setId(commentId);
 
-        when(this.commentsRepository.findActiveById(anyLong())).thenReturn(Optional.of(commentJpa));
+        when(this.commentsRepository.getReferenceById(anyLong())).thenReturn(commentJpa);
         when(this.commentsRepository.save(any(CommentJpa.class))).thenReturn(commentJpa);
         when(this.commentToCommentJpaConverter.convertBack(any(CommentJpa.class))).thenReturn(convertedComment);
 
@@ -390,25 +404,11 @@ class PostsServiceTest {
         assertEquals(this.savedPostJpa.getId(), updatedComment.getPostId());
         assertEquals(newContent, updatedComment.getContent());
         log.info("Comment's content-> "+commentJpa.getContent());
-        verify(this.commentsRepository, times(1)).findActiveById(anyLong());
+        verify(this.commentsRepository, times(1)).getReferenceById(anyLong());
         verify(this.commentsRepository, times(1)).save(any(CommentJpa.class));
         verify(this.commentToCommentJpaConverter, times(1)).convertBack(any(CommentJpa.class));
     }
 
-    @Test
-    void testUpdateCommentById_CommentNotFound_Failed(){
-        String newContent = "Commento al post modificato";
-        CommentPatch commentPatch = new CommentPatch(newContent);
-        Long commentId = 1L;
-
-        when(this.commentsRepository.findActiveById(anyLong())).thenReturn(Optional.empty());
-
-        assertThrows(CommentNotFoundException.class, () -> this.postsService.updateCommentById(commentId, commentPatch));
-
-        verify(this.commentsRepository, times(1)).findActiveById(anyLong());
-        verify(this.commentsRepository, times(0)).save(any(CommentJpa.class));
-        verify(this.commentToCommentJpaConverter, times(0)).convertBack(any(CommentJpa.class));
-    }
 
     @Test
     void testDeleteCommentById_Success(){
@@ -419,23 +419,14 @@ class PostsServiceTest {
         commentJpa.setProfile(profileJpa);
         commentJpa.setPost(this.savedPostJpa);
 
-        when(this.commentsRepository.findActiveById(anyLong())).thenReturn(Optional.of(commentJpa));
+        when(this.commentsRepository.getReferenceById(anyLong())).thenReturn(commentJpa);
 
         this.postsService.deleteCommentById(commentId);
 
-        verify(this.commentsRepository, times(1)).findActiveById(anyLong());
+        verify(this.commentsRepository, times(1)).getReferenceById(anyLong());
         verify(this.commentsRepository, times(1)).save(any(CommentJpa.class));
     }
 
-    @Test
-    void testDeleteCommentById_CommentNotFound_Failed(){
-        Long commentId = 1L;
-        when(this.commentsRepository.findActiveById(anyLong())).thenReturn(Optional.empty());
-
-        assertThrows(CommentNotFoundException.class, () ->this.postsService.deleteCommentById(commentId));
-        verify(this.commentsRepository, times(1)).findActiveById(anyLong());
-        verify(this.commentsRepository, times(0)).save(any(CommentJpa.class));
-    }
 
     @Test
     void testFindAllCommentsByPostId_Success(){
@@ -473,8 +464,7 @@ class PostsServiceTest {
         commentListJpa.get(1).setId(2L);
         commentListJpa.get(2).setId(3L);
 
-        when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa));
-        when(this.commentsRepository.findAllActiveByPost(any(PostJpa.class))).thenReturn(commentListJpa);
+        when(this.commentsRepository.findAllActiveByPostId(anyLong())).thenReturn(commentListJpa);
         when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(0))).thenReturn(commentList.get(0));
         when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(1))).thenReturn(commentList.get(1));
         when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(2))).thenReturn(commentList.get(2));
@@ -483,21 +473,10 @@ class PostsServiceTest {
 
         assertNotNull(returnedCommentList);
         assertEquals(commentList, returnedCommentList);
-        verify(this.postsRepository, times(1)).findActiveById(anyLong());
-        verify(this.commentsRepository, times(1)).findAllActiveByPost(any(PostJpa.class));
+        verify(this.commentsRepository, times(1)).findAllActiveByPostId(anyLong());
         verify(this.commentToCommentJpaConverter, times(3)).convertBack(any(CommentJpa.class));
     }
 
-    @Test
-    void testFindAllCommentsByPostId_PostNotFound_Failed(){
-        when(this.postsRepository.findActiveById(Long.MIN_VALUE)).thenReturn(Optional.empty());
-
-        assertThrows(PostNotFoundException.class, () -> this.postsService.findAllCommentsByPostId(Long.MIN_VALUE));
-
-        verify(this.postsRepository, times(1)).findActiveById(anyLong());
-        verify(this.commentsRepository, times(0)).findAllActiveByPost(any(PostJpa.class));
-        verify(this.commentToCommentJpaConverter, times(0)).convertBack(any(CommentJpa.class));
-    }
 
     @Test
     void testProfileFeedByProfileId_Null_OnlyPost_Success(){

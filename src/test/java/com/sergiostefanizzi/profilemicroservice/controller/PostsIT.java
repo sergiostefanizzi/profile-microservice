@@ -26,6 +26,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static java.util.Arrays.asList;
+import static org.assertj.core.api.Assertions.in;
 import static org.junit.jupiter.api.Assertions.*;
 
 
@@ -1113,6 +1114,62 @@ class PostsIT {
     }
 
     @Test
+    void testAddComment_CommentOnStory_Then_400() throws Exception {
+        errors.add("Cannot comment on a story!");
+        // Creo prima un profilo
+        newProfile.setProfileName("mario_rossi");
+        HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);
+        ResponseEntity<Profile> responseProfile = this.testRestTemplate.exchange(
+                this.baseUrlProfile,
+                HttpMethod.POST,
+                requestProfile,
+                Profile.class);
+        assertEquals(HttpStatus.CREATED, responseProfile.getStatusCode());
+        assertNotNull(responseProfile.getBody());
+        Profile savedProfile = responseProfile.getBody();
+        assertNotNull(savedProfile.getId());
+        profileId = savedProfile.getId();
+        this.newPost.setProfileId(profileId);
+
+        // creo un nuovo post
+        this.newPost.setPostType(Post.PostTypeEnum.STORY);
+        HttpEntity<Post> request = new HttpEntity<>(this.newPost);
+        ResponseEntity<Post> responsePost = this.testRestTemplate.exchange(this.baseUrl,
+                HttpMethod.POST,
+                request,
+                Post.class);
+        // controllo che l'inserimento sia andato a buon fine
+        assertEquals(HttpStatus.CREATED, responsePost.getStatusCode());
+        assertNotNull(responsePost.getBody());
+        assertInstanceOf(Post.class, responsePost.getBody());
+        Post savedPost = responsePost.getBody();
+        assertNotNull(savedPost.getId());
+        // salvo l'id generato dal post inserito
+        Long savedPostId = savedPost.getId();
+
+        String content = "Commento al post";
+        Comment newComment = new Comment(
+                Long.MIN_VALUE,
+                savedPostId,
+                content
+        );
+        HttpEntity<Comment> requestComment = new HttpEntity<>(newComment);
+
+        ResponseEntity<String> responseComment = this.testRestTemplate.exchange(this.baseUrlComment,
+                HttpMethod.POST,
+                requestComment,
+                String.class);
+
+        assertEquals(HttpStatus.BAD_REQUEST, responseComment.getStatusCode());
+        assertNotNull(responseComment.getBody());
+
+        JsonNode node = this.objectMapper.readTree(responseComment.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
     void testAddComment_Content_Size_Then_400() throws Exception {
         errors.add("content size must be between 1 and 2200");
         // Creo prima un profilo
@@ -1681,9 +1738,11 @@ class PostsIT {
         assertEquals(HttpStatus.OK, responseGetAllComment.getStatusCode());
         assertNotNull(responseGetAllComment.getBody());
         List<Comment> returnedCommentList = responseGetAllComment.getBody();
+        log.info(returnedCommentList.toString());
         assertEquals(2, returnedCommentList.size());
-        assertEquals(newComment, returnedCommentList.get(0));
-        assertEquals(newComment2, returnedCommentList.get(1));
+        assertEquals(newComment2, returnedCommentList.get(0));
+        assertEquals(newComment, returnedCommentList.get(1));
+
     }
 
     @Test
@@ -1804,10 +1863,10 @@ class PostsIT {
     @Test
     void testProfileFeedByProfileId_OnlyStories_Then_200(){
         // Creo un primo profilo
-        Profile mainProfile = createPublicProfile("pincoPallino4");
+        Profile mainProfile = createPublicProfile("pincoPallino7");
         // Creo un secondo profilo
-        Profile followedProfile1 = createPublicProfile("pincoPallino5");
-        Profile followedProfile2 = createPublicProfile("pincoPallino6");
+        Profile followedProfile1 = createPublicProfile("pincoPallino8");
+        Profile followedProfile2 = createPublicProfile("pincoPallino9");
         createFollow(mainProfile, followedProfile1);
         createFollow(mainProfile, followedProfile2);
 
@@ -1861,7 +1920,7 @@ class PostsIT {
 
     @Test
     void testProfileFeedByProfileId_Then_400() throws JsonProcessingException {
-        Profile mainProfile = createPublicProfile("pincoPallino7");
+        Profile mainProfile = createPublicProfile("pincoPallino10");
         // messaggio d'errore che mi aspetto d'ottenere
         errors.add("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Boolean'; Invalid boolean value [NotBoolean]");
         ResponseEntity<String> response = this.testRestTemplate.exchange(

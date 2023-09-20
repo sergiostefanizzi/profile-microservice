@@ -3,8 +3,7 @@ package com.sergiostefanizzi.profilemicroservice.service;
 import com.sergiostefanizzi.profilemicroservice.model.*;
 import com.sergiostefanizzi.profilemicroservice.model.converter.PostToPostJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfileJpaConverter;
-import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
-import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
+import com.sergiostefanizzi.profilemicroservice.repository.*;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import jakarta.transaction.Transactional;
@@ -27,6 +26,9 @@ import java.util.stream.Collectors;
 public class ProfilesService {
     private final ProfilesRepository profilesRepository;
     private final PostsRepository postsRepository;
+    private final LikesRepository likesRepository;
+    private final CommentsRepository commentsRepository;
+    private final FollowsRepository followsRepository;
     private final ProfileToProfileJpaConverter profileToProfileJpaConverter;
     private final PostToPostJpaConverter postToPostJpaConverter;
 
@@ -42,26 +44,17 @@ public class ProfilesService {
 
     @Transactional
     public void remove(Long profileId) {
-        if (profileId == null){
-            throw new ProfileNotFoundException("Missing input parameter");
-        }
-
-        // cerco profili che non siano gia' stati eliminati o che non esistano proprio
-        ProfileJpa profileJpa = this.profilesRepository.getReferenceById(profileId);
-
         //imposto a questo istante la data e l'ora di rimozione del profilo
-        profileJpa.setDeletedAt(LocalDateTime.now());
-        this.profilesRepository.save(profileJpa);
-
-        log.info("Profile Deleted At -> "+profileJpa.getDeletedAt());
+        LocalDateTime removalDate = LocalDateTime.now();
+        this.profilesRepository.removeProfileByProfileId(profileId, removalDate);
+        this.postsRepository.removePostByProfileId(profileId, removalDate);
+        this.likesRepository.removeLikeByProfileId(profileId, removalDate);
+        this.commentsRepository.removeCommentByProfileId(profileId, removalDate);
+        this.followsRepository.removeFollowByProfileId(profileId, removalDate);
     }
 
     @Transactional
     public Profile update(Long profileId,@NotNull ProfilePatch profilePatch) {
-        if (profileId == null){
-            throw new ProfileNotFoundException("Missing input parameter");
-        }
-
         // cerco profili che non siano gia' stati eliminati o che non esistano proprio
         ProfileJpa profileJpa = this.profilesRepository.getReferenceById(profileId);
         // modifico solo i campi che devono essere aggiornati
@@ -92,9 +85,6 @@ public class ProfilesService {
 
     @Transactional
     public FullProfile findFull(Long profileId) {
-        if (profileId == null){
-            throw new ProfileNotFoundException("Missing input parameter");
-        }
         List<Post> postList = new ArrayList<>();
 
 

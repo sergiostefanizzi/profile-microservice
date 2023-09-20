@@ -3,9 +3,11 @@ package com.sergiostefanizzi.profilemicroservice.repository;
 import com.sergiostefanizzi.profilemicroservice.model.LikeId;
 import com.sergiostefanizzi.profilemicroservice.model.LikeJpa;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,5 +19,17 @@ public interface LikesRepository extends JpaRepository<LikeJpa, LikeId> {
 
     @Query("SELECT l FROM LikeJpa l WHERE l.likeId = :likeId AND l.deletedAt IS NULL")
     Optional<LikeJpa> findActiveById(LikeId likeId);
+
+    @Modifying
+    @Query("UPDATE LikeJpa l SET l.deletedAt = :removalDate WHERE l.profile.id = :profileId")
+    void removeLikeByProfileId(Long profileId, LocalDateTime removalDate);
+
+    @Modifying
+    @Query("UPDATE LikeJpa l SET l.deletedAt = :removalDate WHERE l.post.id = :postId")
+    void removeLikeByPostId(Long postId, LocalDateTime removalDate);
+
+    @Modifying
+    @Query("UPDATE LikeJpa l SET l.deletedAt = :removalDate WHERE l.id = :likeId")
+    void removeLikeByLikeId(LikeId likeId, LocalDateTime removalDate);
 
 }

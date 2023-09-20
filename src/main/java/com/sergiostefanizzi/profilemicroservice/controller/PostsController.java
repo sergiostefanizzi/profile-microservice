@@ -48,8 +48,6 @@ public class PostsController implements PostsApi {
         return new ResponseEntity<>(post, HttpStatus.OK);
     }
 
-
-    //TODO fare i test
     @Override
     public ResponseEntity<List<Post>> profileFeedByProfileId(Long profileId, Boolean onlyPost) {
         List<Post> postList = this.postsService.profileFeedByProfileId(profileId, onlyPost);

@@ -9,6 +9,7 @@ import com.sergiostefanizzi.profilemicroservice.repository.LikesRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.system.exception.CommentNotFoundException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.CommentOnStoryException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import jakarta.transaction.Transactional;
@@ -54,11 +55,6 @@ public class PostsService {
 
     @Transactional
     public void remove(Long postId) {
-        if(postId == null){
-            throw new PostNotFoundException("Missing input parameter");
-        }
-        // Controllo prima l'esistenza del post
-        PostJpa postJpa = this.postsRepository.getReferenceById(postId);
         // TODO mi serve il JWT
         // Controllo che chi richiede la rimozione abbia l'autorizzazione per farlo
         /*
@@ -66,20 +62,14 @@ public class PostsService {
             throw new PostNotFoundException(postId);
         }
         */
-
-        postJpa.setDeletedAt(LocalDateTime.now());
-
-        log.info("Post Deleted At -> "+postJpa.getDeletedAt());
-
-        this.postsRepository.save(postJpa);
+        LocalDateTime removalTime = LocalDateTime.now();
+        this.postsRepository.removePostByPostId(postId, removalTime);
+        this.likesRepository.removeLikeByPostId(postId, removalTime);
+        this.commentsRepository.removeCommentByPostId(postId, removalTime);
     }
 
     @Transactional
     public Post update(Long postId, PostPatch postPatch) {
-        if(postId == null){
-            throw new PostNotFoundException("Missing input parameter");
-        }
-
         // Controllo prima l'esistenza del post
         PostJpa postJpa = this.postsRepository.getReferenceById(postId);
         // TODO mi serve il JWT
@@ -98,10 +88,6 @@ public class PostsService {
 
     @Transactional
     public Post find(Long postId) {
-        if(postId == null){
-            throw new PostNotFoundException("Missing input parameter");
-        }
-
         return this.postToPostJpaConverter.convertBack(
                 this.postsRepository.getReferenceById(postId)
         );
@@ -115,7 +101,7 @@ public class PostsService {
         // sia controllando che il profilo a cui appartiene il posto sia visibile da chi vuole mettere like
 
         // Controllo prima l'esistenza del post
-        PostJpa postJpa = this.postsRepository.findActiveById(like.getPostId())
+        PostJpa postJpa = this.postsRepository.findActiveById(like.getPostId(), LocalDateTime.now().minusDays(1))
                 .orElseThrow(() -> new PostNotFoundException(like.getPostId()));
         // Controllo poi l'esistenza del profilo di chi vuole mettere like
         ProfileJpa profileJpa = this.profilesRepository.findActiveById(like.getProfileId())
@@ -142,8 +128,7 @@ public class PostsService {
     }
 
     private void removeLike(LikeJpa likeJpa) {
-        likeJpa.setDeletedAt(LocalDateTime.now());
-        this.likesRepository.save(likeJpa);
+        this.likesRepository.removeLikeByLikeId(likeJpa.getLikeId(), LocalDateTime.now());
     }
 
     @Transactional
@@ -167,32 +152,31 @@ public class PostsService {
         // sia controllando il profilo
         // sia controllando che il profilo a cui appartiene il post sia visibile da chi vuole mettere like
         // Controllo prima l'esistenza del post
-        PostJpa postJpa = this.postsRepository.findActiveById(comment.getPostId())
+        PostJpa postJpa = this.postsRepository.findActiveById(comment.getPostId(), LocalDateTime.now().minusDays(1))
                 .orElseThrow(() -> new PostNotFoundException(comment.getPostId()));
+        if (postJpa.getPostType().equals(Post.PostTypeEnum.POST)){
+            // Controllo l'esistenza del profilo che vuole commentare il post
+            ProfileJpa profileJpa = this.profilesRepository.findActiveById(comment.getProfileId())
+                    .orElseThrow(() -> new ProfileNotFoundException(comment.getProfileId()));
 
-        // Controllo l'esistenza del profilo che vuole commentare il post
-        ProfileJpa profileJpa = this.profilesRepository.findActiveById(comment.getProfileId())
-                .orElseThrow(() -> new ProfileNotFoundException(comment.getProfileId()));
+            CommentJpa commentJpa = this.commentToCommentJpaConverter.convert(comment);
+            assert commentJpa != null;
+            commentJpa.setProfile(profileJpa);
+            commentJpa.setPost(postJpa);
+            commentJpa.setCreatedAt(LocalDateTime.now());
 
-        CommentJpa commentJpa = this.commentToCommentJpaConverter.convert(comment);
-        assert commentJpa != null;
-        commentJpa.setProfile(profileJpa);
-        commentJpa.setPost(postJpa);
-        commentJpa.setCreatedAt(LocalDateTime.now());
+            return this.commentToCommentJpaConverter.convertBack(
+                    this.commentsRepository.save(commentJpa)
+            );
+        }else{
+            throw new CommentOnStoryException();
+        }
 
-        return this.commentToCommentJpaConverter.convertBack(
-                this.commentsRepository.save(commentJpa)
-        );
     }
 
     @Transactional
     public Comment updateCommentById(Long commentId, CommentPatch commentPatch) {
-        if(commentId == null){
-            throw new CommentNotFoundException("Missing input parameter");
-        }
-
-        CommentJpa commentJpa = this.commentsRepository.findActiveById(commentId)
-                .orElseThrow(() -> new CommentNotFoundException(commentId));
+        CommentJpa commentJpa = this.commentsRepository.getReferenceById(commentId);
 
         commentJpa.setContent(commentPatch.getContent());
         commentJpa.setUpdatedAt(LocalDateTime.now());
@@ -204,12 +188,7 @@ public class PostsService {
 
     @Transactional
     public void deleteCommentById(Long commentId) {
-        if(commentId == null){
-            throw new CommentNotFoundException("Missing input parameter");
-        }
-
-        CommentJpa commentJpa = this.commentsRepository.findActiveById(commentId)
-                .orElseThrow(() -> new CommentNotFoundException(commentId));
+        CommentJpa commentJpa = this.commentsRepository.getReferenceById(commentId);
 
         commentJpa.setDeletedAt(LocalDateTime.now());
 
@@ -217,14 +196,7 @@ public class PostsService {
     }
     @Transactional
     public List<Comment> findAllCommentsByPostId(Long postId) {
-        if (postId == null){
-            throw new PostNotFoundException("Missing input parameter");
-        }
-
-        PostJpa postJpa = this.postsRepository.findActiveById(postId)
-                .orElseThrow(() -> new PostNotFoundException(postId));
-
-        return this.commentsRepository.findAllActiveByPost(postJpa)
+        return this.commentsRepository.findAllActiveByPostId(postId)
                 .stream().map(this.commentToCommentJpaConverter::convertBack).toList();
     }
 

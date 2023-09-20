@@ -14,6 +14,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.ModelAndView;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @Slf4j
@@ -34,7 +35,7 @@ public class CommentsInterceptor implements HandlerInterceptor {
             Long checkId;
             if (requestMethod.equalsIgnoreCase("GET")) {
                 Long postId = Long.valueOf((String) pathVariables.get("postId"));
-                checkId = this.postsRepository.checkActiveById(postId)
+                checkId = this.postsRepository.checkActiveById(postId, LocalDateTime.now().minusDays(1))
                         .orElseThrow(() -> new PostNotFoundException(postId));
             } else {
                 Long commentId = Long.valueOf((String) pathVariables.get("commentId"));

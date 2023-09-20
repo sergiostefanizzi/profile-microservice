@@ -11,6 +11,7 @@ import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.service.PostsService;
 import com.sergiostefanizzi.profilemicroservice.service.ProfilesService;
 import com.sergiostefanizzi.profilemicroservice.system.exception.CommentNotFoundException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.CommentOnStoryException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import lombok.extern.slf4j.Slf4j;
@@ -298,7 +299,7 @@ class PostsControllerTest {
 
     @Test
     void testDeletePostById_Then_204() throws Exception {
-        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
+        when(this.postsRepository.checkActiveForDeleteById(anyLong())).thenReturn(Optional.of(postId));
         doNothing().when(this.postsService).remove(postId);
 
         this.mockMvc.perform(delete("/posts/{postId}", postId))
@@ -351,7 +352,7 @@ class PostsControllerTest {
         // Aggiorno il post che verra' restituito dal service con il nuovo valore
         this.savedPost.setCaption(newCaption);
 
-        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
+        when(this.postsRepository.checkActiveById(anyLong(), any())).thenReturn(Optional.of(postId));
         when(this.postsService.update(postId, postPatch)).thenReturn(this.savedPost);
 
         MvcResult result = this.mockMvc.perform(patch("/posts/{postId}",postId)
@@ -405,7 +406,7 @@ class PostsControllerTest {
     @Test
     void testUpdatePost_CaptionLength_Then_400() throws Exception{
         errors.add("caption size must be between 0 and 2200");
-        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
+        when(this.postsRepository.checkActiveById(anyLong(), any())).thenReturn(Optional.of(postId));
 
         // genero una caption di 2210 caratteri, superando di 10 il limite
         PostPatch postPatch = new PostPatch(RandomStringUtils.randomAlphabetic(2210));
@@ -458,7 +459,7 @@ class PostsControllerTest {
 
     @Test
     void testFindPostById_Then_200() throws Exception{
-        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
+        when(this.postsRepository.checkActiveById(anyLong(), any())).thenReturn(Optional.of(postId));
         when(this.postsService.find(postId)).thenReturn(this.savedPost);
 
         MvcResult result = this.mockMvc.perform(get("/posts/{postId}",postId)
@@ -628,7 +629,7 @@ class PostsControllerTest {
                 new Like(2L,postId),
                 new Like(3L,postId)
         );
-        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
+        when(this.postsRepository.checkActiveById(anyLong(), any())).thenReturn(Optional.of(postId));
         when(this.postsService.findAllLikesByPostId(postId)).thenReturn(likeList);
 
         MvcResult result = this.mockMvc.perform(get("/posts/likes/{postId}",postId)
@@ -653,7 +654,7 @@ class PostsControllerTest {
     @Test
     void testFindAllLikesByPostId_Empty_Then_200() throws Exception {
         List<Like> likeList = new ArrayList<>();
-        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
+        when(this.postsRepository.checkActiveById(anyLong(), any())).thenReturn(Optional.of(postId));
         when(this.postsService.findAllLikesByPostId(postId)).thenReturn(likeList);
 
         MvcResult result = this.mockMvc.perform(get("/posts/likes/{postId}",postId)
@@ -743,6 +744,36 @@ class PostsControllerTest {
         Comment commentResult = this.objectMapper.readValue(resultAsString, Comment.class);
 
         log.info(commentResult.toString());
+    }
+
+    @Test
+    void testAddComment_CommentOnStory_Then_400() throws Exception {
+        String content = "Commento al post";
+        Long commentId = 1L;
+        Comment newComment = new Comment(
+                profileId,
+                postId,
+                content
+        );
+
+
+        String newCommentJson = this.objectMapper.writeValueAsString(newComment);
+
+
+        when(this.postsService.addComment(newComment)).thenThrow(new CommentOnStoryException());
+
+        MvcResult result = this.mockMvc.perform(post("/posts/comments")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newCommentJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(res.getResolvedException() instanceof CommentOnStoryException))
+                .andExpect(jsonPath("$.error").value("Cannot comment on a story!"))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
     }
 
     @Test
@@ -1025,7 +1056,7 @@ class PostsControllerTest {
         commentList.get(0).setId(1L);
         commentList.get(1).setId(2L);
         commentList.get(2).setId(3L);
-        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
+        when(this.postsRepository.checkActiveById(anyLong(), any())).thenReturn(Optional.of(postId));
         when(this.postsService.findAllCommentsByPostId(postId)).thenReturn(commentList);
 
         MvcResult result = this.mockMvc.perform(get("/posts/comments/{postId}",postId)
@@ -1072,7 +1103,7 @@ class PostsControllerTest {
     //TODO 401,403
     @Test
     void testFindAllCommentsByPostId_PostNotFound_Then_404() throws Exception {
-        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.empty());
+        when(this.postsRepository.checkActiveById(invalidPostId, LocalDateTime.now().minusDays(1))).thenReturn(Optional.empty());
         doThrow(new PostNotFoundException(invalidPostId)).when(this.postsService).findAllCommentsByPostId(invalidPostId);
 
         MvcResult result = this.mockMvc.perform(get("/posts/comments/{postId}",invalidPostId))

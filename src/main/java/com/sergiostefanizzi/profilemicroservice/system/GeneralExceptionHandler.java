@@ -53,6 +53,15 @@ public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
     }
 
+    @ExceptionHandler(CommentOnStoryException.class)
+    public ResponseEntity<Object> handleCommentOnStoryException(CommentOnStoryException ex, WebRequest request){
+        log.error(ex.getMessage(),ex);
+        String error = "Cannot comment on a story!";
+        Map<String, String> body = new HashMap<>();
+        body.put("error", error);
+        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
+    }
+
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<Object> handleConstraintViolationException(ConstraintViolationException ex, WebRequest request){
         log.error(ex.getMessage(),ex);

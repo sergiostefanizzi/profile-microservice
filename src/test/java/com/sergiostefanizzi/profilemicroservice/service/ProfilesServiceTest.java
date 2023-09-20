@@ -239,6 +239,7 @@ class ProfilesServiceTest {
         verify(this.profileToProfileJpaConverter, times(3)).convertBack(any(ProfileJpa.class));
     }
 
+
     @Test
     void testFindFullSuccess(){
         // Profile che verra' restituito

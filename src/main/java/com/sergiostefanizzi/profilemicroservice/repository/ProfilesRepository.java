@@ -2,10 +2,12 @@ package com.sergiostefanizzi.profilemicroservice.repository;
 
 import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,4 +24,8 @@ public interface ProfilesRepository extends JpaRepository<ProfileJpa, Long> {
 
     @Query("SELECT p.id FROM ProfileJpa p WHERE p.id=:profileId AND p.deletedAt IS NULL")
     Optional<Long> checkActiveById(Long profileId);
+
+    @Modifying
+    @Query("UPDATE ProfileJpa p SET p.deletedAt = :removalDate WHERE p.id = :profileId")
+    void removeProfileByProfileId(Long profileId, LocalDateTime removalDate);
 }

@@ -13,6 +13,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.ModelAndView;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @Slf4j
@@ -30,10 +31,15 @@ public class PostsInterceptor implements HandlerInterceptor {
 
         Map pathVariables = (Map) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
         Long postId = Long.valueOf((String) pathVariables.get("postId"));
+        Long checkId;
+        if (requestMethod.equalsIgnoreCase("DELETE")){
+            checkId = this.postsRepository.checkActiveForDeleteById(postId)
+                    .orElseThrow(() -> new PostNotFoundException(postId));
+        }else {
+            checkId = this.postsRepository.checkActiveById(postId, LocalDateTime.now().minusDays(1))
+                    .orElseThrow(() -> new PostNotFoundException(postId));
+        }
 
-
-        Long checkId = this.postsRepository.checkActiveById(postId)
-                .orElseThrow(() -> new PostNotFoundException(postId));
         log.info("\n\tPost Interceptor: Post ID-> "+checkId);
         return true;
     }
