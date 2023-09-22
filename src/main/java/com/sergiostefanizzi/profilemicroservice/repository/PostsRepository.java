@@ -26,6 +26,7 @@ public interface PostsRepository extends JpaRepository<PostJpa, Long> {
     @Query("SELECT p.id FROM PostJpa p WHERE p.id=:postId AND p.deletedAt IS NULL")
     Optional<Long> checkActiveForDeleteById(Long postId);
 
+    //TODO mettere post e story fuori
     @Query("SELECT p FROM PostJpa p INNER JOIN FollowsJpa f ON p.profile.id = f.followsId.followedId WHERE f.followsId.followerId = :profileId AND p.postType = 'POST' AND p.deletedAt IS NULL ORDER BY p.createdAt DESC")
     List<PostJpa> getPostFeedByProfileId(Long profileId);
 

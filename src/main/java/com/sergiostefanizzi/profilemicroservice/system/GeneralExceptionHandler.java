@@ -26,6 +26,14 @@ import java.util.stream.Collectors;
 @Slf4j
 public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
 
+    @ExceptionHandler(FollowItselfException.class)
+    public ResponseEntity<Object> handleFollowItselfException(FollowItselfException ex, WebRequest request){
+        log.error(ex.getMessage(),ex);
+        String error = ex.getMessage();
+        Map<String, String> body = new HashMap<>();
+        body.put("error", error);
+        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
+    }
     @ExceptionHandler(AlertTypeNotSpecifiedException.class)
     public ResponseEntity<Object> handleAlertTypeNotSpecifiedException(AlertTypeNotSpecifiedException ex, WebRequest request){
         log.error(ex.getMessage(),ex);

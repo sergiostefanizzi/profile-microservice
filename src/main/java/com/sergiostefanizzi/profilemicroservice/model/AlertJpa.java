@@ -41,8 +41,7 @@ public class AlertJpa {
     @ManyToOne(optional = false)
     @JoinColumn(name = "created_by", referencedColumnName = "id")
     private ProfileJpa createdBy;
-    @ManyToOne
-    @JoinColumn(name = "managed_by", referencedColumnName = "id")
-    private ProfileJpa managedBy;
+    @Column(name = "managed_by_account")
+    private Long managedByAccount;
 
 }

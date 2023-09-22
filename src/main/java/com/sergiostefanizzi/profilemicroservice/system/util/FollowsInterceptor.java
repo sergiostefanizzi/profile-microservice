@@ -1,6 +1,7 @@
 package com.sergiostefanizzi.profilemicroservice.system.util;
 
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
+import com.sergiostefanizzi.profilemicroservice.system.exception.FollowItselfException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -34,6 +35,9 @@ public class FollowsInterceptor implements HandlerInterceptor {
         Long profileToFollowId = Long.valueOf((String) pathVariables.get("followsId"));
         Long checkProfileToFollowId = this.profilesRepository.checkActiveById(profileToFollowId)
                 .orElseThrow(() -> new ProfileNotFoundException(profileToFollowId));
+        if (profileId.equals(profileToFollowId)){
+            throw new FollowItselfException("Cannot follow itself");
+        }
         log.info("\nFollow Interceptor: IDs -> "+checkProfileId+", "+checkProfileToFollowId);
         return true;
     }
