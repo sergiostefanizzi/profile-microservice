@@ -9,9 +9,10 @@ import lombok.*;
 
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
+import java.util.List;
 
 @Entity
-@Table(name = "Comments")
+@Table(name = "Comment")
 @Getter
 @Setter
 @RequiredArgsConstructor
@@ -44,4 +45,6 @@ public class CommentJpa {
     @ManyToOne(optional = false)
     @JoinColumn(name = "post_id", referencedColumnName = "id")
     private PostJpa post;
+    @OneToMany(mappedBy = "comment")
+    private List<AlertJpa> alertList;
 }

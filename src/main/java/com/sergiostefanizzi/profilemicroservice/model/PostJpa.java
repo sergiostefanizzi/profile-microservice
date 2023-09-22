@@ -51,9 +51,7 @@ public class PostJpa {
     private List<LikeJpa> likes;
     @OneToMany(mappedBy = "post")
     private List<CommentJpa> comments;
-    // TODO fare alert
-    /*
     @OneToMany(mappedBy = "post")
     private List<AlertJpa> alerts;
-     */
+
 }

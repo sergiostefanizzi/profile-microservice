@@ -53,9 +53,9 @@ class FollowsIT {
     @Test
     void testAddFollows_PublicProfile_Return_ACCEPTED_Then_200(){
         // Creo un primo profilo
-        Profile publicProfile1 = createProfile("pincoPallino1", false);
+        Profile publicProfile1 = createProfile("pinco_pallino1", false);
         // Creo un secondo profilo
-        Profile publicProfile2 = createProfile("pincoPallino2", false);
+        Profile publicProfile2 = createProfile("pinco_pallino2", false);
 
 
         ResponseEntity<Follows> response = this.testRestTemplate.exchange(
@@ -81,9 +81,9 @@ class FollowsIT {
     @Test
     void testAddFollows_PrivateProfile_Return_Pending_Then_200(){
         // Creo un primo profilo
-        Profile publicProfile = createProfile("pincoPallino3", false);
+        Profile publicProfile = createProfile("pinco_pallino3", false);
         // Creo un secondo profilo
-        Profile privateProfile = createProfile("pincoPallino4", true);
+        Profile privateProfile = createProfile("pinco_pallino4", true);
 
 
         ResponseEntity<Follows> response = this.testRestTemplate.exchange(
@@ -109,9 +109,9 @@ class FollowsIT {
     @Test
     void testAddFollows_Unfollow_Return_Rejected_Then_200(){
         // Creo un primo profilo
-        Profile publicProfile1 = createProfile("pincoPallino5", false);
+        Profile publicProfile1 = createProfile("pinco_pallino5", false);
         // Creo un secondo profilo
-        Profile publicProfile2 = createProfile("pincoPallino6", false);
+        Profile publicProfile2 = createProfile("pinco_pallino6", false);
 
         ResponseEntity<Follows> responseFollows = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
@@ -156,8 +156,8 @@ class FollowsIT {
         // messaggio d'errore che mi aspetto d'ottenere
         errors.add("Unfollows on creation is not possible!");
 
-        Profile publicProfile1 = createProfile("pincoPallino7", false);
-        Profile publicProfile2 = createProfile("pincoPallino8", false);
+        Profile publicProfile1 = createProfile("pinco_pallino7", false);
+        Profile publicProfile2 = createProfile("pinco_pallino8", false);
 
         ResponseEntity<String> response = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
@@ -180,7 +180,7 @@ class FollowsIT {
     void testAddFollows_InvalidId_Then_400() throws Exception {
         errors.add("ID is not valid!");
 
-        Profile publicProfile = createProfile("pincoPallino9", false);
+        Profile publicProfile = createProfile("pinco_pallino9", false);
 
         ResponseEntity<String> response = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
@@ -207,7 +207,7 @@ class FollowsIT {
         // messaggio d'errore che mi aspetto d'ottenere
         errors.add("Profile "+invalidProfileId+" not found!");
 
-        Profile publicProfile = createProfile("pincoPallino10", false);
+        Profile publicProfile = createProfile("pinco_pallino10", false);
 
         ResponseEntity<String> response = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
@@ -230,9 +230,9 @@ class FollowsIT {
     @Test
     void testAcceptFollows_Then_200() throws Exception {
         // Creo un primo profilo
-        Profile publicProfile = createProfile("pincoPallino11", false);
+        Profile publicProfile = createProfile("pinco_pallino11", false);
         // Creo un secondo profilo
-        Profile privateProfile = createProfile("pincoPallino12", true);
+        Profile privateProfile = createProfile("pinco_pallino12", true);
 
         ResponseEntity<Follows> responseFollows = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
@@ -275,9 +275,9 @@ class FollowsIT {
     @Test
     void testAcceptFollows_AlreadyAccepted_Then_200() throws Exception {
         // Creo un primo profilo
-        Profile publicProfile1 = createProfile("pincoPallino13", false);
+        Profile publicProfile1 = createProfile("pinco_pallino13", false);
         // Creo un secondo profilo
-        Profile publicProfile2 = createProfile("pincoPallino14", false);
+        Profile publicProfile2 = createProfile("pinco_pallino14", false);
 
         ResponseEntity<Follows> responseFollows = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
@@ -320,9 +320,9 @@ class FollowsIT {
     @Test
     void testAcceptFollows_Reject_Then_200() throws Exception {
         // Creo un primo profilo
-        Profile publicProfile = createProfile("pincoPallino15", false);
+        Profile publicProfile = createProfile("pinco_pallino15", false);
         // Creo un secondo profilo
-        Profile privateProfile = createProfile("pincoPallino16", true);
+        Profile privateProfile = createProfile("pinco_pallino16", true);
 
         ResponseEntity<Follows> responseFollows = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
@@ -366,9 +366,9 @@ class FollowsIT {
     @Test
     void testAcceptFollows_BlockProfile_Reject_Then_200() throws Exception {
         // Creo un primo profilo
-        Profile publicProfile1 = createProfile("pincoPallino17", false);
+        Profile publicProfile1 = createProfile("pinco_pallino17", false);
         // Creo un secondo profilo
-        Profile publicProfile2 = createProfile("pincoPallino18", false);
+        Profile publicProfile2 = createProfile("pinco_pallino18", false);
 
         ResponseEntity<Follows> responseFollows = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
@@ -413,7 +413,7 @@ class FollowsIT {
     void testAcceptFollows_InvalidId_Then_400() throws Exception {
         errors.add("ID is not valid!");
         // Creo un primo profilo
-        Profile publicProfile1 = createProfile("pincoPallino19", false);
+        Profile publicProfile1 = createProfile("pinco_pallino19", false);
         ResponseEntity<String> response = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/followedBy/{followsId}?rejectFollow={rejectFollow}",
                 HttpMethod.PUT,
@@ -439,8 +439,8 @@ class FollowsIT {
     void testAcceptFollows_FollowNotFound_Then_404() throws Exception {
         errors.add("Follows not found!");
         // Creo un primo profilo
-        Profile publicProfile1 = createProfile("pincoPallino20", false);
-        Profile publicProfile2 = createProfile("pincoPallino21", false);
+        Profile publicProfile1 = createProfile("pinco_pallino20", false);
+        Profile publicProfile2 = createProfile("pinco_pallino21", false);
         ResponseEntity<String> responseReject = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/followedBy/{followsId}?rejectFollow={rejectFollow}",
                 HttpMethod.PUT,
@@ -461,9 +461,9 @@ class FollowsIT {
 
     @Test
     void testFindAllFollowers_Then_200() throws Exception {
-        Profile publicProfile1 = createProfile("pincoPallino22", false);
-        Profile publicProfile2 = createProfile("pincoPallino23", false);
-        Profile publicProfile3 = createProfile("pincoPallino24", false);
+        Profile publicProfile1 = createProfile("pinco_pallino22", false);
+        Profile publicProfile2 = createProfile("pinco_pallino23", false);
+        Profile publicProfile3 = createProfile("pinco_pallino24", false);
         createFollow(publicProfile2, publicProfile1);
         createFollow(publicProfile3, publicProfile1);
 
@@ -486,7 +486,7 @@ class FollowsIT {
 
     @Test
     void testFindAllFollowers_NoFollowers_Then_200() throws Exception {
-        Profile publicProfile1 = createProfile("pincoPallino25", false);
+        Profile publicProfile1 = createProfile("pinco_pallino25", false);
 
 
         ResponseEntity<ProfileFollowList> responseFollowerList = this.testRestTemplate.exchange(
@@ -553,9 +553,9 @@ class FollowsIT {
 
     @Test
     void testFindAllFollowings_Then_200() throws Exception {
-        Profile publicProfile1 = createProfile("pincoPallino26", false);
-        Profile publicProfile2 = createProfile("pincoPallino27", false);
-        Profile publicProfile3 = createProfile("pincoPallino28", false);
+        Profile publicProfile1 = createProfile("pinco_pallino26", false);
+        Profile publicProfile2 = createProfile("pinco_pallino27", false);
+        Profile publicProfile3 = createProfile("pinco_pallino28", false);
         createFollow(publicProfile1, publicProfile2);
         createFollow(publicProfile1, publicProfile3);
 
@@ -578,7 +578,7 @@ class FollowsIT {
 
     @Test
     void testFindAllFollowings_NoFollowings_Then_200() throws Exception {
-        Profile publicProfile1 = createProfile("pincoPallino29", false);
+        Profile publicProfile1 = createProfile("pinco_pallino29", false);
 
 
         ResponseEntity<ProfileFollowList> responseFollowerList = this.testRestTemplate.exchange(

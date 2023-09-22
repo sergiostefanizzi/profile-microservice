@@ -738,15 +738,22 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /alerts/profile:
+  /alerts:
     post:
       tags:
         - alerts
-      summary: Send a profile alert
-      description: Send a profile alert
-      operationId: addProfileAlert
+      summary: Send an alert
+      description: Send an alert
+      operationId: createAlert
       security:
         - bearerAuth: []
+      parameters:
+        - name: isPost
+          in: query
+          description: if is a post alert or a comment alert
+          required: true
+          schema:
+            type: boolean
       requestBody:
         content:
           application/json:
@@ -754,17 +761,12 @@ paths:
               $ref: '#/components/schemas/Alert'
       responses:
         '201':
-          description: Alert added
+          description: Alert created
           content:
             application/json:
               schema:
-                oneOf:
-                  - $ref: '#/components/schemas/Alert'
-                example:
-                  id: 1
-                  profile_id: 1
-                  post_id: null
-                  reason: reason example
+                $ref: '#/components/schemas/Alert'
+
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -776,43 +778,6 @@ paths:
         '500':
           $ref: '#/components/responses/InternalServerError'
 
-  /alerts/post:
-    post:
-      tags:
-        - alerts
-      summary: Send a post alert
-      description: Send a post alert
-      operationId: addPostAlert
-      security:
-        - bearerAuth: []
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/Alert'
-      responses:
-        '201':
-          description: Alert added
-          content:
-            application/json:
-              schema:
-                oneOf:
-                  - $ref: '#/components/schemas/Alert'
-                example:
-                  id: 1
-                  profile_id: null
-                  post_id: 1
-                  reason: reason example
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
 
   /admins/profiles:
     get:
@@ -1292,11 +1257,15 @@ components:
           type: integer
           format: int64
           readOnly: true
-        profile_id:
+        created_by:
           type: integer
           format: int64
           nullable: true
         post_id:
+          type: integer
+          format: int64
+          nullable: true
+        comment_id:
           type: integer
           format: int64
           nullable: true
@@ -1308,11 +1277,11 @@ components:
         managed_by:
           type: integer
           format: int64
+          nullable: true
           readOnly: true
       required:
         - id
-        - profile_id
-        - post_id
+        - created_by
         - reason
 
     AlertPatch:
