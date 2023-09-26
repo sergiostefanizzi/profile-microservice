@@ -2,6 +2,7 @@ package com.sergiostefanizzi.profilemicroservice.system.util;
 
 import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
+import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.system.exception.CommentNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -25,6 +26,8 @@ public class CommentsInterceptor implements HandlerInterceptor {
     private CommentsRepository commentsRepository;
     @Autowired
     private PostsRepository postsRepository;
+    @Autowired
+    private ProfilesRepository profilesRepository;
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         log.info("\n\tComment Interceptor -> "+request.getRequestURI());
@@ -32,17 +35,30 @@ public class CommentsInterceptor implements HandlerInterceptor {
         String requestMethod = request.getMethod();
         Map pathVariables = (Map) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
         if (!requestMethod.equalsIgnoreCase("POST")) {
-            Long checkId;
+            Long checkPostId;
             if (requestMethod.equalsIgnoreCase("GET")) {
                 Long postId = Long.valueOf((String) pathVariables.get("postId"));
-                checkId = this.postsRepository.checkActiveById(postId, LocalDateTime.now().minusDays(1))
+                // Controllo che il post sia attivo
+                checkPostId = this.postsRepository.checkActiveById(postId, LocalDateTime.now().minusDays(1))
                         .orElseThrow(() -> new PostNotFoundException(postId));
+                // Controllo che il profilo del post sia attivo
+                this.profilesRepository.checkActiveByPostId(postId)
+                        .orElseThrow(() -> new PostNotFoundException(postId));
+                log.info("\n\tComment Interceptor: Post ID-> " + checkPostId);
             } else {
                 Long commentId = Long.valueOf((String) pathVariables.get("commentId"));
-                checkId = this.commentsRepository.checkActiveById(commentId)
+                // Controllo che il commento sia attivo
+                Long checkCommentId = this.commentsRepository.checkActiveById(commentId)
                         .orElseThrow(() -> new CommentNotFoundException(commentId));
+                // Controllo che il post del commento sia attivo
+                checkPostId = this.postsRepository.checkActiveByCommentId(commentId)
+                        .orElseThrow(() -> new CommentNotFoundException(commentId));
+                // Controllo che il profilo del post del commento sia attivo
+                this.profilesRepository.checkActiveByPostId(checkPostId)
+                        .orElseThrow(() -> new CommentNotFoundException(commentId));
+                log.info("\n\tComment Interceptor: Comment ID-> " + checkCommentId);
             }
-            log.info("\n\tComment Interceptor: ID-> " + checkId);
+
         }
         return true;
     }

@@ -25,7 +25,7 @@ public interface ProfilesRepository extends JpaRepository<ProfileJpa, Long> {
     @Query("SELECT p.id FROM ProfileJpa p WHERE p.id=:profileId AND p.deletedAt IS NULL")
     Optional<Long> checkActiveById(Long profileId);
 
-    @Modifying
-    @Query("UPDATE ProfileJpa p SET p.deletedAt = :removalDate WHERE p.id = :profileId")
-    void removeProfileByProfileId(Long profileId, LocalDateTime removalDate);
+    @Query("SELECT p.id FROM ProfileJpa p INNER JOIN PostJpa q ON p.id = q.profile.id WHERE q.id=:postId AND p.deletedAt IS NULL")
+    Optional<Long> checkActiveByPostId(Long postId);
+
 }

@@ -141,21 +141,14 @@ class ProfilesServiceTest {
     // REMOVE A PROFILE
     @Test
     void testRemoveSuccess(){
-        doNothing().when(this.profilesRepository).removeProfileByProfileId(anyLong(), any(LocalDateTime.class));
-        doNothing().when(this.postsRepository).removePostByProfileId(anyLong(), any(LocalDateTime.class));
-        doNothing().when(this.likesRepository).removeLikeByProfileId(anyLong(), any(LocalDateTime.class));
-        doNothing().when(this.commentsRepository).removeCommentByProfileId(anyLong(), any(LocalDateTime.class));
-        doNothing().when(this.followsRepository).removeFollowByProfileId(anyLong(), any(LocalDateTime.class));
+        when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(savedProfileJpa);
 
         this.profilesService.remove(profileId);
 
         // l'istante di rimozione deve essere NON nullo DOPO la rimozione
 
-        verify(this.profilesRepository, times(1)).removeProfileByProfileId(anyLong(), any(LocalDateTime.class));
-        verify(this.postsRepository, times(1)).removePostByProfileId(anyLong(), any(LocalDateTime.class));
-        verify(this.likesRepository, times(1)).removeLikeByProfileId(anyLong(), any(LocalDateTime.class));
-        verify(this.commentsRepository, times(1)).removeCommentByProfileId(anyLong(), any(LocalDateTime.class));
-        verify(this.followsRepository, times(1)).removeFollowByProfileId(anyLong(), any(LocalDateTime.class));
+        verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
+        verify(this.profilesRepository, times(1)).save(any(ProfileJpa.class));
 
     }
 

@@ -36,7 +36,7 @@ public class FollowsInterceptor implements HandlerInterceptor {
         Long checkProfileToFollowId = this.profilesRepository.checkActiveById(profileToFollowId)
                 .orElseThrow(() -> new ProfileNotFoundException(profileToFollowId));
         if (profileId.equals(profileToFollowId)){
-            throw new FollowItselfException("Cannot follow itself");
+            throw new FollowItselfException("Profile cannot follow itself!");
         }
         log.info("\nFollow Interceptor: IDs -> "+checkProfileId+", "+checkProfileToFollowId);
         return true;

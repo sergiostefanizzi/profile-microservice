@@ -36,11 +36,7 @@ public interface PostsRepository extends JpaRepository<PostJpa, Long> {
     @Query("SELECT p FROM PostJpa p INNER JOIN FollowsJpa f ON p.profile.id = f.followsId.followedId WHERE f.followsId.followerId = :profileId AND p.deletedAt IS NULL AND ((p.postType = 'POST') OR (p.postType = 'STORY' AND p.createdAt >= :timeLimit)) ORDER BY p.createdAt DESC")
     List<PostJpa> getFeedByProfileId(Long profileId, LocalDateTime timeLimit);
 
-    @Modifying
-    @Query("UPDATE PostJpa p SET p.deletedAt = :removalDate WHERE p.profile.id = :profileId")
-    void removePostByProfileId(Long profileId, LocalDateTime removalDate);
+    @Query("SELECT p.id FROM PostJpa p INNER JOIN CommentJpa c ON p.id = c.post.id WHERE c.id=:commentId AND p.deletedAt IS NULL")
+    Optional<Long> checkActiveByCommentId(Long commentId);
 
-    @Modifying
-    @Query("UPDATE PostJpa p SET p.deletedAt = :removalDate WHERE p.id = :postId")
-    void removePostByPostId(Long postId, LocalDateTime removalDate);
 }

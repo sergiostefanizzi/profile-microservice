@@ -70,10 +70,6 @@ public class ProfileJpa {
     @JsonBackReference
     private List<AlertJpa> alertList;
 
-    @OneToMany(mappedBy = "managedBy")
-    @JsonBackReference
-    private List<AlertJpa> managedAlertList;
-
     @Version
     @Column(name = "version", nullable = false)
     private Long version;

@@ -300,6 +300,7 @@ class PostsControllerTest {
     @Test
     void testDeletePostById_Then_204() throws Exception {
         when(this.postsRepository.checkActiveForDeleteById(anyLong())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         doNothing().when(this.postsService).remove(postId);
 
         this.mockMvc.perform(delete("/posts/{postId}", postId))
@@ -353,6 +354,7 @@ class PostsControllerTest {
         this.savedPost.setCaption(newCaption);
 
         when(this.postsRepository.checkActiveById(anyLong(), any())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         when(this.postsService.update(postId, postPatch)).thenReturn(this.savedPost);
 
         MvcResult result = this.mockMvc.perform(patch("/posts/{postId}",postId)
@@ -407,6 +409,7 @@ class PostsControllerTest {
     void testUpdatePost_CaptionLength_Then_400() throws Exception{
         errors.add("caption size must be between 0 and 2200");
         when(this.postsRepository.checkActiveById(anyLong(), any())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
 
         // genero una caption di 2210 caratteri, superando di 10 il limite
         PostPatch postPatch = new PostPatch(RandomStringUtils.randomAlphabetic(2210));
@@ -460,6 +463,7 @@ class PostsControllerTest {
     @Test
     void testFindPostById_Then_200() throws Exception{
         when(this.postsRepository.checkActiveById(anyLong(), any())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         when(this.postsService.find(postId)).thenReturn(this.savedPost);
 
         MvcResult result = this.mockMvc.perform(get("/posts/{postId}",postId)
@@ -630,6 +634,7 @@ class PostsControllerTest {
                 new Like(3L,postId)
         );
         when(this.postsRepository.checkActiveById(anyLong(), any())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         when(this.postsService.findAllLikesByPostId(postId)).thenReturn(likeList);
 
         MvcResult result = this.mockMvc.perform(get("/posts/likes/{postId}",postId)
@@ -655,6 +660,7 @@ class PostsControllerTest {
     void testFindAllLikesByPostId_Empty_Then_200() throws Exception {
         List<Like> likeList = new ArrayList<>();
         when(this.postsRepository.checkActiveById(anyLong(), any())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         when(this.postsService.findAllLikesByPostId(postId)).thenReturn(likeList);
 
         MvcResult result = this.mockMvc.perform(get("/posts/likes/{postId}",postId)
@@ -908,6 +914,8 @@ class PostsControllerTest {
         String commentPatchJson = this.objectMapper.writeValueAsString(commentPatch);
 
         when(this.commentsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(commentId));
+        when(this.postsRepository.checkActiveByCommentId(anyLong())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         when(this.postsService.updateCommentById(commentId, commentPatch)).thenReturn(updatedComment);
 
         MvcResult result = this.mockMvc.perform(patch("/posts/comments/{commentId}",commentId)
@@ -956,6 +964,8 @@ class PostsControllerTest {
         String commentPatchJson = this.objectMapper.writeValueAsString(commentPatch);
 
         when(this.commentsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(commentId));
+        when(this.postsRepository.checkActiveByCommentId(anyLong())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
 
         MvcResult result = this.mockMvc.perform(patch("/posts/comments/{commentId}",commentId)
                         .accept(MediaType.APPLICATION_JSON)
@@ -1006,6 +1016,8 @@ class PostsControllerTest {
     void testDeleteCommentById_Then_204() throws Exception {
         Long commentId = 1L;
         when(this.commentsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(commentId));
+        when(this.postsRepository.checkActiveByCommentId(anyLong())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         doNothing().when(this.postsService).deleteCommentById(commentId);
 
         this.mockMvc.perform(delete("/posts/comments/{commentId}", commentId))
@@ -1057,6 +1069,7 @@ class PostsControllerTest {
         commentList.get(1).setId(2L);
         commentList.get(2).setId(3L);
         when(this.postsRepository.checkActiveById(anyLong(), any())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         when(this.postsService.findAllCommentsByPostId(postId)).thenReturn(commentList);
 
         MvcResult result = this.mockMvc.perform(get("/posts/comments/{postId}",postId)

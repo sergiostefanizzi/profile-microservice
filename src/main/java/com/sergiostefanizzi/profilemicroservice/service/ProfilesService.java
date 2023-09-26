@@ -44,13 +44,10 @@ public class ProfilesService {
 
     @Transactional
     public void remove(Long profileId) {
-        //imposto a questo istante la data e l'ora di rimozione del profilo
-        LocalDateTime removalDate = LocalDateTime.now();
-        this.profilesRepository.removeProfileByProfileId(profileId, removalDate);
-        this.postsRepository.removePostByProfileId(profileId, removalDate);
-        this.likesRepository.removeLikeByProfileId(profileId, removalDate);
-        this.commentsRepository.removeCommentByProfileId(profileId, removalDate);
-        this.followsRepository.removeFollowByProfileId(profileId, removalDate);
+        ProfileJpa profileJpa = this.profilesRepository.getReferenceById(profileId);
+        profileJpa.setDeletedAt(LocalDateTime.now());
+        this.profilesRepository.save(profileJpa);
+
     }
 
     @Transactional

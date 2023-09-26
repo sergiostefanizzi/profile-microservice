@@ -43,7 +43,7 @@ public class FollowsService {
         Optional<FollowsJpa> optionalFollowsRequestJpa = this.followsRepository.findById(new FollowsId(profileId, profileToFollowId));
         // TODO scompongo l'if in due metodi privati
         if (optionalFollowsRequestJpa.isPresent()) {
-            followsRequestJpa = updateOldFollowRequest(isUnfollow, optionalFollowsRequestJpa.get());
+            followsRequestJpa = updateOldFollowRequest(isUnfollow, optionalFollowsRequestJpa.get(), profileToFollowId);
         } else {
             followsRequestJpa = createNewFollowRequest(profileId, profileToFollowId, isUnfollow);
         }
@@ -51,11 +51,16 @@ public class FollowsService {
                 this.followsRepository.save(followsRequestJpa));
     }
 
-    private static FollowsJpa updateOldFollowRequest(Boolean isUnfollow, FollowsJpa followsRequestJpa) {
+    private FollowsJpa updateOldFollowRequest(Boolean isUnfollow, FollowsJpa followsRequestJpa, Long profileToFollowId) {
         if (followsRequestJpa.getRequestStatus().equals(Follows.RequestStatusEnum.REJECTED) && !isUnfollow){
             // Se la richiesta esiste ed e' stata rifiutata e viene inviata una nuova richiesta, imposta in approvazione
-            followsRequestJpa.setRequestStatus(Follows.RequestStatusEnum.PENDING);
+            if(this.profilesRepository.getReferenceById(profileToFollowId).getIsPrivate()){
+                followsRequestJpa.setRequestStatus(Follows.RequestStatusEnum.PENDING);
+            }else {
+                followsRequestJpa.setRequestStatus(Follows.RequestStatusEnum.ACCEPTED);
+            }
             followsRequestJpa.setUnfollowedAt(null);//reset a null eventuale data di unfollowed
+
         } else if (!followsRequestJpa.getRequestStatus().equals(Follows.RequestStatusEnum.REJECTED) && isUnfollow) {
             // Se la richiesta esiste ed e' gia' stata accettata o e' in approvazione e viene
             // inviata una richiesta di unfollow,

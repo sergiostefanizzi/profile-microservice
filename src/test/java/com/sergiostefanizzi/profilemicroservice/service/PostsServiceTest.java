@@ -126,15 +126,13 @@ class PostsServiceTest {
 
     @Test
     void testRemoveSuccess(){
-        doNothing().when(this.postsRepository).removePostByPostId(anyLong(), any(LocalDateTime.class));
-        doNothing().when(this.likesRepository).removeLikeByPostId(anyLong(), any(LocalDateTime.class));
-        doNothing().when(this.commentsRepository).removeCommentByPostId(anyLong(), any(LocalDateTime.class));
+        when(this.postsRepository.getReferenceById(anyLong())).thenReturn(savedPostJpa);
 
         this.postsService.remove(postId);
 
-        verify(this.postsRepository, times(1)).removePostByPostId(anyLong(), any(LocalDateTime.class));
-        verify(this.likesRepository, times(1)).removeLikeByPostId(anyLong(), any(LocalDateTime.class));
-        verify(this.commentsRepository, times(1)).removeCommentByPostId(anyLong(), any(LocalDateTime.class));
+        verify(this.postsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.postsRepository, times(1)).save(any(PostJpa.class));
+
     }
 
 
@@ -222,7 +220,6 @@ class PostsServiceTest {
         when(this.postsRepository.findActiveById(anyLong(), any(LocalDateTime.class))).thenReturn(Optional.of(this.savedPostJpa));
         when(this.profilesRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
         when(this.likesRepository.findActiveById(any(LikeId.class))).thenReturn(Optional.of(likeJpa));
-        doNothing().when(this.likesRepository).removeLikeByLikeId(any(LikeId.class), any(LocalDateTime.class));
 
         this.postsService.addLike(true, this.newLike);
 
@@ -230,7 +227,7 @@ class PostsServiceTest {
         verify(this.profilesRepository, times(1)).findActiveById(any(Long.class));
         verify(this.likesRepository, times(1)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(0)).convert(any(Like.class));
-        verify(this.likesRepository, times(1)).removeLikeByLikeId(any(LikeId.class), any(LocalDateTime.class));
+        verify(this.likesRepository, times(1)).save(any(LikeJpa.class));
     }
 
     @Test

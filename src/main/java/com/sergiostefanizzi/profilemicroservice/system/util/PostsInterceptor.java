@@ -1,8 +1,8 @@
 package com.sergiostefanizzi.profilemicroservice.system.util;
 
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
+import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
-import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -22,6 +22,8 @@ import java.util.Map;
 public class PostsInterceptor implements HandlerInterceptor {
     @Autowired
     private PostsRepository postsRepository;
+    @Autowired
+    private ProfilesRepository profilesRepository;
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         log.info("\n\tPost Interceptor -> "+request.getRequestURI());
@@ -30,17 +32,25 @@ public class PostsInterceptor implements HandlerInterceptor {
         if (requestMethod.equalsIgnoreCase("POST") || requestMethod.equalsIgnoreCase("PUT")) return true;
 
         Map pathVariables = (Map) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+
         Long postId = Long.valueOf((String) pathVariables.get("postId"));
-        Long checkId;
+
+        Long checkPostId;
         if (requestMethod.equalsIgnoreCase("DELETE")){
-            checkId = this.postsRepository.checkActiveForDeleteById(postId)
+            //CheckActiveForDeleteById e' lo stesso di checkActiveById
+            //ma non fa il controllo sulle storie scadute.
+            //Così facendo un utente puo' anche cancellare una storia scaduta
+            checkPostId = this.postsRepository.checkActiveForDeleteById(postId)
                     .orElseThrow(() -> new PostNotFoundException(postId));
         }else {
-            checkId = this.postsRepository.checkActiveById(postId, LocalDateTime.now().minusDays(1))
+            checkPostId = this.postsRepository.checkActiveById(postId, LocalDateTime.now().minusDays(1))
                     .orElseThrow(() -> new PostNotFoundException(postId));
         }
 
-        log.info("\n\tPost Interceptor: Post ID-> "+checkId);
+        Long checkProfileId = this.profilesRepository.checkActiveByPostId(postId)
+                .orElseThrow(() -> new PostNotFoundException(checkPostId));
+
+        log.info("\n\tPost Interceptor: Post ID-> "+checkPostId+" Profile ID-> "+checkProfileId);
         return true;
     }
 

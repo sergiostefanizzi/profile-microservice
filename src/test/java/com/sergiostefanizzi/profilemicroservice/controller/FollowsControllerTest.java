@@ -8,6 +8,7 @@ import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.service.FollowsService;
+import com.sergiostefanizzi.profilemicroservice.system.exception.FollowItselfException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.FollowNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.UnfollowOnCreationException;
@@ -149,12 +150,41 @@ class FollowsControllerTest {
     }
 
     @Test
+    void testAddFollows_FollowItself_Then_400() throws Exception {
+        errors.add("Profile cannot follow itself!");
+        Follows followsRequest = new Follows(publicProfileId1, publicProfileId1, Follows.RequestStatusEnum.ACCEPTED);
+
+        when(this.profilesRepository.checkActiveById(publicProfileId1)).thenReturn(Optional.of(publicProfileId1));
+        when(this.profilesRepository.checkActiveById(publicProfileId1)).thenReturn(Optional.of(publicProfileId1));
+
+
+        MvcResult result = this.mockMvc.perform(put("/profiles/{profileId}/follows/{followsId}?unfollow={unfollow}",publicProfileId1,publicProfileId1,false)
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof FollowItselfException
+                ))
+                .andExpect(jsonPath("$.error").value(errors.get(0)))
+                .andReturn();
+
+        verify(this.profilesRepository, times(2)).checkActiveById(anyLong());
+
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+
+
+    }
+
+    @Test
     void testAddFollows_UnfollowOnCreation_Then_400() throws Exception {
         // arrayList contenente i messaggi di errore
         errors.add("Unfollows on creation is not possible!");
         when(this.profilesRepository.checkActiveById(publicProfileId1)).thenReturn(Optional.of(publicProfileId1));
         when(this.profilesRepository.checkActiveById(publicProfileId2)).thenReturn(Optional.of(publicProfileId2));
-        doThrow(new UnfollowOnCreationException()).when(this.followsService).addFollows(anyLong(),anyLong(), anyBoolean());
+        when(this.followsService.addFollows(anyLong(),anyLong(), anyBoolean())).thenThrow(new UnfollowOnCreationException());
 
         MvcResult result = this.mockMvc.perform(put("/profiles/{profileId}/follows/{followsId}?unfollow={unfollow}",publicProfileId1,publicProfileId2,true)
                         .contentType(MediaType.APPLICATION_JSON)

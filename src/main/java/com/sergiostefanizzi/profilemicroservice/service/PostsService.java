@@ -57,15 +57,10 @@ public class PostsService {
     public void remove(Long postId) {
         // TODO mi serve il JWT
         // Controllo che chi richiede la rimozione abbia l'autorizzazione per farlo
-        /*
-        if (postJpa.getProfile().getId().equals(Long.MIN_VALUE)){
-            throw new PostNotFoundException(postId);
-        }
-        */
-        LocalDateTime removalTime = LocalDateTime.now();
-        this.postsRepository.removePostByPostId(postId, removalTime);
-        this.likesRepository.removeLikeByPostId(postId, removalTime);
-        this.commentsRepository.removeCommentByPostId(postId, removalTime);
+
+        PostJpa postJpaToRemove = this.postsRepository.getReferenceById(postId);
+        postJpaToRemove.setDeletedAt(LocalDateTime.now());
+        this.postsRepository.save(postJpaToRemove);
     }
 
     @Transactional
@@ -128,7 +123,8 @@ public class PostsService {
     }
 
     private void removeLike(LikeJpa likeJpa) {
-        this.likesRepository.removeLikeByLikeId(likeJpa.getLikeId(), LocalDateTime.now());
+        likeJpa.setDeletedAt(LocalDateTime.now());
+        this.likesRepository.save(likeJpa);
     }
 
     @Transactional

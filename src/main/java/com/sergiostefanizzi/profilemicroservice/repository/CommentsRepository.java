@@ -21,13 +21,5 @@ public interface CommentsRepository extends JpaRepository<CommentJpa, Long> {
     @Query("SELECT c FROM CommentJpa c WHERE c.post.id = :postId AND c.deletedAt IS NULL ORDER BY c.createdAt ASC")
     List<CommentJpa> findAllActiveByPostId(Long postId);
 
-    @Modifying
-    @Query("UPDATE CommentJpa c SET c.deletedAt = :removalDate WHERE c.profile.id = :profileId")
-    void removeCommentByProfileId(Long profileId, LocalDateTime removalDate);
-
-    @Modifying
-    @Query("UPDATE CommentJpa c SET c.deletedAt = :removalDate WHERE c.post.id = :postId")
-    void removeCommentByPostId(Long postId, LocalDateTime removalDate);
-
 
 }

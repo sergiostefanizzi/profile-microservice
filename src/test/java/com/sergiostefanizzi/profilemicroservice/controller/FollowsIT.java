@@ -150,6 +150,32 @@ class FollowsIT {
         log.info(savedUnfollow.toString());
     }
 
+    @Test
+    void testAddFollows_FollowItself_Then_400() throws Exception {
+        // messaggio d'errore che mi aspetto d'ottenere
+        errors.add("Profile cannot follow itself!");
+
+        Profile publicProfile1 = createProfile("pinco_pallino7a", false);
+
+
+        ResponseEntity<String> response = this.testRestTemplate.exchange(
+                this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
+                HttpMethod.PUT,
+                HttpEntity.EMPTY,
+                String.class,
+                publicProfile1.getId(),
+                publicProfile1.getId(),
+                true);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
 
     @Test
     void testAddFollows_UnfollowOnCreation_Then_400() throws Exception {
