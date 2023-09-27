@@ -1106,7 +1106,7 @@ class PostsIT {
         Comment savedComment = responseComment.getBody();
         assertNotNull(savedComment.getId());
         assertEquals(profileId, savedComment.getProfileId());
-        assertEquals(savedPostId, savedComment.getProfileId());
+        assertEquals(savedPostId, savedComment.getPostId());
         assertEquals(content, savedComment.getContent());
 
         // visualizzo il post salvato
@@ -1961,7 +1961,7 @@ class PostsIT {
     }
 
 
-    private Post createPost(Long profileId, Post.PostTypeEnum postType) {
+    Post createPost(Long profileId, Post.PostTypeEnum postType) {
         Post post = new Post(contentUrl, postType, profileId);
 
         HttpEntity<Post> request = new HttpEntity<>(post);

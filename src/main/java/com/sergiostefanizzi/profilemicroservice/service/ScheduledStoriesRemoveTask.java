@@ -19,6 +19,7 @@ public class ScheduledStoriesRemoveTask {
     private final PostsRepository postsRepository;
 
     @Scheduled(fixedRate = 5000L)
+    @Transactional
     public void removeOutdatedStories(){
         LocalDateTime removalTime = LocalDateTime.now();
         List<PostJpa> storiesToRemove = this.postsRepository.getOutdatedStories(removalTime.minusDays(1));

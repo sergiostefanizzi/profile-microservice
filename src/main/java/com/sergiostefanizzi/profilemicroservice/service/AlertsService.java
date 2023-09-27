@@ -45,12 +45,10 @@ public class AlertsService {
 
     private AlertJpa createAlertByType(Boolean isPost, Alert alert) {
         AlertJpa alertJpa;
-        if (isPost && (alert.getPostId() != null && alert.getCommentId() == null)) {
+        if (isPost) {
             alertJpa = createPostAlert(alert);
-        } else if (!isPost && (alert.getCommentId() != null && alert.getPostId() == null)) {
-            alertJpa = createCommentAlert(alert);
         } else {
-            throw new AlertTypeErrorException("Alert type error");
+            alertJpa = createCommentAlert(alert);
         }
         return alertJpa;
     }
@@ -58,6 +56,9 @@ public class AlertsService {
     private AlertJpa createPostAlert(Alert alert) {
         PostJpa postJpa;
         AlertJpa alertJpa;
+        if(alert.getPostId() == null){
+            throw new AlertTypeErrorException("Alert type error");
+        }
         postJpa = this.postsRepository.findActiveById(alert.getPostId())
                 .orElseThrow(() -> new PostNotFoundException(alert.getPostId()));
         alertJpa = this.alertToAlertJpaConverter.convert(alert);
@@ -69,6 +70,9 @@ public class AlertsService {
     private AlertJpa createCommentAlert(Alert alert) {
         CommentJpa commentJpa;
         AlertJpa alertJpa;
+        if(alert.getCommentId() == null){
+            throw new AlertTypeErrorException("Alert type error");
+        }
         commentJpa = this.commentsRepository.findActiveById(alert.getCommentId())
                 .orElseThrow(() -> new CommentNotFoundException(alert.getCommentId()));
         alertJpa = this.alertToAlertJpaConverter.convert(alert);

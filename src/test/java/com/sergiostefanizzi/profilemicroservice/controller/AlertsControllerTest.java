@@ -7,6 +7,8 @@ import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.service.AlertsService;
 import com.sergiostefanizzi.profilemicroservice.system.exception.AlertTypeErrorException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.CommentNotFoundException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
@@ -25,7 +27,6 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import static org.hamcrest.Matchers.hasSize;
-import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -167,7 +168,7 @@ public class AlertsControllerTest {
     }
 
     @Test
-    void testCreateAlert_PostAlert_AlertTypeNotSpecifiedException_isPost_Missing_Then_400() throws Exception {
+    void testCreateAlert_PostAlert_MethodArgumentTypeMismatchException_isPost_Missing_Then_400() throws Exception {
         String errorMsg = "Failed to convert value of type 'java.lang.String' to required type 'java.lang.Boolean'; Invalid boolean value [NotBoolean]";
 
         String postAlertJson = this.objectMapper.writeValueAsString(this.postAlert);
@@ -188,7 +189,7 @@ public class AlertsControllerTest {
     }
 
     @Test
-    void testCreateAlert_PostAlert_ProfileNotFound_Then_404() throws Exception {
+    void testCreateAlert_PostAlert_ProfileNotFoundException_Then_404() throws Exception {
         String errorMsg = "Profile "+this.postAlert.getCreatedBy()+" not found!";
         when(this.alertsService.createAlert(anyBoolean(),any(Alert.class))).thenThrow(new ProfileNotFoundException(this.postAlert.getCreatedBy()));
 
@@ -202,6 +203,52 @@ public class AlertsControllerTest {
                 )
                 .andExpect(status().isNotFound())
                 .andExpect(res -> assertTrue(res.getResolvedException() instanceof ProfileNotFoundException))
+                .andExpect(jsonPath("$.error").value(errorMsg))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("\nErrors\n" +resultAsString);
+    }
+
+    @Test
+    void testCreateAlert_PostAlert_PostNotFoundException_Then_404() throws Exception {
+        String errorMsg = "Post "+this.postAlert.getCreatedBy()+" not found!";
+        when(this.alertsService.createAlert(anyBoolean(),any(Alert.class))).thenThrow(new PostNotFoundException(this.postAlert.getPostId()));
+
+
+        String postAlertJson = this.objectMapper.writeValueAsString(this.postAlert);
+
+        MvcResult result = this.mockMvc.perform(post("/alerts?isPost={isPost}",true)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content(postAlertJson)
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(res.getResolvedException() instanceof PostNotFoundException))
+                .andExpect(jsonPath("$.error").value(errorMsg))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("\nErrors\n" +resultAsString);
+    }
+
+    @Test
+    void testCreateAlert_CommentAlert_CommentNotFoundException_Then_404() throws Exception {
+        String errorMsg = "Comment "+this.postAlert.getCreatedBy()+" not found!";
+        when(this.alertsService.createAlert(anyBoolean(),any(Alert.class))).thenThrow(new CommentNotFoundException(this.commentAlert.getCommentId()));
+
+
+        String postAlertJson = this.objectMapper.writeValueAsString(this.postAlert);
+
+        MvcResult result = this.mockMvc.perform(post("/alerts?isPost={isPost}",false)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content(postAlertJson)
+                )
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(res.getResolvedException() instanceof CommentNotFoundException))
                 .andExpect(jsonPath("$.error").value(errorMsg))
                 .andReturn();
 
