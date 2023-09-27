@@ -1265,10 +1265,12 @@ components:
           type: integer
           format: int64
           nullable: true
+          x-nonnull: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
         comment_id:
           type: integer
           format: int64
           nullable: true
+          x-nonnull: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
         reason:
           type: string
           minLength: 1
@@ -1279,6 +1281,7 @@ components:
           format: int64
           nullable: true
           readOnly: true
+          x-nonnull: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
       required:
         - created_by
         - reason

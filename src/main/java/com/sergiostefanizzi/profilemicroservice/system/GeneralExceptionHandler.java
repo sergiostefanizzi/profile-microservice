@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
@@ -26,6 +27,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
 
+
     @ExceptionHandler(FollowItselfException.class)
     public ResponseEntity<Object> handleFollowItselfException(FollowItselfException ex, WebRequest request){
         log.error(ex.getMessage(),ex);
@@ -34,8 +36,8 @@ public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
         body.put("error", error);
         return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
     }
-    @ExceptionHandler(AlertTypeNotSpecifiedException.class)
-    public ResponseEntity<Object> handleAlertTypeNotSpecifiedException(AlertTypeNotSpecifiedException ex, WebRequest request){
+    @ExceptionHandler(AlertTypeErrorException.class)
+    public ResponseEntity<Object> handleAlertTypeNotSpecifiedException(AlertTypeErrorException ex, WebRequest request){
         log.error(ex.getMessage(),ex);
         String error = ex.getMessage();
         Map<String, String> body = new HashMap<>();
@@ -136,6 +138,14 @@ public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.INTERNAL_SERVER_ERROR, request);
     }
     // OVERRIDE METHODS
+    @Override
+    protected ResponseEntity<Object> handleMissingServletRequestParameter(MissingServletRequestParameterException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        log.error(ex.getMessage(),ex);
+        String error = ex.getMessage();
+        Map<String, String> body = new HashMap<>();
+        body.put("error", error);
+        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
+    }
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
         log.error(ex.getMessage(),ex);

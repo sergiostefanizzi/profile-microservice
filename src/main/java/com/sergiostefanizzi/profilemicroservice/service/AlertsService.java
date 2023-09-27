@@ -6,7 +6,7 @@ import com.sergiostefanizzi.profilemicroservice.repository.AlertsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
-import com.sergiostefanizzi.profilemicroservice.system.exception.AlertTypeNotSpecifiedException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.AlertTypeErrorException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.CommentNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
@@ -50,7 +50,7 @@ public class AlertsService {
         } else if (!isPost && (alert.getCommentId() != null && alert.getPostId() == null)) {
             alertJpa = createCommentAlert(alert);
         } else {
-            throw new AlertTypeNotSpecifiedException("Alert type is not specified");
+            throw new AlertTypeErrorException("Alert type error");
         }
         return alertJpa;
     }

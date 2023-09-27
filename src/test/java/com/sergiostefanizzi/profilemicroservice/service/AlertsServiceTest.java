@@ -6,7 +6,7 @@ import com.sergiostefanizzi.profilemicroservice.repository.AlertsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
-import com.sergiostefanizzi.profilemicroservice.system.exception.AlertTypeNotSpecifiedException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.AlertTypeErrorException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +29,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 @ActiveProfiles("test")
 @Slf4j
-public class AlertServiceTest {
+public class AlertsServiceTest {
     @InjectMocks
     private AlertsService alertsService;
     @Mock
@@ -157,10 +157,10 @@ public class AlertServiceTest {
     }
 
     @Test
-    void testCreate_PostAlert_AlertTypeNotSpecifiedException_Failed(){
+    void testCreate_PostAlert_AlertTypeErrorException_Failed(){
         when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.alertOwner));
 
-        assertThrows(AlertTypeNotSpecifiedException.class, () -> this.alertsService.createAlert(false, this.postAlertToCreate));
+        assertThrows(AlertTypeErrorException.class, () -> this.alertsService.createAlert(false, this.postAlertToCreate));
 
         verify(this.profilesRepository, times(1)).findActiveById(anyLong());
         verify(this.postsRepository, times(0)).findActiveById(anyLong());
@@ -174,7 +174,7 @@ public class AlertServiceTest {
     void testCreate_CommentAlert_AlertTypeNotSpecifiedException_Failed(){
         when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.alertOwner));
 
-        assertThrows(AlertTypeNotSpecifiedException.class, () -> this.alertsService.createAlert(true, this.commentAlertToCreate));
+        assertThrows(AlertTypeErrorException.class, () -> this.alertsService.createAlert(true, this.commentAlertToCreate));
 
         verify(this.profilesRepository, times(1)).findActiveById(anyLong());
         verify(this.postsRepository, times(0)).findActiveById(anyLong());

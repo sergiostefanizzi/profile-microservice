@@ -39,15 +39,19 @@ public class ProfileConfiguration implements WebMvcConfigurer {
                 .addPathPatterns("/profiles/**")
                 .addPathPatterns("/posts/feed/*")
                 .excludePathPatterns("/profiles/search")
-                .excludePathPatterns("/profiles/*/f*/**");
+                .excludePathPatterns("/profiles/*/f*/**")
+                .excludePathPatterns("/alerts");
         registry.addInterceptor(this.followsInterceptor)
-                .addPathPatterns("/profiles/*/f*/**");
+                .addPathPatterns("/profiles/*/f*/**")
+            .excludePathPatterns("/alerts");
         registry.addInterceptor(this.postsInterceptor)
                 .addPathPatterns("/posts/*")
                 .addPathPatterns("/posts/likes/*")
                 .excludePathPatterns("/posts/feed/*")
-                .excludePathPatterns("/posts/comments/*");
+                .excludePathPatterns("/posts/comments/*")
+                .excludePathPatterns("/alerts");
         registry.addInterceptor(this.commentsInterceptor)
-                .addPathPatterns("/posts/comments/*");
+                .addPathPatterns("/posts/comments/*")
+                .excludePathPatterns("/alerts");;
     }
 }

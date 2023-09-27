@@ -17,7 +17,7 @@ public class AlertsController implements AlertsApi {
     private final AlertsService alertsService;
 
     @Override
-    public ResponseEntity<Alert> createAlert(@NotNull Boolean isPost, Alert alert) {
+    public ResponseEntity<Alert> createAlert(Boolean isPost, Alert alert) {
         Alert savedAlert = this.alertsService.createAlert(isPost, alert);
         return new ResponseEntity<>(savedAlert, HttpStatus.CREATED);
     }
