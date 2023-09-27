@@ -34,8 +34,8 @@ public class AlertsIT {
     private TestRestTemplate testRestTemplate;
     @Autowired
     private ObjectMapper objectMapper;
-    String alertOwnerProfileName = "pinco_pallino";
-    String postOwnerProfileName = "giuseppe_verdi";
+    String alertOwnerProfileName = "newPinco_pallino";
+    String postOwnerProfileName = "newGiuseppe_verdi";
     String contentUrl = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Cape_may.jpg";
     String alertReason = "Motivo della segnalazione";
     String content = "Commento al post";

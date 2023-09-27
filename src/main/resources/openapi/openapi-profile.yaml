@@ -792,7 +792,11 @@ paths:
         - name: removedProfile
           in: query
           description: Show or not show removed profiles
-          required: true
+          schema:
+            type: boolean
+        - name: blockedProfile
+          in: query
+          description: Show or not show blocked profiles
           schema:
             type: boolean
       responses:
@@ -826,14 +830,12 @@ paths:
           schema:
             type: integer
             format: int64
-        - name: blocked_until
+        - name: blockedUntil
           in: query
           description: Block a profile for a specific time or unblock
-          required: true
           schema:
             type: string
             format: date-time
-            nullable: true
       responses:
         '200':
           description: Profile has been successfully blocked!
@@ -864,47 +866,15 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: removedAlerts
+        - name: closedAlerts
           in: query
           description: Show or not show removed alerts
           required: true
           schema:
             type: boolean
-      responses:
-        '200':
-          description: List of all alerts found and returned
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/AlertList'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-  /admin/alerts/{adminId}:
-    get:
-      tags:
-        - admins
-      summary: List of all the alerts assigned to an admin
-      description: List of all the alerts assigned to an admin
-      operationId: findAllAlertsByAdminId
-      security:
-        - bearerAuth: []
-      parameters:
         - name: adminId
-          in: path
-          description: Id of the admin
-          required: true
-          schema:
-            type: integer
-            format: int64
-        - name: removedAlerts
           in: query
-          description: Show or not show removed alerts
-          required: true
+          description: Id of the admin profile in order to see its managed alerts
           schema:
             type: boolean
       responses:
@@ -914,14 +884,10 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AlertList'
-        '400':
-          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
 
@@ -943,12 +909,6 @@ paths:
           schema:
             type: integer
             format: int64
-        - name: removedAlerts
-          in: query
-          description: Show or not show removed alerts
-          required: true
-          schema:
-            type: boolean
       responses:
         '200':
           description: Alert found and returned
@@ -991,36 +951,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Alert'
-        '400':
-          $ref: '#/components/responses/BadRequest'
-        '401':
-          $ref: '#/components/responses/Unauthenticated'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
-        '500':
-          $ref: '#/components/responses/InternalServerError'
-
-    delete:
-      tags:
-        - admins
-      summary: Close an alert
-      description: Close an alert
-      operationId: removeAlertById
-      security:
-        - bearerAuth: []
-      parameters:
-        - name: alertId
-          in: path
-          description: Id of the alert
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '204':
-          description: Alert has been successfully closed!
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
