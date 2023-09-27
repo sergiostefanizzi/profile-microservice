@@ -9,6 +9,7 @@ import com.sergiostefanizzi.profilemicroservice.system.exception.FollowNotFoundE
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.UnfollowOnCreationException;
 import jakarta.transaction.Transactional;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -33,15 +34,9 @@ public class FollowsService {
 
     @Transactional
     public Follows addFollows(Long profileId, Long profileToFollowId, Boolean isUnfollow) {
-        if(profileId == null || profileToFollowId == null){
-            throw new ProfileNotFoundException("Missing input parameter");
-        }
-
         FollowsJpa followsRequestJpa;
         // Controllo che la risorsa non sia già stata creata
-        // TODO this.followsRepository.findActiveById
         Optional<FollowsJpa> optionalFollowsRequestJpa = this.followsRepository.findById(new FollowsId(profileId, profileToFollowId));
-        // TODO scompongo l'if in due metodi privati
         if (optionalFollowsRequestJpa.isPresent()) {
             followsRequestJpa = updateOldFollowRequest(isUnfollow, optionalFollowsRequestJpa.get(), profileToFollowId);
         } else {
@@ -51,10 +46,10 @@ public class FollowsService {
                 this.followsRepository.save(followsRequestJpa));
     }
 
-    private FollowsJpa updateOldFollowRequest(Boolean isUnfollow, FollowsJpa followsRequestJpa, Long profileToFollowId) {
+    private FollowsJpa updateOldFollowRequest(Boolean isUnfollow, @NotNull FollowsJpa followsRequestJpa, Long profileToFollowId) {
         if (followsRequestJpa.getRequestStatus().equals(Follows.RequestStatusEnum.REJECTED) && !isUnfollow){
             // Se la richiesta esiste ed e' stata rifiutata e viene inviata una nuova richiesta, imposta in approvazione
-            if(this.profilesRepository.getReferenceById(profileToFollowId).getIsPrivate()){
+            if(followsRequestJpa.getFollowed().getIsPrivate()){
                 followsRequestJpa.setRequestStatus(Follows.RequestStatusEnum.PENDING);
             }else {
                 followsRequestJpa.setRequestStatus(Follows.RequestStatusEnum.ACCEPTED);
@@ -74,14 +69,6 @@ public class FollowsService {
     }
     private FollowsJpa createNewFollowRequest(Long profileId, Long profileToFollowId, Boolean isUnfollow) {
         FollowsJpa followsRequestJpa;
-        // Controllo l'esistenza dei due profili
-        /*
-        ProfileJpa profileJpa = this.profilesRepository.findActiveById(profileId)
-                .orElseThrow(() -> new ProfileNotFoundException(profileId));
-        ProfileJpa profileToFollowJpa = this.profilesRepository.findActiveById(profileToFollowId)
-                .orElseThrow(() -> new ProfileNotFoundException(profileToFollowId));
-         */
-
         ProfileJpa profileJpa = this.profilesRepository.getReferenceById(profileId);
         ProfileJpa profileToFollowJpa = this.profilesRepository.getReferenceById(profileToFollowId);
         // il profileId esiste perche' verificato nell'interceptor
@@ -96,7 +83,6 @@ public class FollowsService {
                 followsRequestJpa.setRequestStatus(Follows.RequestStatusEnum.ACCEPTED);
                 followsRequestJpa.setFollowedAt(LocalDateTime.now());
             }
-
             //entityManager.flush();
             //ProfileJpa profileJpa = entityManager.getReference(ProfileJpa.class, profileId);
             followsRequestJpa.setFollower(profileJpa);
@@ -108,13 +94,12 @@ public class FollowsService {
     }
 
 
-
     @Transactional
     public Follows acceptFollows(Long profileId, Long followerId, Boolean rejectFollow) {
         if(profileId == null || followerId == null){
             throw new ProfileNotFoundException("Missing input parameter");
         }
-        FollowsJpa followsJpa = this.followsRepository.findById(new FollowsId(followerId, profileId))
+        FollowsJpa followsJpa = this.followsRepository.findActiveById(new FollowsId(followerId, profileId))
                 .orElseThrow(FollowNotFoundException::new);
         // il profilo che fa reject ad un follower sostanzialmente elimina la richiesta di segui.
         // il profilo non puo' quindi accettare o rifiutare una richiesta inesistente
@@ -134,8 +119,6 @@ public class FollowsService {
                 followsJpa.setRequestStatus(Follows.RequestStatusEnum.REJECTED);
                 followsJpa.setUnfollowedAt(LocalDateTime.now());
         }
-
-
         return this.followsToFollowsJpaConverter.convertBack(
                 this.followsRepository.save(followsJpa));
     }

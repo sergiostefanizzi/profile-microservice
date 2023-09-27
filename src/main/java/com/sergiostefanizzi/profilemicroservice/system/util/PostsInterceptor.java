@@ -43,7 +43,7 @@ public class PostsInterceptor implements HandlerInterceptor {
             checkPostId = this.postsRepository.checkActiveForDeleteById(postId)
                     .orElseThrow(() -> new PostNotFoundException(postId));
         }else {
-            checkPostId = this.postsRepository.checkActiveById(postId, LocalDateTime.now().minusDays(1))
+            checkPostId = this.postsRepository.checkActiveById(postId)
                     .orElseThrow(() -> new PostNotFoundException(postId));
         }
 

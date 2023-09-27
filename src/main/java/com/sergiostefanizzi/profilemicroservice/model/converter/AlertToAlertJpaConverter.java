@@ -13,9 +13,9 @@ public class AlertToAlertJpaConverter implements Converter<Alert, AlertJpa> {
     }
 
     public Alert convertBack(AlertJpa source){
-        Alert alert = new Alert(source.getId(),
-                source.getCreatedBy().getId(),
+        Alert alert = new Alert(source.getCreatedBy().getId(),
                 source.getReason());
+        alert.setId(source.getId());
         if (source.getComment().getId() != null) alert.setCommentId(source.getComment().getId());
         if (source.getPost().getId() != null) alert.setCommentId(source.getPost().getId());
         if (source.getManagedByAccount() != null) alert.setManagedBy(source.getManagedByAccount());

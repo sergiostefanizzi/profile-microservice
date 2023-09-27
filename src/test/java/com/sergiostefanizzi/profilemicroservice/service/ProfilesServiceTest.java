@@ -285,7 +285,7 @@ class ProfilesServiceTest {
         );
 
         when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.savedProfileJpa);
-        when(this.postsRepository.findAllActiveByProfileId(anyLong(), any(LocalDateTime.class))).thenReturn(Optional.of(postJpaList));
+        when(this.postsRepository.findAllActiveByProfileId(anyLong())).thenReturn(Optional.of(postJpaList));
         when(this.postToPostJpaConverter.convertBack(postJpaList.get(0))).thenReturn(newPost1);
         when(this.postToPostJpaConverter.convertBack(postJpaList.get(1))).thenReturn(newPost2);
         when(this.profileToProfileJpaConverter.convertBack(any(ProfileJpa.class))).thenReturn(convertedProfile);
@@ -295,7 +295,7 @@ class ProfilesServiceTest {
         assertNotNull(fullProfile);
         assertEquals(convertedFullProfile, fullProfile);
         verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
-        verify(this.postsRepository, times(1)).findAllActiveByProfileId(anyLong(), any(LocalDateTime.class));
+        verify(this.postsRepository, times(1)).findAllActiveByProfileId(anyLong());
         verify(this.postToPostJpaConverter, times(2)).convertBack(any(PostJpa.class));
         verify(this.profileToProfileJpaConverter, times(1)).convertBack(any(ProfileJpa.class));
 
@@ -321,7 +321,7 @@ class ProfilesServiceTest {
         );
 
         when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.savedProfileJpa);
-        when(this.postsRepository.findAllActiveByProfileId(anyLong(), any(LocalDateTime.class))).thenReturn(Optional.of(new ArrayList<>()));
+        when(this.postsRepository.findAllActiveByProfileId(anyLong())).thenReturn(Optional.of(new ArrayList<>()));
         when(this.profileToProfileJpaConverter.convertBack(any(ProfileJpa.class))).thenReturn(convertedProfile);
 
         FullProfile fullProfile = this.profilesService.findFull(profileId);
@@ -330,7 +330,7 @@ class ProfilesServiceTest {
         assertEquals(convertedFullProfile, fullProfile);
         assertTrue(fullProfile.getProfileGranted());
         verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
-        verify(this.postsRepository, times(1)).findAllActiveByProfileId(anyLong(), any(LocalDateTime.class));
+        verify(this.postsRepository, times(1)).findAllActiveByProfileId(anyLong());
         verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
         verify(this.profileToProfileJpaConverter, times(1)).convertBack(any(ProfileJpa.class));
 

@@ -353,7 +353,7 @@ class PostsControllerTest {
         // Aggiorno il post che verra' restituito dal service con il nuovo valore
         this.savedPost.setCaption(newCaption);
 
-        when(this.postsRepository.checkActiveById(anyLong(), any())).thenReturn(Optional.of(postId));
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         when(this.postsService.update(postId, postPatch)).thenReturn(this.savedPost);
 
@@ -408,7 +408,7 @@ class PostsControllerTest {
     @Test
     void testUpdatePost_CaptionLength_Then_400() throws Exception{
         errors.add("caption size must be between 0 and 2200");
-        when(this.postsRepository.checkActiveById(anyLong(), any())).thenReturn(Optional.of(postId));
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
 
         // genero una caption di 2210 caratteri, superando di 10 il limite
@@ -462,7 +462,7 @@ class PostsControllerTest {
 
     @Test
     void testFindPostById_Then_200() throws Exception{
-        when(this.postsRepository.checkActiveById(anyLong(), any())).thenReturn(Optional.of(postId));
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         when(this.postsService.find(postId)).thenReturn(this.savedPost);
 
@@ -633,7 +633,7 @@ class PostsControllerTest {
                 new Like(2L,postId),
                 new Like(3L,postId)
         );
-        when(this.postsRepository.checkActiveById(anyLong(), any())).thenReturn(Optional.of(postId));
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         when(this.postsService.findAllLikesByPostId(postId)).thenReturn(likeList);
 
@@ -659,7 +659,7 @@ class PostsControllerTest {
     @Test
     void testFindAllLikesByPostId_Empty_Then_200() throws Exception {
         List<Like> likeList = new ArrayList<>();
-        when(this.postsRepository.checkActiveById(anyLong(), any())).thenReturn(Optional.of(postId));
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         when(this.postsService.findAllLikesByPostId(postId)).thenReturn(likeList);
 
@@ -1068,7 +1068,7 @@ class PostsControllerTest {
         commentList.get(0).setId(1L);
         commentList.get(1).setId(2L);
         commentList.get(2).setId(3L);
-        when(this.postsRepository.checkActiveById(anyLong(), any())).thenReturn(Optional.of(postId));
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         when(this.postsService.findAllCommentsByPostId(postId)).thenReturn(commentList);
 
@@ -1116,7 +1116,7 @@ class PostsControllerTest {
     //TODO 401,403
     @Test
     void testFindAllCommentsByPostId_PostNotFound_Then_404() throws Exception {
-        when(this.postsRepository.checkActiveById(invalidPostId, LocalDateTime.now().minusDays(1))).thenReturn(Optional.empty());
+        when(this.postsRepository.checkActiveById(invalidPostId)).thenReturn(Optional.empty());
         doThrow(new PostNotFoundException(invalidPostId)).when(this.postsService).findAllCommentsByPostId(invalidPostId);
 
         MvcResult result = this.mockMvc.perform(get("/posts/comments/{postId}",invalidPostId))

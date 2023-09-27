@@ -22,6 +22,7 @@ public class FollowsJpa {
     @EmbeddedId
     private final FollowsId followsId;
     @Column(name = "request_status", nullable = false)
+    @Enumerated(EnumType.STRING)
     @NotNull
     private Follows.RequestStatusEnum requestStatus;
     @Column(name = "followed_at")

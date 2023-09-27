@@ -8,13 +8,13 @@ import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.LikesRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
-import com.sergiostefanizzi.profilemicroservice.system.exception.CommentNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.CommentOnStoryException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -34,6 +34,7 @@ public class PostsService {
     private final CommentsRepository commentsRepository;
     private final LikeToLikeJpaConverter likeToLikeJpaConverter;
     private final CommentToCommentJpaConverter commentToCommentJpaConverter;
+
 
     @Transactional
     public Post save(Post post) {
@@ -96,7 +97,7 @@ public class PostsService {
         // sia controllando che il profilo a cui appartiene il posto sia visibile da chi vuole mettere like
 
         // Controllo prima l'esistenza del post
-        PostJpa postJpa = this.postsRepository.findActiveById(like.getPostId(), LocalDateTime.now().minusDays(1))
+        PostJpa postJpa = this.postsRepository.findActiveById(like.getPostId())
                 .orElseThrow(() -> new PostNotFoundException(like.getPostId()));
         // Controllo poi l'esistenza del profilo di chi vuole mettere like
         ProfileJpa profileJpa = this.profilesRepository.findActiveById(like.getProfileId())
@@ -148,7 +149,7 @@ public class PostsService {
         // sia controllando il profilo
         // sia controllando che il profilo a cui appartiene il post sia visibile da chi vuole mettere like
         // Controllo prima l'esistenza del post
-        PostJpa postJpa = this.postsRepository.findActiveById(comment.getPostId(), LocalDateTime.now().minusDays(1))
+        PostJpa postJpa = this.postsRepository.findActiveById(comment.getPostId())
                 .orElseThrow(() -> new PostNotFoundException(comment.getPostId()));
         if (postJpa.getPostType().equals(Post.PostTypeEnum.POST)){
             // Controllo l'esistenza del profilo che vuole commentare il post
@@ -199,14 +200,14 @@ public class PostsService {
     @Transactional
     public List<Post> profileFeedByProfileId(Long profileId, Boolean onlyPost) {
         if (onlyPost == null){
-            return this.postsRepository.getFeedByProfileId(profileId, LocalDateTime.now().minusDays(1))
+            return this.postsRepository.getFeedByProfileId(profileId)
                     .stream().map(this.postToPostJpaConverter::convertBack).toList();
         } else {
             if (onlyPost) {
                 return this.postsRepository.getPostFeedByProfileId(profileId)
                         .stream().map(this.postToPostJpaConverter::convertBack).toList();
             }else {
-                return this.postsRepository.getStoryFeedByProfileId(profileId, LocalDateTime.now().minusDays(1))
+                return this.postsRepository.getStoryFeedByProfileId(profileId)
                         .stream().map(this.postToPostJpaConverter::convertBack).toList();
             }
         }

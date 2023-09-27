@@ -1280,7 +1280,6 @@ components:
           nullable: true
           readOnly: true
       required:
-        - id
         - created_by
         - reason
 

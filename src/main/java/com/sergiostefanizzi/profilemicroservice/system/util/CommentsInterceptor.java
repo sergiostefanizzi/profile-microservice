@@ -39,7 +39,7 @@ public class CommentsInterceptor implements HandlerInterceptor {
             if (requestMethod.equalsIgnoreCase("GET")) {
                 Long postId = Long.valueOf((String) pathVariables.get("postId"));
                 // Controllo che il post sia attivo
-                checkPostId = this.postsRepository.checkActiveById(postId, LocalDateTime.now().minusDays(1))
+                checkPostId = this.postsRepository.checkActiveById(postId)
                         .orElseThrow(() -> new PostNotFoundException(postId));
                 // Controllo che il profilo del post sia attivo
                 this.profilesRepository.checkActiveByPostId(postId)

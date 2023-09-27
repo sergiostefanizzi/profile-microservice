@@ -230,7 +230,7 @@ class FollowsServiceTest {
     @Test
     void testAddFollows_FollowsAlreadyCreated_Accepted_or_Pending_Request_follow_ACCEPT_Success(){
         FollowsJpa followsRequestJpa = new FollowsJpa(new FollowsId(this.publicProfileJpa.getId(), this.privateProfileJpa.getId()));
-        followsRequestJpa.setRequestStatus(Follows.RequestStatusEnum.ACCEPTED);
+        followsRequestJpa.setRequestStatus(Follows.RequestStatusEnum.PENDING);
         followsRequestJpa.setFollower(this.publicProfileJpa);
         followsRequestJpa.setFollowed(this.privateProfileJpa);
 
@@ -272,14 +272,14 @@ class FollowsServiceTest {
                 this.privateProfileJpa.getId(),
                 Follows.RequestStatusEnum.ACCEPTED);
 
-        when(this.followsRepository.findById(any(FollowsId.class))).thenReturn(Optional.of(followsRequestJpa));
+        when(this.followsRepository.findActiveById(any(FollowsId.class))).thenReturn(Optional.of(followsRequestJpa));
         when(this.followsRepository.save(any(FollowsJpa.class))).thenReturn(savedFollowsJpa);
         when(this.followsToFollowsJpaConverter.convertBack(any(FollowsJpa.class))).thenReturn(followsRequest);
 
-        Follows returnedFollows = this.followsService.addFollows(this.publicProfileJpa.getId(), this.privateProfileJpa.getId(), false);
+        Follows returnedFollows = this.followsService.acceptFollows(this.publicProfileJpa.getId(), this.privateProfileJpa.getId(), false);
 
         assertEquals(followsRequest, returnedFollows);
-        verify(this.followsRepository, times(1)).findById(any(FollowsId.class));
+        verify(this.followsRepository, times(1)).findActiveById(any(FollowsId.class));
         verify(this.followsRepository, times(1)).save(any(FollowsJpa.class));
         verify(this.followsToFollowsJpaConverter, times(1)).convertBack(any(FollowsJpa.class));
         log.info(savedFollowsJpa.getRequestStatus().toString());
@@ -299,14 +299,14 @@ class FollowsServiceTest {
                 this.privateProfileJpa.getId(),
                 Follows.RequestStatusEnum.REJECTED);
 
-        when(this.followsRepository.findById(any(FollowsId.class))).thenReturn(Optional.of(followsRequestJpa));
+        when(this.followsRepository.findActiveById(any(FollowsId.class))).thenReturn(Optional.of(followsRequestJpa));
         when(this.followsRepository.save(any(FollowsJpa.class))).thenReturn(followsRequestJpa);
         when(this.followsToFollowsJpaConverter.convertBack(any(FollowsJpa.class))).thenReturn(followsRequest);
 
-        Follows returnedFollows = this.followsService.addFollows(this.publicProfileJpa.getId(), this.privateProfileJpa.getId(), true);
+        Follows returnedFollows = this.followsService.acceptFollows(this.publicProfileJpa.getId(), this.privateProfileJpa.getId(), true);
 
         assertEquals(followsRequest, returnedFollows);
-        verify(this.followsRepository, times(1)).findById(any(FollowsId.class));
+        verify(this.followsRepository, times(1)).findActiveById(any(FollowsId.class));
         verify(this.followsRepository, times(1)).save(any(FollowsJpa.class));
         verify(this.followsToFollowsJpaConverter, times(1)).convertBack(any(FollowsJpa.class));
         log.info(followsRequestJpa.getRequestStatus().toString());
@@ -326,14 +326,14 @@ class FollowsServiceTest {
                 this.privateProfileJpa.getId(),
                 Follows.RequestStatusEnum.REJECTED);
 
-        when(this.followsRepository.findById(any(FollowsId.class))).thenReturn(Optional.of(followsRequestJpa));
+        when(this.followsRepository.findActiveById(any(FollowsId.class))).thenReturn(Optional.of(followsRequestJpa));
         when(this.followsRepository.save(any(FollowsJpa.class))).thenReturn(followsRequestJpa);
         when(this.followsToFollowsJpaConverter.convertBack(any(FollowsJpa.class))).thenReturn(followsRequest);
 
-        Follows returnedFollows = this.followsService.addFollows(this.publicProfileJpa.getId(), this.privateProfileJpa.getId(), true);
+        Follows returnedFollows = this.followsService.acceptFollows(this.publicProfileJpa.getId(), this.privateProfileJpa.getId(), true);
 
         assertEquals(followsRequest, returnedFollows);
-        verify(this.followsRepository, times(1)).findById(any(FollowsId.class));
+        verify(this.followsRepository, times(1)).findActiveById(any(FollowsId.class));
         verify(this.followsRepository, times(1)).save(any(FollowsJpa.class));
         verify(this.followsToFollowsJpaConverter, times(1)).convertBack(any(FollowsJpa.class));
         log.info(followsRequestJpa.getRequestStatus().toString());
@@ -354,14 +354,14 @@ class FollowsServiceTest {
                 Follows.RequestStatusEnum.ACCEPTED);
 
 
-        when(this.followsRepository.findById(any(FollowsId.class))).thenReturn(Optional.of(followsRequestJpa));
+        when(this.followsRepository.findActiveById(any(FollowsId.class))).thenReturn(Optional.of(followsRequestJpa));
         when(this.followsRepository.save(any(FollowsJpa.class))).thenReturn(followsRequestJpa);
         when(this.followsToFollowsJpaConverter.convertBack(any(FollowsJpa.class))).thenReturn(followsRequest);
 
-        Follows returnedFollows = this.followsService.addFollows(this.publicProfileJpa.getId(), this.privateProfileJpa.getId(), false);
+        Follows returnedFollows = this.followsService.acceptFollows(this.publicProfileJpa.getId(), this.privateProfileJpa.getId(), false);
 
         assertEquals(followsRequest, returnedFollows);
-        verify(this.followsRepository, times(1)).findById(any(FollowsId.class));
+        verify(this.followsRepository, times(1)).findActiveById(any(FollowsId.class));
         verify(this.followsRepository, times(1)).save(any(FollowsJpa.class));
         verify(this.followsToFollowsJpaConverter, times(1)).convertBack(any(FollowsJpa.class));
         log.info(followsRequestJpa.getRequestStatus().toString());
@@ -377,12 +377,12 @@ class FollowsServiceTest {
         followsRequestJpa.setFollowed(this.privateProfileJpa);
 
 
-        when(this.followsRepository.findById(any(FollowsId.class))).thenReturn(Optional.empty());
+        when(this.followsRepository.findActiveById(any(FollowsId.class))).thenReturn(Optional.empty());
 
         assertThrows(FollowNotFoundException.class,
                 () -> this.followsService.acceptFollows(this.publicProfileJpa.getId(), this.privateProfileJpa.getId(), false));
 
-        verify(this.followsRepository, times(1)).findById(any(FollowsId.class));
+        verify(this.followsRepository, times(1)).findActiveById(any(FollowsId.class));
         verify(this.followsRepository, times(0)).save(any(FollowsJpa.class));
         verify(this.followsToFollowsJpaConverter, times(0)).convertBack(any(FollowsJpa.class));
     }

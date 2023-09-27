@@ -58,7 +58,7 @@ public class AlertsService {
     private AlertJpa createPostAlert(Alert alert) {
         PostJpa postJpa;
         AlertJpa alertJpa;
-        postJpa = this.postsRepository.findActiveById(alert.getPostId(), LocalDateTime.now())
+        postJpa = this.postsRepository.findActiveById(alert.getPostId())
                 .orElseThrow(() -> new PostNotFoundException(alert.getPostId()));
         alertJpa = this.alertToAlertJpaConverter.convert(alert);
         assert alertJpa != null;

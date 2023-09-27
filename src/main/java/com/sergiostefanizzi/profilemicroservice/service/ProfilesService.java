@@ -88,8 +88,8 @@ public class ProfilesService {
         // controllo che il profilo non sia gia' stato eliminato o che non sia mai esistito
         ProfileJpa profileJpa = this.profilesRepository.getReferenceById(profileId);
         // cerco i post pubblicati dal profilo
-        //TODO fare test storie scadute
-        Optional<List<PostJpa>> postJpaList = this.postsRepository.findAllActiveByProfileId(profileId, LocalDateTime.now().minusDays(1));
+
+        Optional<List<PostJpa>> postJpaList = this.postsRepository.findAllActiveByProfileId(profileId);
         if (postJpaList.isPresent()){
             postList = postJpaList.get().stream().map(this.postToPostJpaConverter::convertBack).collect(Collectors.toList());
         }
