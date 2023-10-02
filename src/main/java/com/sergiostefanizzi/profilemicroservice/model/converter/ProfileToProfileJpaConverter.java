@@ -6,6 +6,8 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 
 
 @Component
@@ -31,6 +33,9 @@ public class ProfileToProfileJpaConverter implements Converter<Profile, ProfileJ
         profile.setBio(source.getBio());
         profile.setPictureUrl(source.getPictureUrl());
         profile.setId(source.getId());
+        if(source.getBlockedUntil()!=null){
+            profile.setBlockedUntil(OffsetDateTime.of(source.getBlockedUntil(), ZoneOffset.UTC));
+        }
         return profile;
     }
 }

@@ -1,10 +1,7 @@
 package com.sergiostefanizzi.profilemicroservice.system;
 
-import com.sergiostefanizzi.profilemicroservice.system.util.CommentsInterceptor;
-import com.sergiostefanizzi.profilemicroservice.system.util.FollowsInterceptor;
+import com.sergiostefanizzi.profilemicroservice.system.util.*;
 
-import com.sergiostefanizzi.profilemicroservice.system.util.PostsInterceptor;
-import com.sergiostefanizzi.profilemicroservice.system.util.ProfileInterceptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
@@ -32,6 +29,8 @@ public class ProfileConfiguration implements WebMvcConfigurer {
     private PostsInterceptor postsInterceptor;
     @Autowired
     private CommentsInterceptor commentsInterceptor;
+    @Autowired
+    private AdminsProfileInterceptor adminsProfileInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -52,6 +51,8 @@ public class ProfileConfiguration implements WebMvcConfigurer {
                 .excludePathPatterns("/alerts");
         registry.addInterceptor(this.commentsInterceptor)
                 .addPathPatterns("/posts/comments/*")
-                .excludePathPatterns("/alerts");;
+                .excludePathPatterns("/alerts");
+        registry.addInterceptor(this.adminsProfileInterceptor)
+                .addPathPatterns("/admins/profiles/**");
     }
 }

@@ -814,7 +814,7 @@ paths:
           $ref: '#/components/responses/InternalServerError'
 
   /admins/profiles/{profileId}:
-    put:
+    patch:
       tags:
         - admins
       summary: Block a profile
@@ -830,12 +830,12 @@ paths:
           schema:
             type: integer
             format: int64
-        - name: blockedUntil
-          in: query
-          description: Block a profile for a specific time or unblock
-          schema:
-            type: string
-            format: date-time
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProfileAdminPatch'
       responses:
         '200':
           description: Profile has been successfully blocked!
@@ -868,7 +868,7 @@ paths:
       parameters:
         - name: closedAlerts
           in: query
-          description: Show or not show removed alerts
+          description: Show or not show closed alerts
           required: true
           schema:
             type: boolean
@@ -1030,6 +1030,11 @@ components:
         is_private:
           type: boolean
         #TODO: con JWT non uso piu' account_id
+        blocked_until:
+          type: string
+          format: date-time
+          readOnly: true
+          x-nonnull: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
         account_id:
           type: integer
           format: int64
@@ -1072,6 +1077,16 @@ components:
           x-url: '@MyURL'
         is_private:
           type: boolean
+
+    ProfileAdminPatch:
+      type: object
+      properties:
+        blocked_until:
+          type: string
+          format: date-time
+          x-future: '@Future'
+          nullable: true
+
 
     Follows:
       type: object

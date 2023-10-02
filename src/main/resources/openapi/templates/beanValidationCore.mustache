@@ -1,5 +1,6 @@
 {{{ vendorExtensions.x-nonnull }}}
 {{{ vendorExtensions.x-url }}}
+{{{ vendorExtensions.x-future }}}
 {{#pattern}}{{^isByteArray}}@Pattern(regexp = "{{{pattern}}}"{{#vendorExtensions.x-pattern-message}}, message="{{vendorExtensions.x-pattern-message}}"{{/vendorExtensions.x-pattern-message}}) {{/isByteArray}}{{/pattern}}{{!
 minLength && maxLength set
 }}{{#minLength}}{{#maxLength}}@Size(min = {{minLength}}, max = {{maxLength}}) {{/maxLength}}{{/minLength}}{{!

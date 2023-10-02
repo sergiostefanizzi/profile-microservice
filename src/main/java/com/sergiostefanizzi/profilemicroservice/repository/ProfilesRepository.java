@@ -13,19 +13,22 @@ import java.util.Optional;
 
 @Repository
 public interface ProfilesRepository extends JpaRepository<ProfileJpa, Long> {
-    @Query("SELECT p FROM ProfileJpa p WHERE p.profileName LIKE :profileName% AND p.deletedAt IS NULL")
+    @Query("SELECT p FROM ProfileJpa p WHERE p.profileName LIKE :profileName% AND p.deletedAt IS NULL AND p.blockedUntil IS NULL")
     List<ProfileJpa> findAllActiveByProfileName(@Param("profileName") String profileName);
 
-    @Query("SELECT p.profileName FROM ProfileJpa p WHERE p.profileName = :profileName AND p.deletedAt IS NULL")
+    @Query("SELECT p.profileName FROM ProfileJpa p WHERE p.profileName = :profileName AND p.deletedAt IS NULL AND p.blockedUntil IS NULL")
     Optional<String> checkActiveByProfileName(String profileName);
 
-    @Query("SELECT p FROM ProfileJpa p WHERE p.id=:profileId AND p.deletedAt IS NULL")
+    @Query("SELECT p FROM ProfileJpa p WHERE p.id=:profileId AND p.deletedAt IS NULL AND p.blockedUntil IS NULL")
     Optional<ProfileJpa> findActiveById(Long profileId);
 
-    @Query("SELECT p.id FROM ProfileJpa p WHERE p.id=:profileId AND p.deletedAt IS NULL")
+    @Query("SELECT p.id FROM ProfileJpa p WHERE p.id=:profileId AND p.deletedAt IS NULL AND p.blockedUntil IS NULL")
     Optional<Long> checkActiveById(Long profileId);
 
-    @Query("SELECT p.id FROM ProfileJpa p INNER JOIN PostJpa q ON p.id = q.profile.id WHERE q.id=:postId AND p.deletedAt IS NULL")
+    @Query("SELECT p.id FROM ProfileJpa p WHERE p.id=:profileId AND p.deletedAt IS NULL")
+    Optional<Long> adminCheckActiveById(Long profileId);
+
+    @Query("SELECT p.id FROM ProfileJpa p INNER JOIN PostJpa q ON p.id = q.profile.id WHERE q.id=:postId AND p.deletedAt IS NULL AND p.blockedUntil IS NULL")
     Optional<Long> checkActiveByPostId(Long postId);
 
 }
