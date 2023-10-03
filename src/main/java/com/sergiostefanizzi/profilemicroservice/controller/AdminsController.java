@@ -36,8 +36,9 @@ public class AdminsController implements AdminsApi {
     }
 
     @Override
-    public ResponseEntity<List<Profile>> findAllProfiles(Boolean removedProfile, Boolean blockedProfile) {
-        return AdminsApi.super.findAllProfiles(removedProfile, blockedProfile);
+    public ResponseEntity<List<Profile>> findAllProfiles(Boolean removedProfile) {
+        List<Profile> profileList = this.adminsService.findAllProfiles(removedProfile);
+        return new ResponseEntity<>(profileList, HttpStatus.OK);
     }
 
     @Override

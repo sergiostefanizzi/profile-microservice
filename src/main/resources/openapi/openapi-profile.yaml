@@ -794,11 +794,6 @@ paths:
           description: Show or not show removed profiles
           schema:
             type: boolean
-        - name: blockedProfile
-          in: query
-          description: Show or not show blocked profiles
-          schema:
-            type: boolean
       responses:
         '200':
           description: List of all profiles found and returned

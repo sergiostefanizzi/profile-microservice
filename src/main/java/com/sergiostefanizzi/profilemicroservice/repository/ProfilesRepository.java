@@ -13,6 +13,8 @@ import java.util.Optional;
 
 @Repository
 public interface ProfilesRepository extends JpaRepository<ProfileJpa, Long> {
+    @Query("SELECT p FROM ProfileJpa p WHERE p.deletedAt IS NULL")
+    List<ProfileJpa> findAllActiveProfiles();
     @Query("SELECT p FROM ProfileJpa p WHERE p.profileName LIKE :profileName% AND p.deletedAt IS NULL AND p.blockedUntil IS NULL")
     List<ProfileJpa> findAllActiveByProfileName(@Param("profileName") String profileName);
 

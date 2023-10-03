@@ -13,11 +13,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.*;
+import java.util.List;
 
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -201,6 +204,65 @@ public class AdminsIT {
         log.info("Error -> "+node.get("error"));
     }
 
+    @Test
+    void testFindAllProfiles_RemovedTrue_Then_200() throws Exception{
+        Profile profile1 = createPublicProfile("pincoPallino1");
+        Profile profile2 = createPublicProfile("pincoPallino2");
+        Profile profile3 = createPublicProfile("pincoPallino3");
+        removeProfile(profile2);
+
+        ResponseEntity<List<Profile>> responseProfileList = this.testRestTemplate.exchange(
+                this.baseUrlAdminProfiles+"?removedProfile={removedProfile}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                new ParameterizedTypeReference<List<Profile>>() {
+                },
+                true);
+        assertEquals(HttpStatus.OK, responseProfileList.getStatusCode());
+        assertNotNull(responseProfileList.getBody());
+        List<Profile> savedProfileList = responseProfileList.getBody();
+        assertEquals(asList(profile1, profile2, profile3), savedProfileList);
+        log.info(responseProfileList.toString());
+    }
+
+    @Test
+    void testFindAllProfiles_RemovedFalse_Then_200() throws Exception{
+        Profile profile1 = createPublicProfile("pincoPallino1");
+        Profile profile2 = createPublicProfile("pincoPallino2");
+        Profile profile3 = createPublicProfile("pincoPallino3");
+        removeProfile(profile2);
+
+        ResponseEntity<List<Profile>> responseProfileList = this.testRestTemplate.exchange(
+                this.baseUrlAdminProfiles+"?removedProfile={removedProfile}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                new ParameterizedTypeReference<List<Profile>>() {
+                },
+                false);
+        assertEquals(HttpStatus.OK, responseProfileList.getStatusCode());
+        assertNotNull(responseProfileList.getBody());
+        List<Profile> savedProfileList = responseProfileList.getBody();
+        assertEquals(asList(profile1, profile3), savedProfileList);
+        log.info(responseProfileList.toString());
+    }
+
+    @Test
+    void testFindAllProfiles_Then_400() throws Exception{
+        ResponseEntity<String> response = this.testRestTemplate.exchange(
+                this.baseUrlAdminProfiles+"?removedProfile={removedProfile}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class,
+                "NotBoolean");
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Boolean'; Invalid boolean value [NotBoolean]" ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
     private Profile blockProfile(Profile profileToBlock, Boolean isBlock, Integer days) {
         ProfileAdminPatch profileAdminPatch = new ProfileAdminPatch();
         if(isBlock && days != null){
@@ -223,6 +285,17 @@ public class AdminsIT {
         Profile updatedProfile = responseProfile.getBody();
         assertEquals(profileAdminPatch.getBlockedUntil(), updatedProfile.getBlockedUntil());
         return updatedProfile;
+    }
+
+    private void removeProfile(Profile profileToBlock) {
+        ResponseEntity<Void> responseDelete = this.testRestTemplate.exchange(this.baseUrlProfile+"/{profileId}",
+                HttpMethod.DELETE,
+                HttpEntity.EMPTY,
+                Void.class,
+                profileToBlock.getId());
+
+        assertEquals(HttpStatus.NO_CONTENT, responseDelete.getStatusCode());
+        assertNull(responseDelete.getBody());
     }
 
 

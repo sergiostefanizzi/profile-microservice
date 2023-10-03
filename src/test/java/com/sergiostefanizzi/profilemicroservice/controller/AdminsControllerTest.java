@@ -3,15 +3,12 @@ package com.sergiostefanizzi.profilemicroservice.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.sergiostefanizzi.profilemicroservice.model.Alert;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
 import com.sergiostefanizzi.profilemicroservice.model.ProfileAdminPatch;
 import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.service.AdminsService;
-import com.sergiostefanizzi.profilemicroservice.service.AlertsService;
-import com.sergiostefanizzi.profilemicroservice.system.exception.AlertTypeErrorException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
@@ -28,16 +25,18 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.*;
+import java.util.List;
 import java.util.Optional;
 
+import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -160,8 +159,6 @@ public class AdminsControllerTest {
 
         when(this.profilesRepository.adminCheckActiveById(anyLong())).thenReturn(Optional.of(profileId));
         when(this.adminsService.blockProfileById(anyLong(), any(ProfileAdminPatch.class))).thenReturn(updatedProfile);
-
-        String profileAdminPatchJson = this.objectMapper.writeValueAsString(profileAdminPatch);
 
         MvcResult result = this.mockMvc.perform(patch("/admins/profiles/{profileId}",profileId)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -295,5 +292,62 @@ public class AdminsControllerTest {
         // salvo risposta in result per visualizzarla
         String resultAsString = result.getResponse().getContentAsString();
         log.info("\nErrors\n" +resultAsString);
+    }
+
+    @Test
+    void testFindAllProfiles_Then_200() throws Exception{
+        List<Profile> profileList = createProfileList();
+
+        when(this.adminsService.findAllProfiles(anyBoolean())).thenReturn(profileList);
+
+        MvcResult result = this.mockMvc.perform(get("/admins/profiles?removedProfile={removedProfile}",true)
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$", hasSize(3)))
+                .andExpect(jsonPath("$[0].id").value(profileList.get(0).getId()))
+                .andExpect(jsonPath("$[1].id").value(profileList.get(1).getId()))
+                .andExpect(jsonPath("$[2].id").value(profileList.get(2).getId()))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+
+        log.info(resultAsString);
+    }
+
+    @Test
+    void testFindAllProfiles_Then_400() throws Exception{
+        List<Profile> profileList = createProfileList();
+
+        when(this.adminsService.findAllProfiles(anyBoolean())).thenReturn(profileList);
+
+        MvcResult result = this.mockMvc.perform(get("/admins/profiles?removedProfile={removedProfile}","NotBoolean")
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(res.getResolvedException() instanceof MethodArgumentTypeMismatchException))
+                .andExpect(jsonPath("$.error").value("Failed to convert value of type 'java.lang.String' to required type 'java.lang.Boolean'; Invalid boolean value [NotBoolean]"))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("\nErrors\n" +resultAsString);
+    }
+
+    private static List<Profile> createProfileList() {
+        Profile profile1 = createProfile("pinco",1L);
+        Profile profile2 = createProfile("pinco2",2L);
+        Profile profile3 = createProfile("pinco3",3L);
+
+        return asList(profile1,profile2,profile3);
+    }
+
+    private static Profile createProfile(String profileName, Long id) {
+        //accountId e profileId in questo caso sono uguali
+        Profile profile = new Profile(profileName,false, id);
+        profile.setId(id);
+        return profile;
     }
 }
