@@ -862,17 +862,12 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: closedAlerts
+        - name: alertStatus
           in: query
           description: Show or not show closed alerts
-          required: true
           schema:
-            type: boolean
-        - name: adminId
-          in: query
-          description: Id of the admin profile in order to see its managed alerts
-          schema:
-            type: boolean
+            type: string
+            enum: [O, C]
       responses:
         '200':
           description: List of all alerts found and returned
@@ -916,6 +911,8 @@ paths:
           $ref: '#/components/responses/Unauthenticated'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
 

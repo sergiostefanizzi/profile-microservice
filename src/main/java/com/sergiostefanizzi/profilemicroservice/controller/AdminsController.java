@@ -30,10 +30,11 @@ public class AdminsController implements AdminsApi {
         Alert returnedAlert = this.adminsService.findAlertById(alertId);
         return new ResponseEntity<>(returnedAlert, HttpStatus.OK);
     }
-    //TODO da fare
+    // TODO
     @Override
-    public ResponseEntity<List<Alert>> findAllAlerts(Boolean closedAlerts, Boolean adminId) {
-        return AdminsApi.super.findAllAlerts(closedAlerts, adminId);
+    public ResponseEntity<List<Alert>> findAllAlerts(String alertStatus) {
+        List<Alert> alertList = this.adminsService.findAllAlerts(alertStatus);
+        return new ResponseEntity<>(alertList, HttpStatus.OK);
     }
 
     @Override

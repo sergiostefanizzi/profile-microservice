@@ -5,6 +5,7 @@ import com.sergiostefanizzi.profilemicroservice.model.converter.AlertToAlertJpaC
 import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfileJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.repository.AlertsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
+import com.sergiostefanizzi.profilemicroservice.system.exception.AlertStatusNotValidException;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,10 +21,11 @@ public class AdminsService {
     private final ProfileToProfileJpaConverter profileToProfileJpaConverter;
     private final AlertsRepository alertsRepository;
     private final AlertToAlertJpaConverter alertToAlertJpaConverter;
+
+
     @Transactional
     public Profile blockProfileById(Long profileId, ProfileAdminPatch profileAdminPatch) {
         ProfileJpa profileToUpdate = this.profilesRepository.getReferenceById(profileId);
-
 
         if(profileAdminPatch.getBlockedUntil() != null){
             //blocco
@@ -63,5 +65,27 @@ public class AdminsService {
         return this.alertToAlertJpaConverter.convertBack(
                 this.alertsRepository.save(alertJpa)
         );
+    }
+
+    @Transactional
+    public List<Alert> findAllAlerts(String alertStatus) {
+        return getAlertListByStatus(alertStatus).stream().map(this.alertToAlertJpaConverter::convertBack).toList();
+    }
+
+    private List<AlertJpa> getAlertListByStatus(String alertStatus) {
+        List<AlertJpa> alertList;
+        if (alertStatus != null){
+            if(alertStatus.equalsIgnoreCase("O")){
+                alertList = this.alertsRepository.findAllOpenAlerts();
+            } else if (alertStatus.equalsIgnoreCase("C")) {
+                alertList = this.alertsRepository.findAllClosedAlerts();
+            }else{
+                throw new AlertStatusNotValidException();
+            }
+        }else {
+            // return open and closed alerts
+            alertList = this.alertsRepository.findAll();
+        }
+        return alertList;
     }
 }

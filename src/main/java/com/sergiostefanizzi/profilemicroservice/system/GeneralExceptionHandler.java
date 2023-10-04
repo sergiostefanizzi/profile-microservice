@@ -27,6 +27,14 @@ import java.util.stream.Collectors;
 @Slf4j
 public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
 
+    @ExceptionHandler(AlertStatusNotValidException.class)
+    public ResponseEntity<Object> handleAlertStatusNotValidException(AlertStatusNotValidException ex, WebRequest request){
+        log.error(ex.getMessage(),ex);
+        String error = "Alert status not valid!";
+        Map<String, String> body = new HashMap<>();
+        body.put("error", error);
+        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
+    }
 
     @ExceptionHandler(FollowItselfException.class)
     public ResponseEntity<Object> handleFollowItselfException(FollowItselfException ex, WebRequest request){

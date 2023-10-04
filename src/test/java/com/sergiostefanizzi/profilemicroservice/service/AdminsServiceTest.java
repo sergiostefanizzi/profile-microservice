@@ -217,7 +217,7 @@ public class AdminsServiceTest {
 
     @Test
     void testFindAlertById_Success(){
-        AlertJpa savedAlertJpa = createAlertJpa();
+        AlertJpa savedAlertJpa = createAlertJpa(this.profileName, this.profileName+"2", 1L);
         Alert convertedAlert = createAlert(savedAlertJpa);
 
         when(this.alertsRepository.getReferenceById(anyLong())).thenReturn(savedAlertJpa);
@@ -236,7 +236,7 @@ public class AdminsServiceTest {
     void testUpdateAlertById_Success(){
         AlertPatch alertPatch = new AlertPatch(this.adminAccountId);
 
-        AlertJpa savedAlertJpa = createAlertJpa();
+        AlertJpa savedAlertJpa = createAlertJpa(this.profileName+"3", this.profileName+"4", 2L);
         Alert convertedAlert = createAlert(savedAlertJpa);
         convertedAlert.setManagedBy(this.adminAccountId);
 
@@ -253,6 +253,59 @@ public class AdminsServiceTest {
         log.info(updatedAlert.toString());
     }
 
+    @Test
+    void testFindAllAlerts_FindAll_Success(){
+        List<AlertJpa> alertJpaList = createAlertJpaList();
+        List<Alert> alertList = createAlertList(alertJpaList);
+
+        when(this.alertsRepository.findAll()).thenReturn(alertJpaList);
+        when(this.alertToAlertJpaConverter.convertBack(alertJpaList.get(0))).thenReturn(alertList.get(0));
+        when(this.alertToAlertJpaConverter.convertBack(alertJpaList.get(1))).thenReturn(alertList.get(1));
+        when(this.alertToAlertJpaConverter.convertBack(alertJpaList.get(2))).thenReturn(alertList.get(2));
+
+        List<Alert> returnedAlertList = this.adminsService.findAllAlerts(null);
+        assertEquals(alertList, returnedAlertList);
+        verify(this.alertsRepository, times(1)).findAll();
+        verify(this.alertsRepository, times(0)).findAllOpenAlerts();
+        verify(this.alertsRepository, times(0)).findAllClosedAlerts();
+        verify(this.alertToAlertJpaConverter, times(3)).convertBack(any(AlertJpa.class));
+        log.info(returnedAlertList.toString());
+    }
+
+    @Test
+    void testFindAllAlerts_FindOpen_Success(){
+        List<AlertJpa> alertJpaList = createAlertJpaList();
+        List<Alert> alertList = createAlertList(alertJpaList);
+
+        when(this.alertsRepository.findAllOpenAlerts()).thenReturn(alertJpaList);
+        when(this.alertToAlertJpaConverter.convertBack(alertJpaList.get(0))).thenReturn(alertList.get(0));
+        when(this.alertToAlertJpaConverter.convertBack(alertJpaList.get(1))).thenReturn(alertList.get(1));
+        when(this.alertToAlertJpaConverter.convertBack(alertJpaList.get(2))).thenReturn(alertList.get(2));
+
+        List<Alert> returnedAlertList = this.adminsService.findAllAlerts("O");
+        assertEquals(alertList, returnedAlertList);
+        verify(this.alertsRepository, times(0)).findAll();
+        verify(this.alertsRepository, times(1)).findAllOpenAlerts();
+        verify(this.alertsRepository, times(0)).findAllClosedAlerts();
+        verify(this.alertToAlertJpaConverter, times(3)).convertBack(any(AlertJpa.class));
+        log.info(returnedAlertList.toString());
+    }
+    private static List<Alert> createAlertList(List<AlertJpa> alertJpaList) {
+        return asList(
+          createAlert(alertJpaList.get(0)),
+          createAlert(alertJpaList.get(1)),
+          createAlert(alertJpaList.get(2))
+        );
+    }
+
+    private List<AlertJpa> createAlertJpaList() {
+        return asList(
+                createAlertJpa(this.profileName+"5", this.profileName+"6", 3L),
+                createAlertJpa(this.profileName+"7", this.profileName+"8", 4L),
+                createAlertJpa(this.profileName+"9", this.profileName+"10", 5L));
+    }
+
+
     private static Alert createAlert(AlertJpa savedAlertJpa) {
         Alert convertedAlert = new Alert(savedAlertJpa.getCreatedBy().getId(), savedAlertJpa.getReason());
         convertedAlert.setPostId(savedAlertJpa.getPost().getId());
@@ -260,22 +313,22 @@ public class AdminsServiceTest {
         return convertedAlert;
     }
 
-    private AlertJpa createAlertJpa() {
-        ProfileJpa alertOwner = new ProfileJpa(this.profileName, false , this.accountId);
-        alertOwner.setId(1L);
+    private AlertJpa createAlertJpa(String alertOwnerName, String postOwnerName, Long id) {
+        ProfileJpa alertOwner = new ProfileJpa(alertOwnerName, false , this.accountId);
+        alertOwner.setId(id);
         alertOwner.setCreatedAt(LocalDateTime.MIN);
 
-        ProfileJpa postOwner = new ProfileJpa(this.profileName+"2", false, 2L);
-        postOwner.setId(2L);
+        ProfileJpa postOwner = new ProfileJpa(postOwnerName, false, 2L);
+        postOwner.setId(id+1L);
         postOwner.setCreatedAt(LocalDateTime.MIN);
 
         PostJpa postJpa = new PostJpa(this.contentUrl, this.postType);
-        postJpa.setId(1L);
+        postJpa.setId(id*10);
         postJpa.setCreatedAt(LocalDateTime.MIN);
         postJpa.setProfile(postOwner);
 
         AlertJpa savedAlertJpa = new AlertJpa(this.alertReason);
-        savedAlertJpa.setId(1L);
+        savedAlertJpa.setId(id*100);
         savedAlertJpa.setPost(postJpa);
         savedAlertJpa.setCreatedBy(alertOwner);
         savedAlertJpa.setCreatedAt(LocalDateTime.now());

@@ -17,7 +17,7 @@ import java.util.List;
 @Slf4j
 public class ScheduledStoriesRemoveTask {
     private final PostsRepository postsRepository;
-
+    // aggiungere random
     @Scheduled(fixedRate = 5000L)
     @Transactional
     public void removeOutdatedStories(){
