@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sergiostefanizzi.profilemicroservice.model.Alert;
+import com.sergiostefanizzi.profilemicroservice.model.AlertPatch;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
 import com.sergiostefanizzi.profilemicroservice.model.ProfileAdminPatch;
 import com.sergiostefanizzi.profilemicroservice.repository.AlertsRepository;
@@ -348,10 +349,7 @@ public class AdminsControllerTest {
 
     @Test
     void testFindAlertById_Then_200() throws Exception {
-        Alert returnedAlert = new Alert(this.alertOwnerId, this.alertReason);
-        returnedAlert.setId(this.alertId);
-        returnedAlert.setPostId(this.alertPostId);
-        returnedAlert.setManagedBy(this.managedById);
+        Alert returnedAlert = createAlert();
 
 
         when(this.alertsRepository.checkAlertById(anyLong())).thenReturn(Optional.of(this.alertId));
@@ -404,6 +402,109 @@ public class AdminsControllerTest {
         log.info("Errors\n" + resultAsString);
         log.info("Resolved Error ---> " + result.getResolvedException());
     }
+
+    @Test
+    void testUpdateAlertById_Then_200() throws Exception {
+        Alert alert = createAlert();
+
+        String alertPatchJson = this.objectMapper.writeValueAsString(new AlertPatch(this.managedById));
+
+        when(this.alertsRepository.checkAlertById(anyLong())).thenReturn(Optional.of(this.alertId));
+        when(this.adminsService.updateAlertById(anyLong(), any(AlertPatch.class))).thenReturn(alert);
+
+        MvcResult result = this.mockMvc.perform(patch("/admins/alerts/{alertId}",this.alertId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content(alertPatchJson)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.*", hasSize(5)))
+                .andExpect(jsonPath("$.id").value(alert.getId()))
+                .andExpect(jsonPath("$.created_by").value(alert.getCreatedBy()))
+                .andExpect(jsonPath("$.post_id").value(alert.getPostId()))
+                .andExpect(jsonPath("$.reason").value(alert.getReason()))
+                .andExpect(jsonPath("$.managed_by").value(alert.getManagedBy()))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        Alert alertResult = this.objectMapper.readValue(resultAsString, Alert.class);
+
+        log.info(alertResult.toString());
+    }
+
+    @Test
+    void testUpdateAlertById_IdNotLong_Then_400() throws Exception {
+        String alertPatchJson = this.objectMapper.writeValueAsString(new AlertPatch(this.managedById));
+        when(this.alertsRepository.checkAlertById(anyLong())).thenReturn(Optional.empty());
+        MvcResult result = this.mockMvc.perform(patch("/admins/alerts/IdNotLong")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content(alertPatchJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof NumberFormatException
+                ))
+                .andExpect(jsonPath("$.error").value("ID is not valid!")).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+    }
+
+    @Test
+    void testUpdateAlertById_ManagedByNotLong_Then_400() throws Exception {
+        String alertPatchJson = this.objectMapper.writeValueAsString(new AlertPatch(this.managedById));
+
+        JsonNode jsonNode = this.objectMapper.readTree(alertPatchJson);
+        ((ObjectNode) jsonNode).put("managed_by", "IdNotLong");
+        alertPatchJson = this.objectMapper.writeValueAsString(jsonNode);
+
+        when(this.alertsRepository.checkAlertById(anyLong())).thenReturn(Optional.of(this.alertId));
+        MvcResult result = this.mockMvc.perform(patch("/admins/alerts/{alertId}",this.alertId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content(alertPatchJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof HttpMessageNotReadableException
+                ))
+                .andExpect(jsonPath("$.error").value("JSON parse error: Cannot deserialize value of type `java.lang.Long` from String \"IdNotLong\": not a valid `java.lang.Long` value")).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+    }
+
+    @Test
+    void testUpdateAlertById_AlertNotFound_Then_404() throws Exception {
+
+        String alertPatchJson = this.objectMapper.writeValueAsString(new AlertPatch(this.managedById));
+        when(this.alertsRepository.checkAlertById(anyLong())).thenReturn(Optional.empty());
+        MvcResult result = this.mockMvc.perform(patch("/admins/alerts/{alertId}",Long.MAX_VALUE)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .content(alertPatchJson))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof AlertNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value("Alert "+Long.MAX_VALUE+" not found!")).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+    }
+
+    private Alert createAlert() {
+        Alert alert = new Alert(this.alertOwnerId, this.alertReason);
+        alert.setId(this.alertId);
+        alert.setPostId(this.alertPostId);
+        alert.setManagedBy(this.managedById);
+        return alert;
+    }
+
+
 
     private static List<Profile> createProfileList() {
         Profile profile1 = createProfile("pinco",1L);

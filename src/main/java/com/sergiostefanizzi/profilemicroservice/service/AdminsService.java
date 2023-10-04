@@ -1,9 +1,6 @@
 package com.sergiostefanizzi.profilemicroservice.service;
 
-import com.sergiostefanizzi.profilemicroservice.model.Alert;
-import com.sergiostefanizzi.profilemicroservice.model.Profile;
-import com.sergiostefanizzi.profilemicroservice.model.ProfileAdminPatch;
-import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
+import com.sergiostefanizzi.profilemicroservice.model.*;
 import com.sergiostefanizzi.profilemicroservice.model.converter.AlertToAlertJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfileJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.repository.AlertsRepository;
@@ -56,6 +53,15 @@ public class AdminsService {
     public Alert findAlertById(Long alertId) {
         return this.alertToAlertJpaConverter.convertBack(
                 this.alertsRepository.getReferenceById(alertId)
+        );
+    }
+
+    @Transactional
+    public Alert updateAlertById(Long alertId, AlertPatch alertPatch) {
+        AlertJpa alertJpa = this.alertsRepository.getReferenceById(alertId);
+        alertJpa.setManagedByAccount(alertPatch.getManagedBy());
+        return this.alertToAlertJpaConverter.convertBack(
+                this.alertsRepository.save(alertJpa)
         );
     }
 }

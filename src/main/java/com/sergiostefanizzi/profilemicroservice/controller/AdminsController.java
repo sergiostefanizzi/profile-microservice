@@ -30,7 +30,7 @@ public class AdminsController implements AdminsApi {
         Alert returnedAlert = this.adminsService.findAlertById(alertId);
         return new ResponseEntity<>(returnedAlert, HttpStatus.OK);
     }
-
+    //TODO da fare
     @Override
     public ResponseEntity<List<Alert>> findAllAlerts(Boolean closedAlerts, Boolean adminId) {
         return AdminsApi.super.findAllAlerts(closedAlerts, adminId);
@@ -44,6 +44,7 @@ public class AdminsController implements AdminsApi {
 
     @Override
     public ResponseEntity<Alert> updateAlertById(Long alertId, AlertPatch alertPatch) {
-        return AdminsApi.super.updateAlertById(alertId, alertPatch);
+        Alert updatedAlert = this.adminsService.updateAlertById(alertId, alertPatch);
+        return new ResponseEntity<>(updatedAlert, HttpStatus.OK);
     }
 }

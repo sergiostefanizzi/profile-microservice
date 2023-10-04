@@ -42,6 +42,7 @@ public class AdminsServiceTest {
     private Long profileId = 1L;
     private Long accountId = 1L;
     private Long alertId = 1L;
+    private Long adminAccountId = 3L;
     private String profileName = "pinco_pallino";
     private String alertReason = "Motivo della segnalazione";
     private String contentUrl = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Cape_may.jpg";
@@ -215,7 +216,7 @@ public class AdminsServiceTest {
     }
 
     @Test
-    void testFindAlertById(){
+    void testFindAlertById_Success(){
         AlertJpa savedAlertJpa = createAlertJpa();
         Alert convertedAlert = createAlert(savedAlertJpa);
 
@@ -229,6 +230,27 @@ public class AdminsServiceTest {
         verify(this.alertToAlertJpaConverter, times(1)).convertBack(any(AlertJpa.class));
 
         log.info(returnedAlert.toString());
+    }
+
+    @Test
+    void testUpdateAlertById_Success(){
+        AlertPatch alertPatch = new AlertPatch(this.adminAccountId);
+
+        AlertJpa savedAlertJpa = createAlertJpa();
+        Alert convertedAlert = createAlert(savedAlertJpa);
+        convertedAlert.setManagedBy(this.adminAccountId);
+
+        when(this.alertsRepository.getReferenceById(anyLong())).thenReturn(savedAlertJpa);
+        when(this.alertsRepository.save(any(AlertJpa.class))).thenReturn(savedAlertJpa);
+        when(this.alertToAlertJpaConverter.convertBack(any(AlertJpa.class))).thenReturn(convertedAlert);
+
+        Alert updatedAlert = this.adminsService.updateAlertById(this.alertId, alertPatch);
+
+        assertEquals(convertedAlert, updatedAlert);
+        verify(this.alertsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.alertToAlertJpaConverter, times(1)).convertBack(any(AlertJpa.class));
+
+        log.info(updatedAlert.toString());
     }
 
     private static Alert createAlert(AlertJpa savedAlertJpa) {
