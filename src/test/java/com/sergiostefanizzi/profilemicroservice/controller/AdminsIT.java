@@ -12,14 +12,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.*;
-import java.util.List;
 
-import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -40,6 +37,7 @@ public class AdminsIT {
     private String alertOwnerProfileName = "giovanni2";
     private String postOwnerProfileName = "pincoPalla";
     private String alertReason = "Motivo della segnalazione";
+    private Long managedByAdminId = 3L;
     @Autowired
     private TestRestTemplate testRestTemplate;
     @Autowired
@@ -276,7 +274,7 @@ public class AdminsIT {
 
     @Test
     void testFindAlertById_Then_200() throws Exception {
-        Alert savedAlert = createProfilePostAlert();
+        Alert savedAlert = createProfilePostAlert(this.alertOwnerProfileName+"1", this.postOwnerProfileName+"1");
 
         ResponseEntity<Alert> responseAlert = this.testRestTemplate.exchange(
                 this.baseUrlAdminAlerts+"/{alertId}",
@@ -327,11 +325,101 @@ public class AdminsIT {
         log.info("Error -> "+node.get("error"));
     }
 
-    private Alert createProfilePostAlert() {
+    @Test
+    void testUpdateAlertById_Then_200() throws Exception {
+        Alert savedAlert = createProfilePostAlert(this.alertOwnerProfileName+"2", this.postOwnerProfileName+"2");
+        AlertPatch alertPatch = new AlertPatch(this.managedByAdminId);
+
+        HttpEntity<AlertPatch> request = new HttpEntity<>(alertPatch);
+        ResponseEntity<Alert> responseAlert = this.testRestTemplate.exchange(
+                this.baseUrlAdminAlerts+"/{alertId}",
+                HttpMethod.PATCH,
+                request,
+                Alert.class,
+                savedAlert.getId());
+        assertEquals(HttpStatus.OK, responseAlert.getStatusCode());
+        assertNotNull(responseAlert.getBody());
+        Alert updatedAlert = responseAlert.getBody();
+        log.info(updatedAlert.toString());
+        // imposto il managedBy in savedAlert solo nper confronto
+        savedAlert.setManagedBy(this.managedByAdminId);
+        assertEquals(savedAlert, updatedAlert);
+    }
+
+    @Test
+    void testUpdateAlertById_IdNotLong_Then_400() throws Exception {
+        AlertPatch alertPatch = new AlertPatch(this.managedByAdminId);
+
+        HttpEntity<AlertPatch> request = new HttpEntity<>(alertPatch);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(
+                this.baseUrlAdminAlerts+"/{alertId}",
+                HttpMethod.PATCH,
+                request,
+                String.class,
+                "IdNotLong");
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals("ID is not valid!" ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
+    void testUpdateAlertById_ManagedByNotLong_Then_400() throws Exception {
+        Alert savedAlert = createProfilePostAlert(this.alertOwnerProfileName+"3", this.postOwnerProfileName+"3");
+
+        String alertPatchJson = this.objectMapper.writeValueAsString(new AlertPatch(this.managedByAdminId));
+        JsonNode jsonNode = this.objectMapper.readTree(alertPatchJson);
+        ((ObjectNode) jsonNode).put("managed_by", "IdNotLong");
+        alertPatchJson = this.objectMapper.writeValueAsString(jsonNode);
+
+        // Dato che invio direttamente il json del profile, devo impostare il contentType application/json
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> request = new HttpEntity<>(alertPatchJson, headers);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(
+                this.baseUrlAdminAlerts+"/{alertId}",
+                HttpMethod.PATCH,
+                request,
+                String.class,
+                savedAlert.getId());
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals("JSON parse error: Cannot deserialize value of type `java.lang.Long` from String \"IdNotLong\": not a valid `java.lang.Long` value" ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
+    void testUpdateAlertById_AlertNotFound_Then_404() throws Exception {
+        AlertPatch alertPatch = new AlertPatch(this.managedByAdminId);
+
+        HttpEntity<AlertPatch> request = new HttpEntity<>(alertPatch);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(
+                this.baseUrlAdminAlerts+"/{alertId}",
+                HttpMethod.PATCH,
+                request,
+                String.class,
+                Long.MAX_VALUE);
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals("Alert "+Long.MAX_VALUE+" not found!" ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    private Alert createProfilePostAlert(String alertOwnerProfileName, String postOwnerProfileName) {
         // Profilo di chi segnalera' un post
-        Profile alertOwnerProfile = createPublicProfile(this.alertOwnerProfileName, 1L);
+        Profile alertOwnerProfile = createPublicProfile(alertOwnerProfileName, 1L);
         // Profilo di chi possiede il post che verra' segnalato
-        Profile postOwnerProfile = createPublicProfile(this.postOwnerProfileName, 2L);
+        Profile postOwnerProfile = createPublicProfile(postOwnerProfileName, 2L);
         // Post da segnalare
         Post postToAlert = createPost(postOwnerProfile.getId());
 

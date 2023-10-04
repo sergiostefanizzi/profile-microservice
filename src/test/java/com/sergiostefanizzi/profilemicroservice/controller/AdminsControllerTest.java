@@ -165,8 +165,6 @@ public class AdminsControllerTest {
         updatedProfile.setId(this.profileId);
         updatedProfile.blockedUntil(this.blockedUntilTime);
 
-        ProfileAdminPatch profileAdminPatch = new ProfileAdminPatch();
-        profileAdminPatch.setBlockedUntil(this.blockedUntilTime);
 
         when(this.profilesRepository.adminCheckActiveById(anyLong())).thenReturn(Optional.of(profileId));
         when(this.adminsService.blockProfileById(anyLong(), any(ProfileAdminPatch.class))).thenReturn(updatedProfile);
