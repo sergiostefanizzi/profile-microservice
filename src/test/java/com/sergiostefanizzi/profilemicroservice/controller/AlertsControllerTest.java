@@ -2,6 +2,7 @@ package com.sergiostefanizzi.profilemicroservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sergiostefanizzi.profilemicroservice.model.Alert;
+import com.sergiostefanizzi.profilemicroservice.repository.AlertsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
@@ -48,6 +49,8 @@ public class AlertsControllerTest {
     private PostsRepository postsRepository;
     @MockBean
     private CommentsRepository commentsRepository;
+    @MockBean
+    private AlertsRepository alertsRepository;
     @Autowired
     private ObjectMapper objectMapper;
     private Alert postAlert;

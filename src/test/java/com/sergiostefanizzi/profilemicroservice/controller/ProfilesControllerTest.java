@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sergiostefanizzi.profilemicroservice.model.*;
+import com.sergiostefanizzi.profilemicroservice.repository.AlertsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
@@ -56,6 +57,8 @@ class ProfilesControllerTest {
     private PostsRepository postsRepository;
     @MockBean
     private CommentsRepository commentsRepository;
+    @MockBean
+    private AlertsRepository alertsRepository;
     @Autowired
     private MockMvc mockMvc;
     @Autowired

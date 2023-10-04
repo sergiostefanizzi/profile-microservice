@@ -4,7 +4,9 @@ import com.sergiostefanizzi.profilemicroservice.model.Alert;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
 import com.sergiostefanizzi.profilemicroservice.model.ProfileAdminPatch;
 import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
+import com.sergiostefanizzi.profilemicroservice.model.converter.AlertToAlertJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfileJpaConverter;
+import com.sergiostefanizzi.profilemicroservice.repository.AlertsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,8 @@ import java.util.List;
 public class AdminsService {
     private final ProfilesRepository profilesRepository;
     private final ProfileToProfileJpaConverter profileToProfileJpaConverter;
+    private final AlertsRepository alertsRepository;
+    private final AlertToAlertJpaConverter alertToAlertJpaConverter;
     @Transactional
     public Profile blockProfileById(Long profileId, ProfileAdminPatch profileAdminPatch) {
         ProfileJpa profileToUpdate = this.profilesRepository.getReferenceById(profileId);
@@ -50,6 +54,8 @@ public class AdminsService {
 
     @Transactional
     public Alert findAlertById(Long alertId) {
-        return null;
+        return this.alertToAlertJpaConverter.convertBack(
+                this.alertsRepository.getReferenceById(alertId)
+        );
     }
 }

@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sergiostefanizzi.profilemicroservice.model.Follows;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
 import com.sergiostefanizzi.profilemicroservice.model.ProfileFollowList;
+import com.sergiostefanizzi.profilemicroservice.repository.AlertsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
@@ -55,6 +56,8 @@ class FollowsControllerTest {
     private PostsRepository postsRepository;
     @MockBean
     private CommentsRepository commentsRepository;
+    @MockBean
+    private AlertsRepository alertsRepository;
     @Autowired
     private ObjectMapper objectMapper;
     Long publicProfileId1 = 1L;

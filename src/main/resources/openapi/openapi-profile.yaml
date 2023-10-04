@@ -1201,7 +1201,6 @@ components:
         created_by:
           type: integer
           format: int64
-          nullable: true
         post_id:
           type: integer
           format: int64
@@ -1226,6 +1225,7 @@ components:
       required:
         - created_by
         - reason
+
 
     AlertPatch:
       type: object

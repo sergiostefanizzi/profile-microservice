@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
 import com.sergiostefanizzi.profilemicroservice.model.ProfileAdminPatch;
+import com.sergiostefanizzi.profilemicroservice.repository.AlertsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
@@ -55,6 +56,8 @@ public class AdminsControllerTest {
     private PostsRepository postsRepository;
     @MockBean
     private CommentsRepository commentsRepository;
+    @MockBean
+    private AlertsRepository alertsRepository;
     @Autowired
     private ObjectMapper objectMapper;
     private Long profileId = 1L;

@@ -9,6 +9,6 @@ import java.util.Optional;
 
 @Repository
 public interface AlertsRepository extends JpaRepository<AlertJpa, Long> {
-    @Query("SELECT a.id FROM AlertJpa WHERE a.id = :alertId AND")
+    @Query("SELECT a.id FROM AlertJpa a WHERE a.id = :alertId")
     Optional<Long> checkAlertById(Long alertId);
 }
