@@ -1,9 +1,9 @@
 package com.sergiostefanizzi.profilemicroservice.service;
 
-import com.sergiostefanizzi.profilemicroservice.model.Profile;
-import com.sergiostefanizzi.profilemicroservice.model.ProfileAdminPatch;
-import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
+import com.sergiostefanizzi.profilemicroservice.model.*;
+import com.sergiostefanizzi.profilemicroservice.model.converter.AlertToAlertJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfileJpaConverter;
+import com.sergiostefanizzi.profilemicroservice.repository.AlertsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
@@ -34,10 +34,18 @@ public class AdminsServiceTest {
     @Mock
     private ProfilesRepository profilesRepository;
     @Mock
-    ProfileToProfileJpaConverter profileToProfileJpaConverter;
+    private ProfileToProfileJpaConverter profileToProfileJpaConverter;
+    @Mock
+    private AlertsRepository alertsRepository;
+    @Mock
+    private AlertToAlertJpaConverter alertToAlertJpaConverter;
     private Long profileId = 1L;
     private Long accountId = 1L;
+    private Long alertId = 1L;
     private String profileName = "pinco_pallino";
+    private String alertReason = "Motivo della segnalazione";
+    private String contentUrl = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Cape_may.jpg";
+    private Post.PostTypeEnum postType = Post.PostTypeEnum.POST;
 
 
     @BeforeEach
@@ -204,6 +212,52 @@ public class AdminsServiceTest {
         verify(this.profileToProfileJpaConverter, times(2)).convertBack(any(ProfileJpa.class));
 
         log.info(returnedProfileList.toString());
+    }
+
+    @Test
+    void testFindAlertById(){
+        AlertJpa savedAlertJpa = createAlertJpa();
+        Alert convertedAlert = createAlert(savedAlertJpa);
+
+        when(this.alertsRepository.getReferenceById(anyLong())).thenReturn(savedAlertJpa);
+        when(this.alertToAlertJpaConverter.convertBack(any(AlertJpa.class))).thenReturn(convertedAlert);
+
+        Alert returnedAlert = this.adminsService.findAlertById(this.alertId);
+
+        assertEquals(convertedAlert, returnedAlert);
+        verify(this.alertsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.alertToAlertJpaConverter, times(1)).convertBack(any(AlertJpa.class));
+
+        log.info(returnedAlert.toString());
+    }
+
+    private static Alert createAlert(AlertJpa savedAlertJpa) {
+        Alert convertedAlert = new Alert(savedAlertJpa.getCreatedBy().getId(), savedAlertJpa.getReason());
+        convertedAlert.setPostId(savedAlertJpa.getPost().getId());
+        convertedAlert.setId(savedAlertJpa.getId());
+        return convertedAlert;
+    }
+
+    private AlertJpa createAlertJpa() {
+        ProfileJpa alertOwner = new ProfileJpa(this.profileName, false , this.accountId);
+        alertOwner.setId(1L);
+        alertOwner.setCreatedAt(LocalDateTime.MIN);
+
+        ProfileJpa postOwner = new ProfileJpa(this.profileName+"2", false, 2L);
+        postOwner.setId(2L);
+        postOwner.setCreatedAt(LocalDateTime.MIN);
+
+        PostJpa postJpa = new PostJpa(this.contentUrl, this.postType);
+        postJpa.setId(1L);
+        postJpa.setCreatedAt(LocalDateTime.MIN);
+        postJpa.setProfile(postOwner);
+
+        AlertJpa savedAlertJpa = new AlertJpa(this.alertReason);
+        savedAlertJpa.setId(1L);
+        savedAlertJpa.setPost(postJpa);
+        savedAlertJpa.setCreatedBy(alertOwner);
+        savedAlertJpa.setCreatedAt(LocalDateTime.now());
+        return savedAlertJpa;
     }
 
     private static List<Profile> createAllProfileList(List<ProfileJpa> profileJpaList) {
