@@ -3,6 +3,7 @@ package com.sergiostefanizzi.profilemicroservice.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.sergiostefanizzi.profilemicroservice.model.Alert;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
 import com.sergiostefanizzi.profilemicroservice.model.ProfileAdminPatch;
 import com.sergiostefanizzi.profilemicroservice.repository.AlertsRepository;
@@ -10,6 +11,7 @@ import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.service.AdminsService;
+import com.sergiostefanizzi.profilemicroservice.system.exception.AlertNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
@@ -62,6 +64,11 @@ public class AdminsControllerTest {
     private ObjectMapper objectMapper;
     private Long profileId = 1L;
     private Long accountId = 1L;
+    private Long alertId = 1L;
+    private Long alertOwnerId = 1L;
+    private Long alertPostId = 1L;
+    private Long managedById = 2L;
+    private String alertReason = "Motivo della segnalazione";
     private String profileName = "pinco_pallino";
     private OffsetDateTime blockedUntilTime = OffsetDateTime.of(
             LocalDate.of(2023,10,5),
@@ -337,6 +344,65 @@ public class AdminsControllerTest {
         // salvo risposta in result per visualizzarla
         String resultAsString = result.getResponse().getContentAsString();
         log.info("\nErrors\n" +resultAsString);
+    }
+
+    @Test
+    void testFindAlertById_Then_200() throws Exception {
+        Alert returnedAlert = new Alert(this.alertOwnerId, this.alertReason);
+        returnedAlert.setId(this.alertId);
+        returnedAlert.setPostId(this.alertPostId);
+        returnedAlert.setManagedBy(this.managedById);
+
+
+        when(this.alertsRepository.checkAlertById(anyLong())).thenReturn(Optional.of(this.alertId));
+        when(this.adminsService.findAlertById(anyLong())).thenReturn(returnedAlert);
+
+        MvcResult result = this.mockMvc.perform(get("/admins/alerts/{alertId}",this.alertId)
+                        .accept(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.*", hasSize(5)))
+                .andExpect(jsonPath("$.id").value(returnedAlert.getId()))
+                .andExpect(jsonPath("$.created_by").value(returnedAlert.getCreatedBy()))
+                .andExpect(jsonPath("$.post_id").value(returnedAlert.getPostId()))
+                .andExpect(jsonPath("$.reason").value(returnedAlert.getReason()))
+                .andExpect(jsonPath("$.managed_by").value(returnedAlert.getManagedBy()))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        Alert alertResult = this.objectMapper.readValue(resultAsString, Alert.class);
+
+        log.info(alertResult.toString());
+    }
+
+    @Test
+    void testFindAlertById_IdNotLong_Then_400() throws Exception {
+        MvcResult result = this.mockMvc.perform(get("/admins/alerts/IdNotLong"))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof NumberFormatException
+                ))
+                .andExpect(jsonPath("$.error").value("ID is not valid!")).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+    }
+
+    @Test
+    void testFindAlertById_NotFound_Then_404() throws Exception {
+        when(this.alertsRepository.checkAlertById(anyLong())).thenReturn(Optional.empty());
+        MvcResult result = this.mockMvc.perform(get("/admins/alerts/{alertId}",Long.MAX_VALUE))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof AlertNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value("Alert "+Long.MAX_VALUE+" not found!")).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
     }
 
     private static List<Profile> createProfileList() {

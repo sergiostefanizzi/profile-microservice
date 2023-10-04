@@ -888,7 +888,7 @@ paths:
           $ref: '#/components/responses/InternalServerError'
 
 
-  /admin/alerts/{alertId}:
+  /admins/alerts/{alertId}:
     get:
       tags:
         - admins

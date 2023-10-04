@@ -3,8 +3,7 @@ package com.sergiostefanizzi.profilemicroservice.controller;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.sergiostefanizzi.profilemicroservice.model.Profile;
-import com.sergiostefanizzi.profilemicroservice.model.ProfileAdminPatch;
+import com.sergiostefanizzi.profilemicroservice.model.*;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,9 +31,15 @@ public class AdminsIT {
     private int port;
     private String baseUrl = "http://localhost";
     private String baseUrlAdminProfiles;
+    private String baseUrlAdminAlerts;
     private String baseUrlProfile;
     private String baseUrlPost;
+    private String baseUrlAlerts;
     private String baseUrlComment;
+    private String contentUrl = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Cape_may.jpg";
+    private String alertOwnerProfileName = "giovanni2";
+    private String postOwnerProfileName = "pincoPalla";
+    private String alertReason = "Motivo della segnalazione";
     @Autowired
     private TestRestTemplate testRestTemplate;
     @Autowired
@@ -47,6 +52,8 @@ public class AdminsIT {
         this.baseUrlPost = this.baseUrl + "/posts";
         this.baseUrlComment = this.baseUrl + "/posts/comments";
         this.baseUrlAdminProfiles =  this.baseUrl + "/admins/profiles";
+        this.baseUrlAdminAlerts =  this.baseUrl + "/admins/alerts";
+        this.baseUrlAlerts =  this.baseUrl + "/alerts";
     }
 
     @AfterEach
@@ -56,14 +63,14 @@ public class AdminsIT {
 
     @Test
     void testBlockProfileById_Block_Then_200(){
-        Profile profileToBlock = createPublicProfile("marioBros");
+        Profile profileToBlock = createPublicProfile("marioBros",1L);
         Profile updatedProfile = blockProfile( profileToBlock, true, 3);
         log.info("Profile ID: "+profileToBlock.getId()+" blocked until "+updatedProfile.getBlockedUntil());
     }
 
     @Test
     void testBlockProfileById_Unblock_Then_200(){
-        Profile profileToBlock = createPublicProfile("marioBros2");
+        Profile profileToBlock = createPublicProfile("marioBros2",1L);
         Profile updatedProfile = blockProfile(profileToBlock, false, null);
         assertNull(updatedProfile.getBlockedUntil());
         log.info("Profile ID: "+profileToBlock.getId()+" unblocked");
@@ -71,7 +78,7 @@ public class AdminsIT {
 
     @Test
     void testBlockProfileById_Extends_Block_Then_200(){
-        Profile profileToBlock = createPublicProfile("marioBros3");
+        Profile profileToBlock = createPublicProfile("marioBros3",1L);
         Profile updatedProfile = blockProfile( profileToBlock, true, 3);
         log.info("Profile ID: "+profileToBlock.getId()+" blocked until "+updatedProfile.getBlockedUntil());
         updatedProfile = blockProfile( profileToBlock, true, 4);
@@ -80,7 +87,7 @@ public class AdminsIT {
 
     @Test
     void testBlockProfileById_Unblock_anotherTime_Then_200(){
-        Profile profileToBlock = createPublicProfile("marioBros4");
+        Profile profileToBlock = createPublicProfile("marioBros4",1L);
         Profile updatedProfile = blockProfile(profileToBlock, false, null);
         assertNull(updatedProfile.getBlockedUntil());
         log.info("Profile ID: "+profileToBlock.getId()+" unblocked");
@@ -92,7 +99,7 @@ public class AdminsIT {
 
     @Test
     void testBlockProfileById_Block_PastDate_Then_400() throws Exception {
-        Profile profileToBlock = createPublicProfile("marioBros6");
+        Profile profileToBlock = createPublicProfile("marioBros6", 1L);
 
         ProfileAdminPatch profileAdminPatch = new ProfileAdminPatch();
 
@@ -152,7 +159,7 @@ public class AdminsIT {
 
     @Test
     void testBlockProfileById_Block_DateNotReadable_Then_400() throws Exception {
-        Profile profileToBlock = createPublicProfile("marioBros7");
+        Profile profileToBlock = createPublicProfile("marioBros7",1L);
 
         ProfileAdminPatch profileAdminPatch = new ProfileAdminPatch();
         String profileAdminPatchJson = this.objectMapper.writeValueAsString(profileAdminPatch);
@@ -267,6 +274,118 @@ public class AdminsIT {
         log.info("Error -> "+node.get("error"));
     }
 
+    @Test
+    void testFindAlertById_Then_200() throws Exception {
+        Alert savedAlert = createProfilePostAlert();
+
+        ResponseEntity<Alert> responseAlert = this.testRestTemplate.exchange(
+                this.baseUrlAdminAlerts+"/{alertId}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                Alert.class,
+                savedAlert.getId());
+        assertEquals(HttpStatus.OK, responseAlert.getStatusCode());
+        assertNotNull(responseAlert.getBody());
+        Alert returnedAlert = responseAlert.getBody();
+        log.info(returnedAlert.toString());
+        assertEquals(savedAlert, returnedAlert);
+    }
+
+    @Test
+    void testFindAlertById_IdNotLong_Then_400() throws Exception {
+        ResponseEntity<String> response = this.testRestTemplate.exchange(
+                this.baseUrlAdminAlerts+"/{alertId}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class,
+                "IdNotLong"
+        );
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals("ID is not valid!" ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
+    void testFindAlertById_NotFound_Then_404() throws Exception {
+        ResponseEntity<String> response = this.testRestTemplate.exchange(
+                this.baseUrlAdminAlerts+"/{alertId}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class,
+                Long.MAX_VALUE
+        );
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals("Alert "+Long.MAX_VALUE+" not found!" ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    private Alert createProfilePostAlert() {
+        // Profilo di chi segnalera' un post
+        Profile alertOwnerProfile = createPublicProfile(this.alertOwnerProfileName, 1L);
+        // Profilo di chi possiede il post che verra' segnalato
+        Profile postOwnerProfile = createPublicProfile(this.postOwnerProfileName, 2L);
+        // Post da segnalare
+        Post postToAlert = createPost(postOwnerProfile.getId());
+
+        Alert newAlert = new Alert(alertOwnerProfile.getId(), alertReason);
+        newAlert.setPostId(postToAlert.getId());
+
+        return createAlert(newAlert, true);
+    }
+
+    Alert createAlert(Alert newAlert, Boolean isPost) {
+        HttpEntity<Alert> requestAlert = new HttpEntity<>(newAlert);
+        ResponseEntity<Alert> responseAlert = this.testRestTemplate.exchange(
+                this.baseUrlAlerts+"?isPost={isPost}",
+                HttpMethod.POST,
+                requestAlert,
+                Alert.class,
+                isPost);
+        assertEquals(HttpStatus.CREATED, responseAlert.getStatusCode());
+        assertNotNull(responseAlert.getBody());
+        Alert savedAlert = responseAlert.getBody();
+        log.info(savedAlert.toString());
+        assertNotNull(savedAlert.getId());
+        assertEquals(newAlert.getCreatedBy(), savedAlert.getCreatedBy());
+        assertEquals(newAlert.getPostId(), savedAlert.getPostId());
+        assertNull(savedAlert.getCommentId());
+        assertEquals(newAlert.getReason(), savedAlert.getReason());
+
+        return savedAlert;
+    }
+
+
+    Post createPost(Long profileId) {
+        Post newPost = new Post(this.contentUrl, Post.PostTypeEnum.POST, profileId);
+
+        HttpEntity<Post> request = new HttpEntity<>(newPost);
+        ResponseEntity<Post> response = this.testRestTemplate.exchange(
+                this.baseUrlPost,
+                HttpMethod.POST,
+                request,
+                Post.class);
+
+        assertEquals(HttpStatus.CREATED, response.getStatusCode());
+        Post savedPost = response.getBody();
+        assertNotNull(savedPost);
+        assertNotNull(savedPost.getId());
+        assertEquals(newPost.getContentUrl(), savedPost.getContentUrl());
+        assertEquals(newPost.getPostType(), savedPost.getPostType());
+        assertEquals(newPost.getProfileId(), savedPost.getProfileId());
+
+        // visualizzo il post salvato
+        log.info(savedPost.toString());
+        return savedPost;
+    }
+
     private Profile blockProfile(Profile profileToBlock, Boolean isBlock, Integer days) {
         ProfileAdminPatch profileAdminPatch = new ProfileAdminPatch();
         if(isBlock && days != null){
@@ -304,8 +423,8 @@ public class AdminsIT {
 
 
 
-    Profile createPublicProfile(String profileName){
-        Profile newProfile = new Profile(profileName,false,1L);
+    Profile createPublicProfile(String profileName, Long accountId){
+        Profile newProfile = new Profile(profileName,false,accountId);
 
         HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);
         ResponseEntity<Profile> responseProfile = this.testRestTemplate.exchange(

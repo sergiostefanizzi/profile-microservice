@@ -26,6 +26,7 @@ public class AlertsInterceptor implements HandlerInterceptor {
         log.info("\n\tAlerts Interceptor -> "+request.getRequestURI());
 
         Map pathVariables = (Map) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+
         if(pathVariables.get("alertId") != null){
             Long alertId = Long.valueOf((String) pathVariables.get("alertId"));
 
@@ -33,6 +34,7 @@ public class AlertsInterceptor implements HandlerInterceptor {
                     .orElseThrow(() -> new AlertNotFoundException(alertId));
             log.info("\n\tAlerts Interceptor: Alert ID-> "+checkId);
         }
+
 
         return true;
     }
