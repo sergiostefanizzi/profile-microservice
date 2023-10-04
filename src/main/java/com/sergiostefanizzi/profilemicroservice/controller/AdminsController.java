@@ -26,8 +26,9 @@ public class AdminsController implements AdminsApi {
     }
 
     @Override
-    public ResponseEntity<Alert> findAlertsById(Long alertId) {
-        return AdminsApi.super.findAlertsById(alertId);
+    public ResponseEntity<Alert> findAlertById(Long alertId) {
+        Alert returnedAlert = this.adminsService.findAlertById(alertId);
+        return new ResponseEntity<>(returnedAlert, HttpStatus.OK);
     }
 
     @Override

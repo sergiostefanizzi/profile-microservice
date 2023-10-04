@@ -31,6 +31,8 @@ public class ProfileConfiguration implements WebMvcConfigurer {
     private CommentsInterceptor commentsInterceptor;
     @Autowired
     private AdminsProfileInterceptor adminsProfileInterceptor;
+    @Autowired
+    private AlertsInterceptor alertsInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -54,5 +56,7 @@ public class ProfileConfiguration implements WebMvcConfigurer {
                 .excludePathPatterns("/alerts");
         registry.addInterceptor(this.adminsProfileInterceptor)
                 .addPathPatterns("/admins/profiles/**");
+        registry.addInterceptor(this.alertsInterceptor)
+                .addPathPatterns("/admins/alerts/**");
     }
 }

@@ -110,6 +110,15 @@ public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.CONFLICT, request);
     }
 
+    @ExceptionHandler(AlertNotFoundException.class)
+    public ResponseEntity<Object> handleAlertNotFoundException(AlertNotFoundException ex, WebRequest request){
+        log.error(ex.getMessage(),ex);
+        String error = "Alert "+ex.getMessage()+" not found!";
+        Map<String, String> body = new HashMap<>();
+        body.put("error", error);
+        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
+    }
+
     @ExceptionHandler(ProfileNotFoundException.class)
     public ResponseEntity<Object> handleProfileNotFoundException(ProfileNotFoundException ex, WebRequest request){
         log.error(ex.getMessage(),ex);

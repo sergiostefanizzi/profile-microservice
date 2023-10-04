@@ -1,5 +1,6 @@
 package com.sergiostefanizzi.profilemicroservice.service;
 
+import com.sergiostefanizzi.profilemicroservice.model.Alert;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
 import com.sergiostefanizzi.profilemicroservice.model.ProfileAdminPatch;
 import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
@@ -45,5 +46,10 @@ public class AdminsService {
             profileList = this.profilesRepository.findAllActiveProfiles();
         }
         return profileList.stream().map(this.profileToProfileJpaConverter::convertBack).toList();
+    }
+
+    @Transactional
+    public Alert findAlertById(Long alertId) {
+        return null;
     }
 }

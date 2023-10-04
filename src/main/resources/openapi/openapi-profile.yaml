@@ -792,6 +792,7 @@ paths:
         - name: removedProfile
           in: query
           description: Show or not show removed profiles
+          required: true
           schema:
             type: boolean
       responses:
@@ -893,7 +894,7 @@ paths:
         - admins
       summary: Return an alert
       description: Return an alert
-      operationId: findAlertsById
+      operationId: findAlertById
       security:
         - bearerAuth: []
       parameters:
@@ -921,8 +922,8 @@ paths:
     patch:
       tags:
         - admins
-      summary: Assign an alert to and admin
-      description: Assign an alert to and admin
+      summary: Assign an alert to an admin
+      description: Assign an alert to an admin
       operationId: updateAlertById
       security:
         - bearerAuth: []
