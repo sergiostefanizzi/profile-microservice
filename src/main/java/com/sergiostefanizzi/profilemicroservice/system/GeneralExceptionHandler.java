@@ -33,7 +33,7 @@ public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
         String error = "Alert status not valid!";
         Map<String, String> body = new HashMap<>();
         body.put("error", error);
-        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
+        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
     }
 
     @ExceptionHandler(FollowItselfException.class)

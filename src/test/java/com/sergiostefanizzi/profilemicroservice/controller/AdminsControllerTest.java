@@ -13,6 +13,7 @@ import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.service.AdminsService;
 import com.sergiostefanizzi.profilemicroservice.system.exception.AlertNotFoundException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.AlertStatusNotValidException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterEach;
@@ -37,6 +38,7 @@ import java.util.Optional;
 
 import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
@@ -347,7 +349,7 @@ public class AdminsControllerTest {
 
     @Test
     void testFindAlertById_Then_200() throws Exception {
-        Alert returnedAlert = createAlert();
+        Alert returnedAlert = createAlert(1L);
 
 
         when(this.alertsRepository.checkAlertById(anyLong())).thenReturn(Optional.of(this.alertId));
@@ -403,7 +405,7 @@ public class AdminsControllerTest {
 
     @Test
     void testUpdateAlertById_Then_200() throws Exception {
-        Alert alert = createAlert();
+        Alert alert = createAlert(2L);
 
         String alertPatchJson = this.objectMapper.writeValueAsString(new AlertPatch(this.managedById));
 
@@ -494,11 +496,80 @@ public class AdminsControllerTest {
         log.info("Resolved Error ---> " + result.getResolvedException());
     }
 
-    private Alert createAlert() {
-        Alert alert = new Alert(this.alertOwnerId, this.alertReason);
-        alert.setId(this.alertId);
-        alert.setPostId(this.alertPostId);
-        alert.setManagedBy(this.managedById);
+    @Test
+    void testFindAllAlerts_AllAlerts_Then_200() throws Exception{
+        List<Alert> alertList = asList(
+                createAlert(3L),
+                createAlert(4L),
+                createAlert(5L)
+        );
+
+        when(this.adminsService.findAllAlerts(anyString())).thenReturn(alertList);
+
+        MvcResult result = this.mockMvc.perform(get("/admins/alerts?alertStatus={alertStatus}",nullValue())
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.*", hasSize(3)))
+                .andExpect(jsonPath("$[0].id").value(alertList.get(0).getId()))
+                .andExpect(jsonPath("$[1].id").value(alertList.get(1).getId()))
+                .andExpect(jsonPath("$[2].id").value(alertList.get(2).getId()))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+
+        log.info(resultAsString);
+    }
+
+    @Test
+    void testFindAllAlerts_AllOpenAlerts_Then_200() throws Exception{
+        List<Alert> alertList = asList(
+                createAlert(3L),
+                createAlert(4L),
+                createAlert(5L)
+        );
+
+        when(this.adminsService.findAllAlerts(anyString())).thenReturn(alertList);
+
+        MvcResult result = this.mockMvc.perform(get("/admins/alerts?alertStatus={alertStatus}","O")
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.*", hasSize(3)))
+                .andExpect(jsonPath("$[0].id").value(alertList.get(0).getId()))
+                .andExpect(jsonPath("$[1].id").value(alertList.get(1).getId()))
+                .andExpect(jsonPath("$[2].id").value(alertList.get(2).getId()))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+
+        log.info(resultAsString);
+    }
+
+    @Test
+    void testFindAllAlerts_AlertStatusNotValid_Then_400() throws Exception{
+        when(this.adminsService.findAllAlerts(anyString())).thenThrow(AlertStatusNotValidException.class);
+
+        MvcResult result = this.mockMvc.perform(get("/admins/alerts?alertStatus={alertStatus}","xx")
+                        .contentType(MediaType.APPLICATION_JSON)
+                )
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(res.getResolvedException() instanceof AlertStatusNotValidException))
+                .andExpect(jsonPath("$.error").value("Alert status not valid!"))
+                .andReturn();
+
+        // salvo risposta in result per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("\nErrors\n" +resultAsString);
+    }
+
+    private Alert createAlert(Long id) {
+        Alert alert = new Alert(id, this.alertReason);
+        alert.setId(id*10);
+        alert.setPostId(id*100);
+        alert.setManagedBy(id*1000);
         return alert;
     }
 

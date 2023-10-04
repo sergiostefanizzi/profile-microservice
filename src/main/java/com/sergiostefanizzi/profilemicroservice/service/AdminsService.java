@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -62,6 +63,7 @@ public class AdminsService {
     public Alert updateAlertById(Long alertId, AlertPatch alertPatch) {
         AlertJpa alertJpa = this.alertsRepository.getReferenceById(alertId);
         alertJpa.setManagedByAccount(alertPatch.getManagedBy());
+        alertJpa.setClosedAt(LocalDateTime.now());
         return this.alertToAlertJpaConverter.convertBack(
                 this.alertsRepository.save(alertJpa)
         );
@@ -77,14 +79,17 @@ public class AdminsService {
         if (alertStatus != null){
             if(alertStatus.equalsIgnoreCase("O")){
                 alertList = this.alertsRepository.findAllOpenAlerts();
+                log.info("Read all the open alerts");
             } else if (alertStatus.equalsIgnoreCase("C")) {
                 alertList = this.alertsRepository.findAllClosedAlerts();
+                log.info("Read all the closed alerts");
             }else{
                 throw new AlertStatusNotValidException();
             }
         }else {
             // return open and closed alerts
             alertList = this.alertsRepository.findAll();
+            log.info("Read all the alerts");
         }
         return alertList;
     }

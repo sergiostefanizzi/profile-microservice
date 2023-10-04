@@ -1,8 +1,9 @@
 package com.sergiostefanizzi.profilemicroservice.service;
 
 import com.sergiostefanizzi.profilemicroservice.model.PostJpa;
-import com.sergiostefanizzi.profilemicroservice.model.converter.PostToPostJpaConverter;
+import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
+import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,6 +18,7 @@ import java.util.List;
 @Slf4j
 public class ScheduledStoriesRemoveTask {
     private final PostsRepository postsRepository;
+    private final ProfilesRepository profilesRepository;
     // aggiungere random
     @Scheduled(fixedRate = 5000L)
     @Transactional
@@ -30,6 +32,18 @@ public class ScheduledStoriesRemoveTask {
         }else {
             log.info("Scheduler: Nessuna storia rimossa");
         }
+    }
 
+    @Scheduled(fixedRate = 3000L)
+    @Transactional
+    public void unblockProfiles(){
+        List<ProfileJpa> profileToUnblockList = this.profilesRepository.findAllToBeUnBlocked(LocalDateTime.now());
+        if (!profileToUnblockList.isEmpty()){
+            profileToUnblockList.forEach(profile -> profile.setBlockedUntil(null));
+            int removedStories = this.profilesRepository.saveAll(profileToUnblockList).size();
+            log.info("Scheduler: Profili sbloccati :"+removedStories);
+        }else {
+            log.info("Scheduler: Nessun profilo sbloccato");
+        }
     }
 }

@@ -24,6 +24,9 @@ public interface ProfilesRepository extends JpaRepository<ProfileJpa, Long> {
     @Query("SELECT p FROM ProfileJpa p WHERE p.id=:profileId AND p.deletedAt IS NULL AND p.blockedUntil IS NULL")
     Optional<ProfileJpa> findActiveById(Long profileId);
 
+    @Query("SELECT p FROM ProfileJpa p WHERE p.deletedAt IS NULL AND p.blockedUntil < :timeLimit")
+    List<ProfileJpa> findAllToBeUnBlocked(LocalDateTime timeLimit);
+
     @Query("SELECT p.id FROM ProfileJpa p WHERE p.id=:profileId AND p.deletedAt IS NULL AND p.blockedUntil IS NULL")
     Optional<Long> checkActiveById(Long profileId);
 

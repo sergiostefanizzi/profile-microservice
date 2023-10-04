@@ -12,11 +12,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.*;
+import java.util.List;
 
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -412,6 +415,83 @@ public class AdminsIT {
         JsonNode node = this.objectMapper.readTree(response.getBody());
         // In questo caso l'errore NON è un array di dimensione 1
         assertEquals("Alert "+Long.MAX_VALUE+" not found!" ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    // TODO fare dopo repository
+
+    @Test
+    void testFindAllAlerts_AllAlerts_Then_200() throws Exception{
+        List<Alert> alertList = asList(
+                createProfilePostAlert("mario_rossi1","giuseppeVerdi1"),
+                createProfilePostAlert("mario_rossi2","giuseppeVerdi2"),
+                createProfilePostAlert("mario_rossi3","giuseppeVerdi3")
+        );
+
+        ResponseEntity<List<Alert>> responseAlertList = this.testRestTemplate.exchange(
+                this.baseUrlAdminAlerts,
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                new ParameterizedTypeReference<List<Alert>>() {}
+        );
+        assertEquals(HttpStatus.OK, responseAlertList.getStatusCode());
+        assertNotNull(responseAlertList.getBody());
+        List<Alert> returnedAlertList = responseAlertList.getBody();
+        assertEquals(alertList, returnedAlertList);
+        log.info(returnedAlertList.toString());
+    }
+
+    @Test
+    void testFindAllAlerts_AllOpenAlerts_Then_200() throws Exception{
+        List<Alert> alertList = asList(
+                createProfilePostAlert("mario_rossi1","giuseppeVerdi1"),
+                createProfilePostAlert("mario_rossi2","giuseppeVerdi2"),
+                createProfilePostAlert("mario_rossi3","giuseppeVerdi3")
+        );
+
+        ResponseEntity<List<Alert>> responseAlertList = this.testRestTemplate.exchange(
+                this.baseUrlAdminAlerts + "?alertStatus={alertStatus}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                new ParameterizedTypeReference<List<Alert>>() {},
+                "O"
+        );
+        assertEquals(HttpStatus.OK, responseAlertList.getStatusCode());
+        assertNotNull(responseAlertList.getBody());
+        List<Alert> returnedAlertList = responseAlertList.getBody();
+        assertEquals(alertList, returnedAlertList);
+        log.info(returnedAlertList.toString());
+    }
+
+    @Test
+    void testFindAllAlerts_AllClosedAlerts_Then_200() throws Exception{
+        ResponseEntity<List<Alert>> responseAlertList = this.testRestTemplate.exchange(
+                this.baseUrlAdminAlerts + "?alertStatus={alertStatus}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                new ParameterizedTypeReference<List<Alert>>() {},
+                "C"
+        );
+        assertEquals(HttpStatus.OK, responseAlertList.getStatusCode());
+        assertNotNull(responseAlertList.getBody());
+        List<Alert> returnedAlertList = responseAlertList.getBody();
+        log.info(returnedAlertList.toString());
+    }
+
+    @Test
+    void testFindAllAlerts_AlertStatusNotValid_Then_400() throws Exception{
+        ResponseEntity<String> response = this.testRestTemplate.exchange(
+                this.baseUrlAdminAlerts + "?alertStatus={alertStatus}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class,
+                "NotValidStatus"
+        );
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals("Alert status not valid!" ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
 
