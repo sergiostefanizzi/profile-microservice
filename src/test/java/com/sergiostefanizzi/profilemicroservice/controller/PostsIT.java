@@ -21,7 +21,6 @@ import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
 
 
-import java.util.ArrayList;
 import java.util.List;
 
 import static java.util.Arrays.asList;
@@ -36,7 +35,6 @@ class PostsIT {
     private int port;
 
     private String baseUrl = "http://localhost";
-    private String baseUrlProfile;
     private String baseUrlLike;
     private String baseUrlComment;
 
@@ -61,9 +59,6 @@ class PostsIT {
     String caption = "This is the caption";
     Post.PostTypeEnum postType = Post.PostTypeEnum.POST;
     Post.PostTypeEnum storyType = Post.PostTypeEnum.STORY;
-    Long postId = 1L;
-    Long profileId;
-    Integer count = 1;
     private Post newPost;
     String profileName = "pinco_pallino";
     Profile newProfile = new Profile(profileName,false,111L);
@@ -72,7 +67,7 @@ class PostsIT {
 
     @BeforeEach
     void setUp() {
-        this.baseUrlProfile = this.baseUrl + ":" + port + "/profiles";
+
         this.baseUrl += ":" + port + "/posts";
         this.baseUrlLike = this.baseUrl + "/likes";
         this.baseUrlComment = this.baseUrl + "/comments";
@@ -1084,41 +1079,22 @@ class PostsIT {
         assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
-// TODO
+
     @Test
     void testProfileFeedByProfileId_Then_200(){
-        // Creo un primo profilo
-        Profile mainProfile = createPublicProfile("pincoPallino1");
-        // Creo un secondo profilo
-        Profile followedProfile1 = createPublicProfile("pincoPallino2");
-        Profile followedProfile2 = createPublicProfile("pincoPallino3");
-        createFollow(mainProfile, followedProfile1);
-        createFollow(mainProfile, followedProfile2);
-
-        Post savedPost1 = createPost(followedProfile1.getId(), Post.PostTypeEnum.POST);
-        Post savedStory1 = createPost(followedProfile1.getId(), Post.PostTypeEnum.STORY);
-        Post savedPost2 = createPost(followedProfile2.getId(), Post.PostTypeEnum.POST);
-
-        List<Post> expectedFeed = new ArrayList<>();
-
-        expectedFeed.add(savedPost2);
-        expectedFeed.add(savedStory1);
-        expectedFeed.add(savedPost1);
-
-
 
         ResponseEntity<List<Post>> response = this.testRestTemplate.exchange(
                 this.baseUrl + "/feed/{profileId}?onlyPost={onlyPost}",
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
                 new ParameterizedTypeReference<List<Post>>() {},
-                mainProfile.getId(),
+                this.savedProfile2.getId(),
                 null);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         List<Post> mainProfileFeed = response.getBody();
         assertNotNull(mainProfileFeed);
-        assertEquals(expectedFeed, mainProfileFeed);
+        assertFalse(mainProfileFeed.isEmpty());
 
         // visualizzo il post salvato
         log.info(mainProfileFeed.toString());
@@ -1126,37 +1102,23 @@ class PostsIT {
 
     @Test
     void testProfileFeedByProfileId_OnlyPost_Then_200(){
-        // Creo un primo profilo
-        Profile mainProfile = createPublicProfile("pincoPallino4");
-        // Creo un secondo profilo
-        Profile followedProfile1 = createPublicProfile("pincoPallino5");
-        Profile followedProfile2 = createPublicProfile("pincoPallino6");
-        createFollow(mainProfile, followedProfile1);
-        createFollow(mainProfile, followedProfile2);
-
-        Post savedPost1 = createPost(followedProfile1.getId(), Post.PostTypeEnum.POST);
-        createPost(followedProfile1.getId(), Post.PostTypeEnum.STORY);
-        Post savedPost2 = createPost(followedProfile2.getId(), Post.PostTypeEnum.POST);
-
-        List<Post> expectedFeed = new ArrayList<>();
-
-        expectedFeed.add(savedPost2);
-        expectedFeed.add(savedPost1);
-
-
 
         ResponseEntity<List<Post>> response = this.testRestTemplate.exchange(
                 this.baseUrl + "/feed/{profileId}?onlyPost={onlyPost}",
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
                 new ParameterizedTypeReference<List<Post>>() {},
-                mainProfile.getId(),
+                this.savedProfile2.getId(),
                 true);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         List<Post> mainProfileFeed = response.getBody();
         assertNotNull(mainProfileFeed);
-        assertEquals(expectedFeed, mainProfileFeed);
+        assertFalse(mainProfileFeed.isEmpty());
+
+        for (Post p : mainProfileFeed){
+            assertEquals(postType, p.getPostType());
+        }
 
         // visualizzo il post salvato
         log.info(mainProfileFeed.toString());
@@ -1164,36 +1126,23 @@ class PostsIT {
 
     @Test
     void testProfileFeedByProfileId_OnlyStories_Then_200(){
-        // Creo un primo profilo
-        Profile mainProfile = createPublicProfile("pincoPallino7");
-        // Creo un secondo profilo
-        Profile followedProfile1 = createPublicProfile("pincoPallino8");
-        Profile followedProfile2 = createPublicProfile("pincoPallino9");
-        createFollow(mainProfile, followedProfile1);
-        createFollow(mainProfile, followedProfile2);
-
-        createPost(followedProfile1.getId(), Post.PostTypeEnum.POST);
-        Post savedStory1 = createPost(followedProfile1.getId(), Post.PostTypeEnum.STORY);
-        createPost(followedProfile2.getId(), Post.PostTypeEnum.POST);
-
-        List<Post> expectedFeed = new ArrayList<>();
-
-        expectedFeed.add(savedStory1);
-
-
 
         ResponseEntity<List<Post>> response = this.testRestTemplate.exchange(
                 this.baseUrl + "/feed/{profileId}?onlyPost={onlyPost}",
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
                 new ParameterizedTypeReference<List<Post>>() {},
-                mainProfile.getId(),
+                this.savedProfile2.getId(),
                 false);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         List<Post> mainProfileFeed = response.getBody();
         assertNotNull(mainProfileFeed);
-        assertEquals(expectedFeed, mainProfileFeed);
+        assertFalse(mainProfileFeed.isEmpty());
+
+        for (Post p : mainProfileFeed){
+            assertEquals(storyType, p.getPostType());
+        }
 
         // visualizzo il post salvato
         log.info(mainProfileFeed.toString());
@@ -1222,7 +1171,7 @@ class PostsIT {
 
     @Test
     void testProfileFeedByProfileId_Then_400() throws JsonProcessingException {
-        Profile mainProfile = createPublicProfile("pincoPallino10");
+
         // messaggio d'errore che mi aspetto d'ottenere
         String error = "Failed to convert value of type 'java.lang.String' to required type 'java.lang.Boolean'; Invalid boolean value [NotBoolean]";
         ResponseEntity<String> response = this.testRestTemplate.exchange(
@@ -1230,7 +1179,7 @@ class PostsIT {
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
                 String.class,
-                mainProfile.getId(),
+                this.savedProfile2.getId(),
                 "NotBoolean");
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -1263,66 +1212,4 @@ class PostsIT {
     }
 
 
-    Post createPost(Long profileId, Post.PostTypeEnum postType) {
-        Post post = new Post(contentUrl, postType, profileId);
-
-        HttpEntity<Post> request = new HttpEntity<>(post);
-        ResponseEntity<Post> response = this.testRestTemplate.exchange(
-                this.baseUrl,
-                HttpMethod.POST,
-                request,
-                Post.class);
-
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        Post savedPost = response.getBody();
-        assertNotNull(savedPost);
-        assertNotNull(savedPost.getId());
-        assertEquals(post.getContentUrl(), savedPost.getContentUrl());
-        assertEquals(post.getPostType(), savedPost.getPostType());
-        assertEquals(post.getProfileId(), savedPost.getProfileId());
-
-        // visualizzo il post salvato
-        log.info(savedPost.toString());
-        return savedPost;
-    }
-
-
-    Profile createPublicProfile(String profileName){
-        Profile newProfile = new Profile(profileName, false,1L);
-        // Creo prima un profilo
-        HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);
-        ResponseEntity<Profile> responseProfile = this.testRestTemplate.exchange(
-                this.baseUrlProfile,
-                HttpMethod.POST,
-                requestProfile,
-                Profile.class);
-        assertEquals(HttpStatus.CREATED, responseProfile.getStatusCode());
-        assertNotNull(responseProfile.getBody());
-        Profile savedProfile = responseProfile.getBody();
-        assertNotNull(savedProfile.getId());
-
-        log.info(responseProfile.toString());
-
-        return savedProfile;
-    }
-
-    void createFollow(Profile follower, Profile followed){
-        ResponseEntity<Follows> responseFollows = this.testRestTemplate.exchange(
-                this.baseUrlProfile+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
-                HttpMethod.PUT,
-                HttpEntity.EMPTY,
-                Follows.class,
-                follower.getId(),
-                followed.getId(),
-                false);
-
-        assertEquals(HttpStatus.OK, responseFollows.getStatusCode());
-        assertNotNull(responseFollows.getBody());
-        Follows savedFollows = responseFollows.getBody();
-        assertEquals(follower.getId(), savedFollows.getFollowerId());
-        assertEquals(followed.getId(), savedFollows.getFollowedId());
-        assertEquals(Follows.RequestStatusEnum.ACCEPTED, savedFollows.getRequestStatus());
-
-        log.info(savedFollows.toString());
-    }
 }

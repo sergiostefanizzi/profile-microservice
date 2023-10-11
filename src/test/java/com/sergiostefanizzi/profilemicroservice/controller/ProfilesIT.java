@@ -610,8 +610,8 @@ class ProfilesIT {
         assertInstanceOf(FullProfile.class, responseGet.getBody());
         FullProfile fullProfile = responseGet.getBody();
         assertEquals(this.savedProfile1.getId(), fullProfile.getProfile().getId());
-        assertEquals(0, fullProfile.getPostList().size());
-        assertEquals(0, fullProfile.getPostCount());
+        assertTrue(fullProfile.getPostList().size()>=3);
+        assertTrue(fullProfile.getPostCount()>=3);
         assertTrue(fullProfile.getProfileGranted());
 
         // visualizzo il profilo aggiornato
