@@ -13,10 +13,10 @@ import java.util.Optional;
 @Repository
 public interface FollowsRepository extends JpaRepository<FollowsJpa, FollowsId> {
 
-    @Query("SELECT f.follower FROM FollowsJpa f WHERE f.followed = :profileJpa AND f.followedAt IS NOT NULL AND f.unfollowedAt IS NULL AND f.follower.deletedAt IS NULL")
+    @Query("SELECT f.follower FROM FollowsJpa f WHERE f.followed = :profileJpa AND f.followedAt IS NOT NULL AND f.unfollowedAt IS NULL AND f.requestStatus = 'ACCEPTED' AND f.follower.deletedAt IS NULL")
     List<ProfileJpa> findActiveFollowers(ProfileJpa profileJpa);
 
-    @Query("SELECT f.followed FROM FollowsJpa f WHERE f.follower = :profileJpa AND f.followedAt IS NOT NULL AND f.unfollowedAt IS NULL AND f.followed.deletedAt IS NULL")
+    @Query("SELECT f.followed FROM FollowsJpa f WHERE f.follower = :profileJpa AND f.followedAt IS NOT NULL AND f.unfollowedAt IS NULL AND f.requestStatus = 'ACCEPTED' AND f.followed.deletedAt IS NULL")
     List<ProfileJpa> findActiveFollowings(ProfileJpa profileJpa);
 
     @Query("SELECT f FROM FollowsJpa f WHERE f.id = :followsId AND ((f.requestStatus = 'ACCEPTED') OR (f.requestStatus = 'PENDING'))")

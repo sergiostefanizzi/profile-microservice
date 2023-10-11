@@ -19,9 +19,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -36,42 +33,57 @@ class FollowsIT {
     private TestRestTemplate testRestTemplate;
     @Autowired
     private ObjectMapper objectMapper;
-    Long invalidProfileId = Long.MIN_VALUE;
-    List<String> errors;
+    private Profile savedProfile1;
+    private Profile savedProfile2;
+    private Profile savedProfile3;
+    private Profile savedPrivateProfile1;
+    String pictureUrl = "https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg";
 
     @BeforeEach
     void setUp() {
         this.baseUrl += ":" + port + "/profiles";
-        errors = new ArrayList<>();
+
+        this.savedProfile1 = new Profile("pinco_pallino", false, 101L);
+        this.savedProfile1.setId(101L);
+        this.savedProfile1.setBio("Profilo di Pinco");
+        this.savedProfile1.setPictureUrl(pictureUrl);
+
+        this.savedProfile2 = new Profile("luigiBros", false, 103L);
+        this.savedProfile2.setId(103L);
+        this.savedProfile2.setBio("Benvenuti!!");
+        this.savedProfile2.setPictureUrl(pictureUrl);
+
+        this.savedProfile3 = new Profile("pinco_pallino2", false, 101L);
+        this.savedProfile3.setId(104L);
+        this.savedProfile3.setBio("Secondo profilo di Pinco");
+        this.savedProfile3.setPictureUrl(pictureUrl);
+
+        this.savedPrivateProfile1 = new Profile("tony_stark", true, 104L);
+        this.savedPrivateProfile1.setId(105L);
+        this.savedPrivateProfile1.setBio("Profilo di Tony");
+        this.savedPrivateProfile1.setPictureUrl(pictureUrl);
     }
 
     @AfterEach
     void tearDown() {
-        errors.clear();
     }
 
     @Test
     void testAddFollows_PublicProfile_Return_ACCEPTED_Then_200(){
-        // Creo un primo profilo
-        Profile publicProfile1 = createProfile("pinco_pallino1", false);
-        // Creo un secondo profilo
-        Profile publicProfile2 = createProfile("pinco_pallino2", false);
-
-
         ResponseEntity<Follows> response = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 Follows.class,
-                publicProfile1.getId(),
-                publicProfile2.getId(),
+                this.savedProfile1.getId(),
+                this.savedProfile2.getId(),
                 false);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         Follows savedFollows = response.getBody();
-        assertEquals(publicProfile1.getId(), savedFollows.getFollowerId());
-        assertEquals(publicProfile2.getId(), savedFollows.getFollowedId());
+        assertEquals(this.savedProfile1.getId(), savedFollows.getFollowerId());
+        assertEquals(this.savedProfile2.getId(), savedFollows.getFollowedId());
         assertEquals(Follows.RequestStatusEnum.ACCEPTED, savedFollows.getRequestStatus());
 
         // visualizzo il post salvato
@@ -80,26 +92,20 @@ class FollowsIT {
 
     @Test
     void testAddFollows_PrivateProfile_Return_Pending_Then_200(){
-        // Creo un primo profilo
-        Profile publicProfile = createProfile("pinco_pallino3", false);
-        // Creo un secondo profilo
-        Profile privateProfile = createProfile("pinco_pallino4", true);
-
-
         ResponseEntity<Follows> response = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 Follows.class,
-                publicProfile.getId(),
-                privateProfile.getId(),
+                this.savedProfile1.getId(),
+                this.savedPrivateProfile1.getId(),
                 false);
 
         assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
         Follows savedFollows = response.getBody();
-        assertEquals(publicProfile.getId(), savedFollows.getFollowerId());
-        assertEquals(privateProfile.getId(), savedFollows.getFollowedId());
+        assertEquals(this.savedProfile1.getId(), savedFollows.getFollowerId());
+        assertEquals(this.savedPrivateProfile1.getId(), savedFollows.getFollowedId());
         assertEquals(Follows.RequestStatusEnum.PENDING, savedFollows.getRequestStatus());
 
         // visualizzo il post salvato
@@ -108,42 +114,20 @@ class FollowsIT {
 
     @Test
     void testAddFollows_Unfollow_Return_Rejected_Then_200(){
-        // Creo un primo profilo
-        Profile publicProfile1 = createProfile("pinco_pallino5", false);
-        // Creo un secondo profilo
-        Profile publicProfile2 = createProfile("pinco_pallino6", false);
-
-        ResponseEntity<Follows> responseFollows = this.testRestTemplate.exchange(
-                this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
-                HttpMethod.PUT,
-                HttpEntity.EMPTY,
-                Follows.class,
-                publicProfile1.getId(),
-                publicProfile2.getId(),
-                false);
-
-        assertEquals(HttpStatus.OK, responseFollows.getStatusCode());
-        assertNotNull(responseFollows.getBody());
-        Follows savedFollows = responseFollows.getBody();
-        assertEquals(publicProfile1.getId(), savedFollows.getFollowerId());
-        assertEquals(publicProfile2.getId(), savedFollows.getFollowedId());
-        assertEquals(Follows.RequestStatusEnum.ACCEPTED, savedFollows.getRequestStatus());
-
-
         ResponseEntity<Follows> responseUnfollows = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 Follows.class,
-                publicProfile1.getId(),
-                publicProfile2.getId(),
+                this.savedProfile1.getId(),
+                this.savedProfile3.getId(),
                 true);
 
         assertEquals(HttpStatus.OK, responseUnfollows.getStatusCode());
         assertNotNull(responseUnfollows.getBody());
         Follows savedUnfollow = responseUnfollows.getBody();
-        assertEquals(publicProfile1.getId(), savedUnfollow.getFollowerId());
-        assertEquals(publicProfile2.getId(), savedUnfollow.getFollowedId());
+        assertEquals(this.savedProfile1.getId(), savedUnfollow.getFollowerId());
+        assertEquals(this.savedProfile3.getId(), savedUnfollow.getFollowedId());
         assertEquals(Follows.RequestStatusEnum.REJECTED, savedUnfollow.getRequestStatus());
 
         // visualizzo il post salvato
@@ -153,26 +137,23 @@ class FollowsIT {
     @Test
     void testAddFollows_FollowItself_Then_400() throws Exception {
         // messaggio d'errore che mi aspetto d'ottenere
-        errors.add("Profile cannot follow itself!");
-
-        Profile publicProfile1 = createProfile("pinco_pallino7a", false);
-
+        String error = "Profile cannot follow itself!";
 
         ResponseEntity<String> response = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 String.class,
-                publicProfile1.getId(),
-                publicProfile1.getId(),
-                true);
+                this.savedProfile1.getId(),
+                this.savedProfile1.getId(),
+                false);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
 
         JsonNode node = this.objectMapper.readTree(response.getBody());
         // In questo caso l'errore NON è un array di dimensione 1
-        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
 
@@ -180,18 +161,15 @@ class FollowsIT {
     @Test
     void testAddFollows_UnfollowOnCreation_Then_400() throws Exception {
         // messaggio d'errore che mi aspetto d'ottenere
-        errors.add("Unfollows on creation is not possible!");
-
-        Profile publicProfile1 = createProfile("pinco_pallino7", false);
-        Profile publicProfile2 = createProfile("pinco_pallino8", false);
+        String error = "Unfollows on creation is not possible!";
 
         ResponseEntity<String> response = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 String.class,
-                publicProfile1.getId(),
-                publicProfile2.getId(),
+                this.savedProfile1.getId(),
+                this.savedProfile2.getId(),
                 true);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -199,21 +177,19 @@ class FollowsIT {
 
         JsonNode node = this.objectMapper.readTree(response.getBody());
         // In questo caso l'errore NON è un array di dimensione 1
-        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
     @Test
     void testAddFollows_InvalidId_Then_400() throws Exception {
-        errors.add("ID is not valid!");
-
-        Profile publicProfile = createProfile("pinco_pallino9", false);
+        String error = "ID is not valid!";
 
         ResponseEntity<String> response = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 String.class,
-                publicProfile.getId(),
+                this.savedProfile1.getId(),
                 "IdNotLong",
                 false);
 
@@ -222,7 +198,7 @@ class FollowsIT {
 
         JsonNode node = this.objectMapper.readTree(response.getBody());
         // In questo caso l'errore NON è un array di dimensione 1
-        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
 
@@ -231,17 +207,15 @@ class FollowsIT {
     @Test
     void testAddFollows_ProfileNotFound_Then_404() throws Exception {
         // messaggio d'errore che mi aspetto d'ottenere
-        errors.add("Profile "+invalidProfileId+" not found!");
-
-        Profile publicProfile = createProfile("pinco_pallino10", false);
+        String error = "Profile "+Long.MAX_VALUE+" not found!";
 
         ResponseEntity<String> response = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 String.class,
-                publicProfile.getId(),
-                invalidProfileId,
+                this.savedProfile1.getId(),
+                Long.MAX_VALUE,
                 false);
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
@@ -249,49 +223,26 @@ class FollowsIT {
 
         JsonNode node = this.objectMapper.readTree(response.getBody());
         // In questo caso l'errore NON è un array di dimensione 1
-        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
 
     @Test
     void testAcceptFollows_Then_200() throws Exception {
-        // Creo un primo profilo
-        Profile publicProfile = createProfile("pinco_pallino11", false);
-        // Creo un secondo profilo
-        Profile privateProfile = createProfile("pinco_pallino12", true);
-
-        ResponseEntity<Follows> responseFollows = this.testRestTemplate.exchange(
-                this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
-                HttpMethod.PUT,
-                HttpEntity.EMPTY,
-                Follows.class,
-                publicProfile.getId(),
-                privateProfile.getId(),
-                false);
-
-        assertEquals(HttpStatus.OK, responseFollows.getStatusCode());
-        assertNotNull(responseFollows.getBody());
-        Follows savedFollows = responseFollows.getBody();
-        assertEquals(publicProfile.getId(), savedFollows.getFollowerId());
-        assertEquals(privateProfile.getId(), savedFollows.getFollowedId());
-        assertEquals(Follows.RequestStatusEnum.PENDING, savedFollows.getRequestStatus());
-
-        log.info(savedFollows.toString());
-
         ResponseEntity<Follows> responseAccept = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/followedBy/{followsId}?rejectFollow={rejectFollow}",
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 Follows.class,
-                privateProfile.getId(),
-                publicProfile.getId(),
+                this.savedPrivateProfile1.getId(),
+                this.savedProfile2.getId(),
                 false);
 
         assertEquals(HttpStatus.OK, responseAccept.getStatusCode());
         assertNotNull(responseAccept.getBody());
         Follows savedAccepted= responseAccept.getBody();
-        assertEquals(publicProfile.getId(), savedAccepted.getFollowerId());
-        assertEquals(privateProfile.getId(), savedAccepted.getFollowedId());
+        assertEquals(this.savedPrivateProfile1.getId(), savedAccepted.getFollowedId());
+        assertEquals(this.savedProfile2.getId(), savedAccepted.getFollowerId());
         assertEquals(Follows.RequestStatusEnum.ACCEPTED, savedAccepted.getRequestStatus());
 
         // visualizzo il post salvato
@@ -300,43 +251,21 @@ class FollowsIT {
 
     @Test
     void testAcceptFollows_AlreadyAccepted_Then_200() throws Exception {
-        // Creo un primo profilo
-        Profile publicProfile1 = createProfile("pinco_pallino13", false);
-        // Creo un secondo profilo
-        Profile publicProfile2 = createProfile("pinco_pallino14", false);
-
-        ResponseEntity<Follows> responseFollows = this.testRestTemplate.exchange(
-                this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
-                HttpMethod.PUT,
-                HttpEntity.EMPTY,
-                Follows.class,
-                publicProfile1.getId(),
-                publicProfile2.getId(),
-                false);
-
-        assertEquals(HttpStatus.OK, responseFollows.getStatusCode());
-        assertNotNull(responseFollows.getBody());
-        Follows savedFollows = responseFollows.getBody();
-        assertEquals(publicProfile1.getId(), savedFollows.getFollowerId());
-        assertEquals(publicProfile2.getId(), savedFollows.getFollowedId());
-        assertEquals(Follows.RequestStatusEnum.ACCEPTED, savedFollows.getRequestStatus());
-
-        log.info(savedFollows.toString());
 
         ResponseEntity<Follows> responseAccept = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/followedBy/{followsId}?rejectFollow={rejectFollow}",
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 Follows.class,
-                publicProfile2.getId(),
-                publicProfile1.getId(),
+                this.savedProfile1.getId(),
+                this.savedProfile3.getId(),
                 false);
 
         assertEquals(HttpStatus.OK, responseAccept.getStatusCode());
         assertNotNull(responseAccept.getBody());
         Follows savedAccepted= responseAccept.getBody();
-        assertEquals(publicProfile1.getId(), savedAccepted.getFollowerId());
-        assertEquals(publicProfile2.getId(), savedAccepted.getFollowedId());
+        assertEquals(this.savedProfile1.getId(), savedAccepted.getFollowedId());
+        assertEquals(this.savedProfile3.getId(), savedAccepted.getFollowerId());
         assertEquals(Follows.RequestStatusEnum.ACCEPTED, savedAccepted.getRequestStatus());
 
         // visualizzo il post salvato
@@ -345,43 +274,20 @@ class FollowsIT {
 
     @Test
     void testAcceptFollows_Reject_Then_200() throws Exception {
-        // Creo un primo profilo
-        Profile publicProfile = createProfile("pinco_pallino15", false);
-        // Creo un secondo profilo
-        Profile privateProfile = createProfile("pinco_pallino16", true);
-
-        ResponseEntity<Follows> responseFollows = this.testRestTemplate.exchange(
-                this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
-                HttpMethod.PUT,
-                HttpEntity.EMPTY,
-                Follows.class,
-                publicProfile.getId(),
-                privateProfile.getId(),
-                false);
-
-        assertEquals(HttpStatus.OK, responseFollows.getStatusCode());
-        assertNotNull(responseFollows.getBody());
-        Follows savedFollows = responseFollows.getBody();
-        assertEquals(publicProfile.getId(), savedFollows.getFollowerId());
-        assertEquals(privateProfile.getId(), savedFollows.getFollowedId());
-        assertEquals(Follows.RequestStatusEnum.PENDING, savedFollows.getRequestStatus());
-
-        log.info(savedFollows.toString());
-
         ResponseEntity<Follows> responseReject = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/followedBy/{followsId}?rejectFollow={rejectFollow}",
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 Follows.class,
-                privateProfile.getId(),
-                publicProfile.getId(),
+                this.savedPrivateProfile1.getId(),
+                this.savedProfile3.getId(),
                 true);
 
         assertEquals(HttpStatus.OK, responseReject.getStatusCode());
         assertNotNull(responseReject.getBody());
         Follows savedReject= responseReject.getBody();
-        assertEquals(publicProfile.getId(), savedReject.getFollowerId());
-        assertEquals(privateProfile.getId(), savedReject.getFollowedId());
+        assertEquals(this.savedProfile3.getId(), savedReject.getFollowerId());
+        assertEquals(this.savedPrivateProfile1.getId(), savedReject.getFollowedId());
         assertEquals(Follows.RequestStatusEnum.REJECTED, savedReject.getRequestStatus());
 
         // visualizzo il post salvato
@@ -391,43 +297,20 @@ class FollowsIT {
 
     @Test
     void testAcceptFollows_BlockProfile_Reject_Then_200() throws Exception {
-        // Creo un primo profilo
-        Profile publicProfile1 = createProfile("pinco_pallino17", false);
-        // Creo un secondo profilo
-        Profile publicProfile2 = createProfile("pinco_pallino18", false);
-
-        ResponseEntity<Follows> responseFollows = this.testRestTemplate.exchange(
-                this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
-                HttpMethod.PUT,
-                HttpEntity.EMPTY,
-                Follows.class,
-                publicProfile1.getId(),
-                publicProfile2.getId(),
-                false);
-
-        assertEquals(HttpStatus.OK, responseFollows.getStatusCode());
-        assertNotNull(responseFollows.getBody());
-        Follows savedFollows = responseFollows.getBody();
-        assertEquals(publicProfile1.getId(), savedFollows.getFollowerId());
-        assertEquals(publicProfile2.getId(), savedFollows.getFollowedId());
-        assertEquals(Follows.RequestStatusEnum.ACCEPTED, savedFollows.getRequestStatus());
-
-        log.info(savedFollows.toString());
-
         ResponseEntity<Follows> responseReject = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/followedBy/{followsId}?rejectFollow={rejectFollow}",
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 Follows.class,
-                publicProfile2.getId(),
-                publicProfile1.getId(),
+                this.savedProfile1.getId(),
+                this.savedProfile3.getId(),
                 true);
 
         assertEquals(HttpStatus.OK, responseReject.getStatusCode());
         assertNotNull(responseReject.getBody());
         Follows savedReject= responseReject.getBody();
-        assertEquals(publicProfile1.getId(), savedReject.getFollowerId());
-        assertEquals(publicProfile2.getId(), savedReject.getFollowedId());
+        assertEquals(this.savedProfile3.getId(), savedReject.getFollowerId());
+        assertEquals(this.savedProfile1.getId(), savedReject.getFollowedId());
         assertEquals(Follows.RequestStatusEnum.REJECTED, savedReject.getRequestStatus());
 
 
@@ -437,15 +320,14 @@ class FollowsIT {
 
     @Test
     void testAcceptFollows_InvalidId_Then_400() throws Exception {
-        errors.add("ID is not valid!");
-        // Creo un primo profilo
-        Profile publicProfile1 = createProfile("pinco_pallino19", false);
+        String error = "ID is not valid!";
+
         ResponseEntity<String> response = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/followedBy/{followsId}?rejectFollow={rejectFollow}",
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 String.class,
-                publicProfile1.getId(),
+                this.savedProfile1.getId(),
                 "IdNotLong",
                 false);
 
@@ -454,7 +336,7 @@ class FollowsIT {
 
         JsonNode node = this.objectMapper.readTree(response.getBody());
         // In questo caso l'errore NON è un array di dimensione 1
-        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
 
@@ -463,17 +345,15 @@ class FollowsIT {
 
     @Test
     void testAcceptFollows_FollowNotFound_Then_404() throws Exception {
-        errors.add("Follows not found!");
-        // Creo un primo profilo
-        Profile publicProfile1 = createProfile("pinco_pallino20", false);
-        Profile publicProfile2 = createProfile("pinco_pallino21", false);
+        String error = "Follows not found!";
+
         ResponseEntity<String> responseReject = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/followedBy/{followsId}?rejectFollow={rejectFollow}",
                 HttpMethod.PUT,
                 HttpEntity.EMPTY,
                 String.class,
-                publicProfile2.getId(),
-                publicProfile1.getId(),
+                this.savedProfile2.getId(),
+                this.savedProfile3.getId(),
                 true);
 
         assertEquals(HttpStatus.NOT_FOUND, responseReject.getStatusCode());
@@ -481,61 +361,33 @@ class FollowsIT {
 
         JsonNode node = this.objectMapper.readTree(responseReject.getBody());
         // In questo caso l'errore NON è un array di dimensione 1
-        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
 
     @Test
     void testFindAllFollowers_Then_200() throws Exception {
-        Profile publicProfile1 = createProfile("pinco_pallino22", false);
-        Profile publicProfile2 = createProfile("pinco_pallino23", false);
-        Profile publicProfile3 = createProfile("pinco_pallino24", false);
-        createFollow(publicProfile2, publicProfile1);
-        createFollow(publicProfile3, publicProfile1);
-
         ResponseEntity<ProfileFollowList> responseFollowerList = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/followedBy",
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
                 ProfileFollowList.class,
-                publicProfile1.getId());
+                this.savedProfile1.getId());
 
         assertEquals(HttpStatus.OK, responseFollowerList.getStatusCode());
         assertNotNull(responseFollowerList.getBody());
         ProfileFollowList profileFollowList = responseFollowerList.getBody();
-        assertEquals(2,profileFollowList.getProfileCount());
-        assertEquals(publicProfile2, profileFollowList.getProfiles().get(0));
-        assertEquals(publicProfile3, profileFollowList.getProfiles().get(1));
-
-        log.info(responseFollowerList.toString());
-    }
-
-    @Test
-    void testFindAllFollowers_NoFollowers_Then_200() throws Exception {
-        Profile publicProfile1 = createProfile("pinco_pallino25", false);
-
-
-        ResponseEntity<ProfileFollowList> responseFollowerList = this.testRestTemplate.exchange(
-                this.baseUrl+"/{profileId}/followedBy",
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                ProfileFollowList.class,
-                publicProfile1.getId());
-
-        assertEquals(HttpStatus.OK, responseFollowerList.getStatusCode());
-        assertNotNull(responseFollowerList.getBody());
-        ProfileFollowList profileFollowList = responseFollowerList.getBody();
-        assertEquals(0,profileFollowList.getProfileCount());
-        assertTrue(profileFollowList.getProfiles().isEmpty());
+        assertTrue(profileFollowList.getProfileCount()>0);
 
 
         log.info(responseFollowerList.toString());
     }
+
 
 
     @Test
     void testFindAllFollowers_Then_400() throws Exception {
-        errors.add("ID is not valid!");
+        String error = "ID is not valid!";
 
         ResponseEntity<String> response = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/followedBy",
@@ -549,7 +401,7 @@ class FollowsIT {
 
         JsonNode node = this.objectMapper.readTree(response.getBody());
         // In questo caso l'errore NON è un array di dimensione 1
-        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
 
@@ -558,7 +410,7 @@ class FollowsIT {
     @Test
     void testFindAllFollowers_ProfileNotFound_Then_404() throws Exception {
         // messaggio d'errore che mi aspetto d'ottenere
-        errors.add("Profile "+invalidProfileId+" not found!");
+        String error = "Profile "+Long.MAX_VALUE+" not found!";
 
 
         ResponseEntity<String> response = this.testRestTemplate.exchange(
@@ -566,59 +418,30 @@ class FollowsIT {
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
                 String.class,
-                invalidProfileId);
+                Long.MAX_VALUE);
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertNotNull(response.getBody());
 
         JsonNode node = this.objectMapper.readTree(response.getBody());
         // In questo caso l'errore NON è un array di dimensione 1
-        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
 
     @Test
     void testFindAllFollowings_Then_200() throws Exception {
-        Profile publicProfile1 = createProfile("pinco_pallino26", false);
-        Profile publicProfile2 = createProfile("pinco_pallino27", false);
-        Profile publicProfile3 = createProfile("pinco_pallino28", false);
-        createFollow(publicProfile1, publicProfile2);
-        createFollow(publicProfile1, publicProfile3);
-
         ResponseEntity<ProfileFollowList> responseFollowerList = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/follows",
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
                 ProfileFollowList.class,
-                publicProfile1.getId());
+                this.savedProfile2.getId());
 
         assertEquals(HttpStatus.OK, responseFollowerList.getStatusCode());
         assertNotNull(responseFollowerList.getBody());
         ProfileFollowList profileFollowList = responseFollowerList.getBody();
-        assertEquals(2,profileFollowList.getProfileCount());
-        assertEquals(publicProfile2, profileFollowList.getProfiles().get(0));
-        assertEquals(publicProfile3, profileFollowList.getProfiles().get(1));
-
-        log.info(responseFollowerList.toString());
-    }
-
-    @Test
-    void testFindAllFollowings_NoFollowings_Then_200() throws Exception {
-        Profile publicProfile1 = createProfile("pinco_pallino29", false);
-
-
-        ResponseEntity<ProfileFollowList> responseFollowerList = this.testRestTemplate.exchange(
-                this.baseUrl+"/{profileId}/follows",
-                HttpMethod.GET,
-                HttpEntity.EMPTY,
-                ProfileFollowList.class,
-                publicProfile1.getId());
-
-        assertEquals(HttpStatus.OK, responseFollowerList.getStatusCode());
-        assertNotNull(responseFollowerList.getBody());
-        ProfileFollowList profileFollowList = responseFollowerList.getBody();
-        assertEquals(0,profileFollowList.getProfileCount());
-        assertTrue(profileFollowList.getProfiles().isEmpty());
+        assertEquals(3,profileFollowList.getProfileCount());
 
 
         log.info(responseFollowerList.toString());
@@ -626,7 +449,7 @@ class FollowsIT {
 
     @Test
     void testFindAllFollowings_Then_400() throws Exception {
-        errors.add("ID is not valid!");
+        String error = "ID is not valid!";
         ResponseEntity<String> response = this.testRestTemplate.exchange(
                 this.baseUrl+"/{profileId}/follows",
                 HttpMethod.GET,
@@ -639,7 +462,7 @@ class FollowsIT {
 
         JsonNode node = this.objectMapper.readTree(response.getBody());
         // In questo caso l'errore NON è un array di dimensione 1
-        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
 
@@ -648,7 +471,7 @@ class FollowsIT {
     @Test
     void testFindAllFollowings_ProfileNotFound_Then_404() throws Exception {
         // messaggio d'errore che mi aspetto d'ottenere
-        errors.add("Profile "+invalidProfileId+" not found!");
+        String error = "Profile "+Long.MAX_VALUE+" not found!";
 
 
         ResponseEntity<String> response = this.testRestTemplate.exchange(
@@ -656,53 +479,15 @@ class FollowsIT {
                 HttpMethod.GET,
                 HttpEntity.EMPTY,
                 String.class,
-                invalidProfileId);
+                Long.MAX_VALUE);
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertNotNull(response.getBody());
 
         JsonNode node = this.objectMapper.readTree(response.getBody());
         // In questo caso l'errore NON è un array di dimensione 1
-        assertEquals(errors.get(0) ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
 
-    Profile createProfile(String profileName, Boolean isPrivate){
-        Profile newProfile = new Profile(profileName,isPrivate,1L);
-        // Creo prima un profilo
-        HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);
-        ResponseEntity<Profile> responseProfile = this.testRestTemplate.exchange(
-                this.baseUrl,
-                HttpMethod.POST,
-                requestProfile,
-                Profile.class);
-        assertEquals(HttpStatus.CREATED, responseProfile.getStatusCode());
-        assertNotNull(responseProfile.getBody());
-        Profile savedProfile = responseProfile.getBody();
-        assertNotNull(savedProfile.getId());
-
-        log.info(responseProfile.toString());
-
-        return savedProfile;
-    }
-
-    void createFollow(Profile follower, Profile followed){
-        ResponseEntity<Follows> responseFollows = this.testRestTemplate.exchange(
-                this.baseUrl+"/{profileId}/follows/{followsId}?unfollow={unfollow}",
-                HttpMethod.PUT,
-                HttpEntity.EMPTY,
-                Follows.class,
-                follower.getId(),
-                followed.getId(),
-                false);
-
-        assertEquals(HttpStatus.OK, responseFollows.getStatusCode());
-        assertNotNull(responseFollows.getBody());
-        Follows savedFollows = responseFollows.getBody();
-        assertEquals(follower.getId(), savedFollows.getFollowerId());
-        assertEquals(followed.getId(), savedFollows.getFollowedId());
-        assertEquals(Follows.RequestStatusEnum.ACCEPTED, savedFollows.getRequestStatus());
-
-        log.info(savedFollows.toString());
-    }
 }

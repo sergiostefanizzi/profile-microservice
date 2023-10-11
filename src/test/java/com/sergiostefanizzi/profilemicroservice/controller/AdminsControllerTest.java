@@ -192,7 +192,7 @@ public class AdminsControllerTest {
         updatedProfile.blockedUntil(this.blockedUntilTime);
 
         ProfileAdminPatch profileAdminPatch = new ProfileAdminPatch();
-        profileAdminPatch.setBlockedUntil(this.blockedUntilTime.minusMonths(10));
+        profileAdminPatch.setBlockedUntil(this.blockedUntilTime.minusYears(2));
 
         when(this.profilesRepository.adminCheckActiveById(anyLong())).thenReturn(Optional.of(profileId));
         when(this.adminsService.blockProfileById(anyLong(), any(ProfileAdminPatch.class))).thenReturn(updatedProfile);
