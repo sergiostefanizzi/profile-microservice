@@ -27,25 +27,46 @@ public class AlertsIT {
     @LocalServerPort
     private int port;
     private String baseUrl = "http://localhost";
-    private String baseUrlProfile = "http://localhost";
-    private String baseUrlPost = "http://localhost";
-    private String baseUrlComment = "http://localhost";
+
     @Autowired
     private TestRestTemplate testRestTemplate;
     @Autowired
     private ObjectMapper objectMapper;
-    String alertOwnerProfileName = "newPinco_pallino";
-    String postOwnerProfileName = "newGiuseppe_verdi";
+    private Profile alertSender;
+    private Post postToAlert;
+    private Comment commentToAlert;
+
     String contentUrl = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Cape_may.jpg";
     String alertReason = "Motivo della segnalazione";
-    String content = "Commento al post";
+
+    String pictureUrl = "https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg";
+    String caption = "This is the caption";
+    Post.PostTypeEnum postType = Post.PostTypeEnum.POST;
 
     @BeforeEach
     void setUp() {
-        this.baseUrlProfile += ":" + port + "/profiles";
-        this.baseUrlPost += ":" + port + "/posts";
-        this.baseUrlComment += ":" + port + "/posts/comments";
         this.baseUrl += ":" + port + "/alerts";
+
+        this.alertSender = new Profile("pinco_pallino", false, 101L);
+        this.alertSender.setId(101L);
+        this.alertSender.setBio("Profilo di Pinco");
+        this.alertSender.setPictureUrl(pictureUrl);
+
+        Profile postOwner = new Profile("matt_murdock", false, 105L);
+        postOwner.setId(106L);
+        postOwner.setBio("Profilo di Murdock");
+        postOwner.setPictureUrl(pictureUrl);
+
+        this.postToAlert = new Post(contentUrl, postType, postOwner.getId());
+        this.postToAlert.setCaption(caption);
+        this.postToAlert.setId(116L);
+
+        this.commentToAlert = new Comment(
+                postOwner.getId(),
+                this.postToAlert.getId(),
+                "Commento al post"
+        );
+        commentToAlert.setId(101L);
     }
 
     @AfterEach
@@ -55,60 +76,54 @@ public class AlertsIT {
 
     @Test
     void testCreateAlert_PostAlert_Then_201(){
-        // Profilo di chi segnalera' un post
-        Profile alertOwnerProfile = createPublicProfile(alertOwnerProfileName);
-        // Profilo di chi possiede il post che verra' segnalato
-        Profile postOwnerProfile = createPublicProfile(postOwnerProfileName);
-        // Post da segnalare
-        Post postToAlert = createPost(postOwnerProfile.getId());
+        Alert newAlert = new Alert(this.alertSender.getId(), alertReason);
+        newAlert.setPostId(this.postToAlert.getId());
 
-        Alert newAlert = new Alert(alertOwnerProfile.getId(), alertReason);
-        newAlert.setPostId(postToAlert.getId());
 
-        Alert savedAlert = createAlert(newAlert, true);
+        HttpEntity<Alert> requestAlert = new HttpEntity<>(newAlert);
+        ResponseEntity<Alert> responseAlert = this.testRestTemplate.exchange(
+                this.baseUrl+"?isPost={isPost}",
+                HttpMethod.POST,
+                requestAlert,
+                Alert.class,
+                true);
+        assertEquals(HttpStatus.CREATED, responseAlert.getStatusCode());
+        assertNotNull(responseAlert.getBody());
+        Alert savedAlert = responseAlert.getBody();
+        assertNotNull(savedAlert.getId());
+        newAlert.setId(savedAlert.getId());
+        assertEquals(newAlert, savedAlert);
 
         log.info(savedAlert.toString());
-        assertNotNull(savedAlert.getId());
-        assertEquals(newAlert.getCreatedBy(), savedAlert.getCreatedBy());
-        assertEquals(newAlert.getPostId(), savedAlert.getPostId());
-        assertNull(savedAlert.getCommentId());
-        assertEquals(newAlert.getReason(), savedAlert.getReason());
     }
 
     @Test
     void testCreateAlert_CommentAlert_Then_201(){
-        // Profilo di chi segnalera' un post
-        Profile alertOwnerProfile = createPublicProfile(alertOwnerProfileName+"_1");
-        // Profilo di chi possiede il post che verra' segnalato
-        Profile postOwnerProfile = createPublicProfile(postOwnerProfileName+"_1");
-        // Post del commento da segnalare
-        Post postToAlert = createPost(postOwnerProfile.getId());
-        // Commento del owner del post che verra' segnalato
-        Comment commentToAlert = createComment(postOwnerProfile.getId(), postToAlert.getId());
 
-        Alert newAlert = new Alert(alertOwnerProfile.getId(), alertReason);
-        newAlert.setCommentId(commentToAlert.getId());
+        Alert newAlert = new Alert(this.alertSender.getId(), alertReason);
+        newAlert.setCommentId(this.commentToAlert.getId());
 
-        Alert savedAlert = createAlert(newAlert, false);
-
+        HttpEntity<Alert> requestAlert = new HttpEntity<>(newAlert);
+        ResponseEntity<Alert> responseAlert = this.testRestTemplate.exchange(
+                this.baseUrl+"?isPost={isPost}",
+                HttpMethod.POST,
+                requestAlert,
+                Alert.class,
+                false);
+        assertEquals(HttpStatus.CREATED, responseAlert.getStatusCode());
+        assertNotNull(responseAlert.getBody());
+        Alert savedAlert = responseAlert.getBody();
         assertNotNull(savedAlert.getId());
-        assertEquals(newAlert.getCreatedBy(), savedAlert.getCreatedBy());
-        assertEquals(newAlert.getCommentId(), savedAlert.getCommentId());
-        assertNull(savedAlert.getPostId());
-        assertEquals(newAlert.getReason(), savedAlert.getReason());
+        newAlert.setId(savedAlert.getId());
+        assertEquals(newAlert, savedAlert);
+
+        log.info(savedAlert.toString());
     }
 
     @Test
     void testCreateAlert_PostAlert_AlertTypeErrorException_isPost_False_Then_400() throws JsonProcessingException {
-        // Profilo di chi segnalera' un post
-        Profile alertOwnerProfile = createPublicProfile(alertOwnerProfileName+"_2");
-        // Profilo di chi possiede il post che verra' segnalato
-        Profile postOwnerProfile = createPublicProfile(postOwnerProfileName+"_2");
-        // Post da segnalare
-        Post postToAlert = createPost(postOwnerProfile.getId());
-
-        Alert newAlert = new Alert(alertOwnerProfile.getId(), alertReason);
-        newAlert.setPostId(postToAlert.getId());
+        Alert newAlert = new Alert(this.alertSender.getId(), alertReason);
+        newAlert.setPostId(this.postToAlert.getId());
 
         HttpEntity<Alert> requestAlert = new HttpEntity<>(newAlert);
         ResponseEntity<String> responseAlert = this.testRestTemplate.exchange(
@@ -129,17 +144,9 @@ public class AlertsIT {
 
     @Test
     void testCreateAlert_CommentAlert_AlertTypeErrorException_isPost_False_Then_400() throws JsonProcessingException {
-        // Profilo di chi segnalera' un post
-        Profile alertOwnerProfile = createPublicProfile(alertOwnerProfileName+"_3");
-        // Profilo di chi possiede il post che verra' segnalato
-        Profile postOwnerProfile = createPublicProfile(postOwnerProfileName+"_3");
-        // Post da segnalare
-        Post postToAlert = createPost(postOwnerProfile.getId());
-        // Commento del owner del post che verra' segnalato
-        Comment commentToAlert = createComment(postOwnerProfile.getId(), postToAlert.getId());
 
-        Alert newAlert = new Alert(alertOwnerProfile.getId(), alertReason);
-        newAlert.setCommentId(commentToAlert.getId());
+        Alert newAlert = new Alert(this.alertSender.getId(), alertReason);
+        newAlert.setCommentId(this.commentToAlert.getId());
 
         HttpEntity<Alert> requestAlert = new HttpEntity<>(newAlert);
         ResponseEntity<String> responseAlert = this.testRestTemplate.exchange(
@@ -160,15 +167,8 @@ public class AlertsIT {
 
     @Test
     void testCreateAlert_PostAlert_MethodArgumentTypeMismatchException_isPost_Missing_Then_400() throws JsonProcessingException {
-        // Profilo di chi segnalera' un post
-        Profile alertOwnerProfile = createPublicProfile(alertOwnerProfileName+"_4");
-        // Profilo di chi possiede il post che verra' segnalato
-        Profile postOwnerProfile = createPublicProfile(postOwnerProfileName+"_4");
-        // Post da segnalare
-        Post postToAlert = createPost(postOwnerProfile.getId());
-
-        Alert newAlert = new Alert(alertOwnerProfile.getId(), alertReason);
-        newAlert.setPostId(postToAlert.getId());
+        Alert newAlert = new Alert(this.alertSender.getId(), alertReason);
+        newAlert.setPostId(this.postToAlert.getId());
 
         HttpEntity<Alert> requestAlert = new HttpEntity<>(newAlert);
         ResponseEntity<String> responseAlert = this.testRestTemplate.exchange(
@@ -189,15 +189,8 @@ public class AlertsIT {
 
     @Test
     void testCreateAlert_PostAlert_AlertTypeNotSpecifiedException_isPost_Missing_Then_400() throws JsonProcessingException {
-        // Profilo di chi segnalera' un post
-        Profile alertOwnerProfile = createPublicProfile(alertOwnerProfileName+"_5");
-        // Profilo di chi possiede il post che verra' segnalato
-        Profile postOwnerProfile = createPublicProfile(postOwnerProfileName+"_5");
-        // Post da segnalare
-        Post postToAlert = createPost(postOwnerProfile.getId());
-
-        Alert newAlert = new Alert(alertOwnerProfile.getId(), alertReason);
-        newAlert.setPostId(postToAlert.getId());
+        Alert newAlert = new Alert(this.alertSender.getId(), alertReason);
+        newAlert.setPostId(this.postToAlert.getId());
 
         HttpEntity<Alert> requestAlert = new HttpEntity<>(newAlert);
         ResponseEntity<String> responseAlert = this.testRestTemplate.exchange(
@@ -217,13 +210,9 @@ public class AlertsIT {
 
     @Test
     void testCreateAlert_PostAlert_ProfileNotFoundException_Then_404() throws Exception {
-        // Profilo di chi possiede il post che verra' segnalato
-        Profile postOwnerProfile = createPublicProfile(postOwnerProfileName+"_6");
-        // Post da segnalare
-        Post postToAlert = createPost(postOwnerProfile.getId());
 
         Alert newAlert = new Alert(Long.MAX_VALUE, alertReason);
-        newAlert.setPostId(postToAlert.getId());
+        newAlert.setPostId(this.postToAlert.getId());
 
         HttpEntity<Alert> requestAlert = new HttpEntity<>(newAlert);
         ResponseEntity<String> responseAlert = this.testRestTemplate.exchange(
@@ -244,10 +233,8 @@ public class AlertsIT {
 
     @Test
     void testCreateAlert_PostAlert_PostNotFoundException_Then_404() throws Exception {
-        // Profilo di chi possiede il post che verra' segnalato
-        Profile postOwnerProfile = createPublicProfile(postOwnerProfileName+"_7");
 
-        Alert newAlert = new Alert(postOwnerProfile.getId(), alertReason);
+        Alert newAlert = new Alert(this.alertSender.getId(), alertReason);
         newAlert.setPostId(Long.MAX_VALUE);
 
         HttpEntity<Alert> requestAlert = new HttpEntity<>(newAlert);
@@ -269,10 +256,7 @@ public class AlertsIT {
 
     @Test
     void testCreateAlert_CommentAlert_PostNotFoundException_Then_404() throws Exception {
-        // Profilo di chi possiede il post che verra' segnalato
-        Profile postOwnerProfile = createPublicProfile(postOwnerProfileName+"_8");
-
-        Alert newAlert = new Alert(postOwnerProfile.getId(), alertReason);
+        Alert newAlert = new Alert(this.alertSender.getId(), alertReason);
         newAlert.setCommentId(Long.MAX_VALUE);
 
         HttpEntity<Alert> requestAlert = new HttpEntity<>(newAlert);
@@ -292,100 +276,6 @@ public class AlertsIT {
         log.info("Error -> "+node.get("error"));
     }
 
-    private Alert createAlert(Alert newAlert, Boolean isPost) {
-        HttpEntity<Alert> requestAlert = new HttpEntity<>(newAlert);
-        ResponseEntity<Alert> responseAlert = this.testRestTemplate.exchange(
-                this.baseUrl+"?isPost={isPost}",
-                HttpMethod.POST,
-                requestAlert,
-                Alert.class,
-                isPost);
-        assertEquals(HttpStatus.CREATED, responseAlert.getStatusCode());
-        assertNotNull(responseAlert.getBody());
-        Alert savedAlert = responseAlert.getBody();
-        log.info(savedAlert.toString());
-        return savedAlert;
-    }
 
-    private String createAlertError(Alert newAlert, Boolean isPost) {
-        HttpEntity<Alert> requestAlert = new HttpEntity<>(newAlert);
-        ResponseEntity<String> responseAlert = this.testRestTemplate.exchange(
-                this.baseUrl+"?isPost={isPost}",
-                HttpMethod.POST,
-                requestAlert,
-                String.class,
-                isPost);
-        assertEquals(HttpStatus.BAD_REQUEST, responseAlert.getStatusCode());
-        assertNotNull(responseAlert.getBody());
-        String alertError = responseAlert.getBody();
-        log.info(alertError);
-        return alertError;
-    }
-
-    Profile createPublicProfile(String profileName){
-        Profile newProfile = new Profile(profileName,false,1L);
-
-        HttpEntity<Profile> requestProfile = new HttpEntity<>(newProfile);
-        ResponseEntity<Profile> responseProfile = this.testRestTemplate.exchange(
-                this.baseUrlProfile,
-                HttpMethod.POST,
-                requestProfile,
-                Profile.class);
-        assertEquals(HttpStatus.CREATED, responseProfile.getStatusCode());
-        assertNotNull(responseProfile.getBody());
-        Profile savedProfile = responseProfile.getBody();
-        assertNotNull(savedProfile.getId());
-
-        log.info(responseProfile.toString());
-        return savedProfile;
-    }
-
-    Post createPost(Long profileId) {
-        Post newPost = new Post(contentUrl, Post.PostTypeEnum.POST, profileId);
-
-        HttpEntity<Post> request = new HttpEntity<>(newPost);
-        ResponseEntity<Post> response = this.testRestTemplate.exchange(
-                this.baseUrlPost,
-                HttpMethod.POST,
-                request,
-                Post.class);
-
-        assertEquals(HttpStatus.CREATED, response.getStatusCode());
-        Post savedPost = response.getBody();
-        assertNotNull(savedPost);
-        assertNotNull(savedPost.getId());
-        assertEquals(newPost.getContentUrl(), savedPost.getContentUrl());
-        assertEquals(newPost.getPostType(), savedPost.getPostType());
-        assertEquals(newPost.getProfileId(), savedPost.getProfileId());
-
-        // visualizzo il post salvato
-        log.info(savedPost.toString());
-        return savedPost;
-    }
-
-    Comment createComment(Long profileId, Long postId) {
-        Comment newComment = new Comment(
-                profileId,
-                postId,
-                content
-        );
-        HttpEntity<Comment> requestComment = new HttpEntity<>(newComment);
-        ResponseEntity<Comment> responseComment = this.testRestTemplate.exchange(this.baseUrlComment,
-                HttpMethod.POST,
-                requestComment,
-                Comment.class);
-
-        assertEquals(HttpStatus.CREATED, responseComment.getStatusCode());
-        assertNotNull(responseComment.getBody());
-        Comment savedComment = responseComment.getBody();
-        assertNotNull(savedComment.getId());
-        assertEquals(profileId, savedComment.getProfileId());
-        assertEquals(postId, savedComment.getPostId());
-        assertEquals(content, savedComment.getContent());
-
-        // visualizzo il commento salvato
-        log.info(savedComment.toString());
-        return savedComment;
-    }
 
 }
