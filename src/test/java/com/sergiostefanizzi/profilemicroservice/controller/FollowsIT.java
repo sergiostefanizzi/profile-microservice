@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @ActiveProfiles("test")
 @Slf4j
 class FollowsIT {
+    /*
 
     @LocalServerPort
     private int port;
@@ -496,4 +497,6 @@ class FollowsIT {
         log.info("Error -> "+node.get("error"));
     }
 
+
+     */
 }

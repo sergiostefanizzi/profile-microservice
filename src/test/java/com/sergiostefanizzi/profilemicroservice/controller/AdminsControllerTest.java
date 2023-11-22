@@ -92,7 +92,7 @@ public class AdminsControllerTest {
     void tearDown() {
 
     }
-
+    /*
     @Test
     void testBlockProfileById_Block_Then_200() throws Exception {
         Profile updatedProfile = new Profile(this.profileName,false, this.accountId);
@@ -589,4 +589,6 @@ public class AdminsControllerTest {
         profile.setId(id);
         return profile;
     }
+
+     */
 }

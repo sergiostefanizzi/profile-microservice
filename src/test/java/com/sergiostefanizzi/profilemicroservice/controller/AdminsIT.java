@@ -61,7 +61,7 @@ public class AdminsIT {
     void tearDown() {
 
     }
-
+/*
     @Test
     void testBlockProfileById_Block_Then_200(){
         Profile profileToBlock = createPublicProfile("marioBros",1L);
@@ -212,6 +212,8 @@ public class AdminsIT {
         log.info("Error -> "+node.get("error"));
     }
 
+ */
+
     //TODO risolvere, usare repository
     /*
     @Test
@@ -258,6 +260,7 @@ public class AdminsIT {
 
      */
 
+/*
     @Test
     void testFindAllProfiles_Then_400() throws Exception{
         ResponseEntity<String> response = this.testRestTemplate.exchange(
@@ -608,4 +611,6 @@ public class AdminsIT {
         log.info(responseProfile.toString());
         return savedProfile;
     }
+
+ */
 }

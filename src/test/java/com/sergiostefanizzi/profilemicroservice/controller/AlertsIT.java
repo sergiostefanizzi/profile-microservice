@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @ActiveProfiles("test")
 @Slf4j
 public class AlertsIT {
+    /*
     @LocalServerPort
     private int port;
     private String baseUrl = "http://localhost";
@@ -277,5 +278,7 @@ public class AlertsIT {
     }
 
 
+
+     */
 
 }

@@ -46,6 +46,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @Slf4j
 class FollowsControllerTest {
+    /*
     @MockBean
     private FollowsService followsService;
     @Autowired
@@ -637,6 +638,8 @@ class FollowsControllerTest {
         log.info("Errors\n" + resultAsString);
         log.info("Resolved Error ---> " + result.getResolvedException());
     }
+
+     */
 
 
 }

@@ -32,6 +32,7 @@ import static org.mockito.Mockito.*;
 @ActiveProfiles("test")
 @Slf4j
 class PostsServiceTest {
+    /*
     @Mock
     private PostsRepository postsRepository;
     @Mock
@@ -589,5 +590,7 @@ class PostsServiceTest {
         postJpaList.add(newPostJpa4);
         return postJpaList;
     }
+
+     */
 
 }

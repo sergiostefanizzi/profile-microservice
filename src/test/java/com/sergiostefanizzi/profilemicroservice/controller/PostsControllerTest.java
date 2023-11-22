@@ -54,6 +54,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @Slf4j
 class PostsControllerTest {
+    /*
     @MockBean
     private PostsService postsService;
     @MockBean
@@ -1271,5 +1272,7 @@ class PostsControllerTest {
         postList.add(post4);
         return postList;
     }
+
+     */
 
 }

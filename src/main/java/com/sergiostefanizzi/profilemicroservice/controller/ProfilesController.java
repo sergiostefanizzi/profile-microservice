@@ -23,10 +23,6 @@ import java.util.Optional;
 @Slf4j
 public class ProfilesController implements ProfilesApi {
     private final ProfilesService profilesService;
-    @Override
-    public Optional<NativeWebRequest> getRequest() {
-        return ProfilesApi.super.getRequest();
-    }
 
     @Override
     public ResponseEntity<Profile> addProfile(Profile profile) {

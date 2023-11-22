@@ -10,7 +10,7 @@ info:
     email: sergio.stefanizzi@finconsgroup.com
     name: Sergio Stefanizzi
 servers:
-  - url: http://localhost:8080/api/v1
+  - url: http://localhost:8084
     variables: {}
     description: Development server
 tags:
@@ -1029,12 +1029,13 @@ components:
           readOnly: true
           x-nonnull: '@com.fasterxml.jackson.annotation.JsonInclude(com.fasterxml.jackson.annotation.JsonInclude.Include.NON_NULL)'
         account_id:
-          type: integer
-          format: int64
+          type: string
+          pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+          readOnly: true
+          description: Account id
       required:
         - profile_name
         - is_private
-        - account_id
 
     FullProfile:
       type: object

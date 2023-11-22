@@ -27,9 +27,9 @@ public class ProfileToProfileJpaConverter implements Converter<Profile, ProfileJ
     public Profile convertBack(ProfileJpa source){
         Profile profile = new Profile(
                 source.getProfileName(),
-                source.getIsPrivate(),
-                source.getAccountId()
+                source.getIsPrivate()
         );
+        profile.setAccountId(source.getAccountId());
         profile.setBio(source.getBio());
         profile.setPictureUrl(source.getPictureUrl());
         profile.setId(source.getId());

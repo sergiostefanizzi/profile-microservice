@@ -1,24 +1,24 @@
 INSERT INTO PUBLIC.PROFILE
 (ID, PROFILE_NAME, BIO, PICTURE_URL, IS_PRIVATE, CREATED_AT, UPDATED_AT, DELETED_AT, BLOCKED_UNTIL, VERSION, ACCOUNT_ID)
-VALUES(101, 'pinco_pallino', 'Profilo di Pinco', 'https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg', false, '2023-09-22 14:20:01.944', NULL, NULL, NULL, 0, 101);
+VALUES(101, 'pinco_pallino', 'Profilo di Pinco', 'https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg', false, '2023-09-22 14:20:01.944', NULL, NULL, NULL, 0, '14e80daf-ccbd-4a7f-ac83-1cacf809fc07');
 -- Profile id 102 to be deleted in ProfilesIT
 INSERT INTO PUBLIC.PROFILE
 (ID, PROFILE_NAME, BIO, PICTURE_URL, IS_PRIVATE, CREATED_AT, UPDATED_AT, DELETED_AT, BLOCKED_UNTIL, VERSION, ACCOUNT_ID)
-VALUES(102, 'marioBros', 'Profilo di Mario', 'https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg', false, '2023-09-22 14:20:21.068', NULL, NULL, NULL, 0, 102);
+VALUES(102, 'marioBros', 'Profilo di Mario', 'https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg', false, '2023-09-22 14:20:21.068', NULL, NULL, NULL, 0, '14e80daf-ccbd-4a7f-ac83-1cacf809fc07');
 INSERT INTO PUBLIC.PROFILE
 (ID, PROFILE_NAME, BIO, PICTURE_URL, IS_PRIVATE, CREATED_AT, UPDATED_AT, DELETED_AT, BLOCKED_UNTIL, VERSION, ACCOUNT_ID)
-VALUES(103, 'luigiBros', 'Benvenuti!!', 'https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg', false, '2023-09-22 14:20:32.057', NULL, NULL, NULL, 0, 103);
+VALUES(103, 'luigiBros', 'Benvenuti!!', 'https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg', false, '2023-09-22 14:20:32.057', NULL, NULL, NULL, 0, '14e80daf-ccbd-4a7f-ac83-1cacf809fc07');
 INSERT INTO PUBLIC.PROFILE
 (ID, PROFILE_NAME, BIO, PICTURE_URL, IS_PRIVATE, CREATED_AT, UPDATED_AT, DELETED_AT, BLOCKED_UNTIL, VERSION, ACCOUNT_ID)
-VALUES(104, 'pinco_pallino2', 'Secondo profilo di Pinco', 'https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg', false, '2023-09-22 14:20:01.944', NULL, NULL, NULL, 0, 101);
+VALUES(104, 'pinco_pallino2', 'Secondo profilo di Pinco', 'https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg', false, '2023-09-22 14:20:01.944', NULL, NULL, NULL, 0, '14e80daf-ccbd-4a7f-ac83-1cacf809fc07');
 -- Profile id 105 is a private profile
 INSERT INTO PUBLIC.PROFILE
 (ID, PROFILE_NAME, BIO, PICTURE_URL, IS_PRIVATE, CREATED_AT, UPDATED_AT, DELETED_AT, BLOCKED_UNTIL, VERSION, ACCOUNT_ID)
-VALUES(105, 'tony_stark', 'Profilo di Tony', 'https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg', true, '2023-09-22 14:20:01.944', NULL, NULL, NULL, 0, 104);
+VALUES(105, 'tony_stark', 'Profilo di Tony', 'https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg', true, '2023-09-22 14:20:01.944', NULL, NULL, NULL, 0, '14e80daf-ccbd-4a7f-ac83-1cacf809fc07');
 
 INSERT INTO PUBLIC.PROFILE
 (ID, PROFILE_NAME, BIO, PICTURE_URL, IS_PRIVATE, CREATED_AT, UPDATED_AT, DELETED_AT, BLOCKED_UNTIL, VERSION, ACCOUNT_ID)
-VALUES(106, 'matt_murdock', 'Profilo di Murdock', 'https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg', false, '2023-09-22 14:20:01.944', NULL, NULL, NULL, 0, 105);
+VALUES(106, 'matt_murdock', 'Profilo di Murdock', 'https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg', false, '2023-09-22 14:20:01.944', NULL, NULL, NULL, 0, '14e80daf-ccbd-4a7f-ac83-1cacf809fc07');
 
 -- Profile id 101 to unfollow 104 on FollowsIT
 INSERT INTO PUBLIC.FOLLOWS

@@ -59,8 +59,8 @@ public class ProfileJpa {
     private LocalDateTime blockedUntil;
 
     @Column(name = "account_id", nullable = false)
-    @NotNull
-    private final Long accountId;
+    @NotEmpty
+    private final String accountId;
 
     @OneToMany(mappedBy = "profile")
     @JsonBackReference

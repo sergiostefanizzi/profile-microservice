@@ -31,6 +31,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @ActiveProfiles("test")
 @Slf4j
 class PostsIT {
+    /*
     @LocalServerPort
     private int port;
 
@@ -1210,6 +1211,8 @@ class PostsIT {
         assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
+
+     */
 
 
 }

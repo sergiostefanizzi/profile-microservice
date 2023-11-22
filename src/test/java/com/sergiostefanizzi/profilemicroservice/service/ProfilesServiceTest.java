@@ -14,12 +14,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
@@ -43,29 +46,35 @@ class ProfilesServiceTest {
     private ProfileToProfileJpaConverter profileToProfileJpaConverter;
     @Mock
     private PostToPostJpaConverter postToPostJpaConverter;
+    @Mock
+    private SecurityContext securityContext;
     @InjectMocks
     private ProfilesService profilesService;
+    private JwtAuthenticationToken jwtAuthenticationToken;
 
-    String profileName = "giuseppe_verdi";
-    Boolean isPrivate = false;
-    Boolean updatedIsPrivate = true;
-    Long accountId = 1L;
-    String bio = "This is Giuseppe's profile!";
-    String updatedBio = "New Giuseppe's bio";
-    String pictureUrl = "https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg";
-    String updatedPictureUrl = "https://icons-for-free.com/iconfiles/png/512/avatar+person+profile+user+icon-1320086059654790795.png";
-    Long profileId = 12L;
+    private String profileName = "giuseppe_verdi";
+    private Boolean isPrivate = false;
+    private Boolean updatedIsPrivate = true;
+    private String accountId = UUID.randomUUID().toString();
+    private String bio = "This is Giuseppe's profile!";
+    private String updatedBio = "New Giuseppe's bio";
+    private String pictureUrl = "https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg";
+    private String updatedPictureUrl = "https://icons-for-free.com/iconfiles/png/512/avatar+person+profile+user+icon-1320086059654790795.png";
+    private Long profileId = 12L;
     private Profile newProfile;
     private ProfileJpa savedProfileJpa;
     private UrlValidator validator;
-    String contentUrl = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Cape_may.jpg";
-    String caption = "This is the post caption";
+    private String contentUrl = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Cape_may.jpg";
+    private String caption = "This is the post caption";
     Post.PostTypeEnum postType = Post.PostTypeEnum.POST;
     @BeforeEach
     void setUp() {
-        this.newProfile = new Profile(profileName,isPrivate,accountId);
+        SecurityContextHolder.setContext(securityContext);
+
+        this.newProfile = new Profile(profileName,isPrivate);
         this.newProfile.setBio(bio);
         this.newProfile.setPictureUrl(pictureUrl);
+
 
         this.savedProfileJpa = new ProfileJpa(profileName, isPrivate, accountId);
         this.savedProfileJpa.setBio(bio);
@@ -73,8 +82,20 @@ class ProfilesServiceTest {
         this.savedProfileJpa.setId(profileId);
 
 
-
         this.validator = new UrlValidator();
+
+        Map<String, Object> headers = new HashMap<>();
+        headers.put("alg","HS256");
+        headers.put("typ","JWT");
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("sub", this.accountId);
+        Jwt jwt = new Jwt("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+                Instant.now(),
+                Instant.MAX,
+                headers,
+                claims);
+
+        this.jwtAuthenticationToken = new JwtAuthenticationToken(jwt);
     }
 
     @AfterEach
@@ -90,12 +111,14 @@ class ProfilesServiceTest {
         newProfileJpa.setPictureUrl(pictureUrl);
 
         // Profilo che verra' restituito service
-        Profile convertedProfile = new Profile(profileName, isPrivate, accountId);
+        Profile convertedProfile = new Profile(profileName, isPrivate);
+        convertedProfile.setAccountId(accountId);
         convertedProfile.setBio(bio);
         convertedProfile.setPictureUrl(pictureUrl);
         convertedProfile.setId(profileId);
 
         when(this.profilesRepository.checkActiveByProfileName(anyString())).thenReturn(Optional.empty());
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
         when(this.profileToProfileJpaConverter.convert(any(Profile.class))).thenReturn(newProfileJpa);
         when(this.profilesRepository.save(any(ProfileJpa.class))).thenReturn(newProfileJpa);
         when(this.profileToProfileJpaConverter.convertBack(any(ProfileJpa.class))).thenReturn(convertedProfile);
@@ -105,15 +128,15 @@ class ProfilesServiceTest {
         Profile savedProfile = this.profilesService.save(this.newProfile);
 
         assertNotNull(savedProfile);
-        assertEquals(profileId, savedProfile.getId());
-        assertEquals(profileName, savedProfile.getProfileName());
-        assertEquals(isPrivate, savedProfile.getIsPrivate());
-        assertEquals(accountId, savedProfile.getAccountId());
-        assertEquals(bio, savedProfile.getBio());
-        assertEquals(pictureUrl, savedProfile.getPictureUrl());
+        this.newProfile.setAccountId(this.accountId);
+        this.newProfile.setId(this.profileId);
+
+        assertEquals(this.newProfile, savedProfile);
+
         assertTrue(validator.isValid(savedProfile.getPictureUrl()));
 
         verify(this.profilesRepository, times(1)).checkActiveByProfileName(anyString());
+        verify(this.securityContext, times(1)).getAuthentication();
         verify(this.profileToProfileJpaConverter, times(1)).convert(any(Profile.class));
         verify(this.profilesRepository, times(1)).save(any(ProfileJpa.class));
         verify(this.profileToProfileJpaConverter, times(1)).convertBack(any(ProfileJpa.class));
@@ -133,6 +156,7 @@ class ProfilesServiceTest {
         });
 
         verify(this.profilesRepository, times(1)).checkActiveByProfileName(anyString());
+        verify(this.securityContext, times(0)).getAuthentication();
         verify(this.profileToProfileJpaConverter, times(0)).convert(any(Profile.class));
         verify(this.profilesRepository, times(0)).save(any(ProfileJpa.class));
         verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
@@ -165,7 +189,8 @@ class ProfilesServiceTest {
         profilePatch.setIsPrivate(updatedIsPrivate);
 
         // Aggiorno il profilo che verra' restituito dal service con i nuovi valori
-        Profile convertedProfile = new Profile(profileName, isPrivate, accountId);
+        Profile convertedProfile = new Profile(profileName, isPrivate);
+        convertedProfile.setAccountId(accountId);
         convertedProfile.setId(profileId);
         convertedProfile.setBio(profilePatch.getBio() != null ? profilePatch.getBio() : bio);
         convertedProfile.setPictureUrl(profilePatch.getPictureUrl() != null ? profilePatch.getPictureUrl() : pictureUrl);
@@ -206,17 +231,20 @@ class ProfilesServiceTest {
 
 
         // Post che verra' restituito
-        Profile convertedProfile1 = new Profile(profileName, isPrivate, accountId);
+        Profile convertedProfile1 = new Profile(profileName, isPrivate);
+        convertedProfile1.setAccountId(accountId);
         convertedProfile1.setBio(bio);
         convertedProfile1.setPictureUrl(pictureUrl);
         convertedProfile1.setId(profileId);
 
-        Profile convertedProfile2 = new Profile(profileName+"_2", isPrivate, accountId);
+        Profile convertedProfile2 = new Profile(profileName+"_2", isPrivate);
+        convertedProfile2.setAccountId(accountId);
         convertedProfile2.setBio(bio);
         convertedProfile2.setPictureUrl(pictureUrl);
         convertedProfile2.setId(2L);
 
-        Profile convertedProfile3 = new Profile(profileName+"_3", isPrivate, accountId);
+        Profile convertedProfile3 = new Profile(profileName+"_3", isPrivate);
+        convertedProfile3.setAccountId(accountId);
         convertedProfile3.setBio(bio);
         convertedProfile3.setPictureUrl(pictureUrl);
         convertedProfile3.setId(3L);
@@ -245,7 +273,8 @@ class ProfilesServiceTest {
     @Test
     void testFindFullSuccess(){
         // Profile che verra' restituito
-        Profile convertedProfile = new Profile(profileName, isPrivate, accountId);
+        Profile convertedProfile = new Profile(profileName, isPrivate);
+        convertedProfile.setAccountId(accountId);
         convertedProfile.setBio(bio);
         convertedProfile.setPictureUrl(pictureUrl);
         convertedProfile.setId(profileId);
@@ -305,7 +334,8 @@ class ProfilesServiceTest {
     @Test
     void testFindFull_NoPost_Success(){
         // Post che verra' restituito
-        Profile convertedProfile = new Profile(profileName, isPrivate, accountId);
+        Profile convertedProfile = new Profile(profileName, isPrivate);
+        convertedProfile.setAccountId(accountId);
         convertedProfile.setBio(bio);
         convertedProfile.setPictureUrl(pictureUrl);
         convertedProfile.setId(profileId);

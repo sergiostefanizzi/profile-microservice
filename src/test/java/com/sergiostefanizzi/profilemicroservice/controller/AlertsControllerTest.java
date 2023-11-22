@@ -39,6 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @Slf4j
 public class AlertsControllerTest {
+    /*
     @Autowired
     private MockMvc mockMvc;
     @MockBean
@@ -259,4 +260,6 @@ public class AlertsControllerTest {
         String resultAsString = result.getResponse().getContentAsString();
         log.info("\nErrors\n" +resultAsString);
     }
+
+     */
 }

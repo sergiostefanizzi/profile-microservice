@@ -10,6 +10,9 @@ import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -32,11 +35,22 @@ public class ProfilesService {
     private final ProfileToProfileJpaConverter profileToProfileJpaConverter;
     private final PostToPostJpaConverter postToPostJpaConverter;
 
+    private static String getJwtAccountId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        JwtAuthenticationToken oauthToken = (JwtAuthenticationToken) authentication;
+        String jwtAccountId = oauthToken.getToken().getClaim("sub");
+        log.info("TOKEN ACCOUNT ID --> "+jwtAccountId);
+        return jwtAccountId;
+    }
+
     @Transactional
     public Profile save(@NotNull Profile profile){
         if(this.profilesRepository.checkActiveByProfileName(profile.getProfileName()).isPresent()){
             throw new ProfileAlreadyCreatedException(profile.getProfileName());
         }
+
+        profile.setAccountId(getJwtAccountId());
+
         ProfileJpa newProfileJpa = this.profileToProfileJpaConverter.convert(profile);
         Objects.requireNonNull(newProfileJpa).setCreatedAt(LocalDateTime.now());
         return this.profileToProfileJpaConverter.convertBack(this.profilesRepository.save(newProfileJpa));

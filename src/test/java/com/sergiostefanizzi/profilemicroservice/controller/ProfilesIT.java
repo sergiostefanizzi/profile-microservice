@@ -30,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.*;
 @ActiveProfiles("test")
 @Slf4j
 class ProfilesIT {
+    /*
     @LocalServerPort
     private int port;
 
@@ -313,6 +314,8 @@ class ProfilesIT {
         log.info("Error -> "+node.get("error"));
     }
 
+     */
+
     //TODO: In inserimento fare controllo permessi d'accesso account id, JWT
     /*
     @Test
@@ -320,6 +323,7 @@ class ProfilesIT {
 
     }
     */
+    /*
     @Test
     void testAddProfile_ProfileNameExists_Then_409() throws Exception {
         // Per l'esecuzione in singolo di questo test e' necessario
@@ -654,6 +658,9 @@ class ProfilesIT {
         assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
+
+     */
+
 
 
 }

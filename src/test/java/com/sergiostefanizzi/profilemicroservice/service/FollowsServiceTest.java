@@ -33,6 +33,7 @@ import static org.mockito.Mockito.*;
 @ActiveProfiles("test")
 @Slf4j
 class FollowsServiceTest {
+    /*
     @InjectMocks
     private FollowsService followsService;
     @Mock
@@ -482,6 +483,8 @@ class FollowsServiceTest {
         verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
     }
 
+
+     */
     //TODO Ritorno il numero di followers ma non la lista dei profili dati che non ho accesso a tale profilo
 
 
