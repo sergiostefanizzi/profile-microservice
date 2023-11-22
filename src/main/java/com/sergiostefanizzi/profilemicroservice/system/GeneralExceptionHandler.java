@@ -127,6 +127,15 @@ public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
     }
 
+    @ExceptionHandler(NotInProfileListException.class)
+    public ResponseEntity<Object> handleNotInProfileListException(NotInProfileListException ex, WebRequest request){
+        log.error(ex.getMessage(),ex);
+        String error = "Profile "+ex.getMessage()+" is not inside the profile list!";
+        Map<String, String> body = new HashMap<>();
+        body.put("error", error);
+        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.FORBIDDEN, request);
+    }
+
     @ExceptionHandler(ProfileNotFoundException.class)
     public ResponseEntity<Object> handleProfileNotFoundException(ProfileNotFoundException ex, WebRequest request){
         log.error(ex.getMessage(),ex);

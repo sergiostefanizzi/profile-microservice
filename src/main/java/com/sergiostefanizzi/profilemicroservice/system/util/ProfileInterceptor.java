@@ -3,6 +3,8 @@ package com.sergiostefanizzi.profilemicroservice.system.util;
 import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
+import com.sergiostefanizzi.profilemicroservice.service.KeycloakService;
+import com.sergiostefanizzi.profilemicroservice.system.exception.NotInProfileListException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -18,10 +20,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.ModelAndView;
 
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.TreeMap;
+import java.util.*;
 
 @Slf4j
 @Component
@@ -29,6 +28,8 @@ import java.util.TreeMap;
 public class ProfileInterceptor implements HandlerInterceptor {
     @Autowired
     private ProfilesRepository profilesRepository;
+    @Autowired
+    private KeycloakService keycloakService;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -36,11 +37,25 @@ public class ProfileInterceptor implements HandlerInterceptor {
         // Esco se e' un metodo post
         if (request.getMethod().equalsIgnoreCase("POST")) return true;
 
+
         Map pathVariables = (Map) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
         Long profileId = Long.valueOf((String) pathVariables.get("profileId"));
 
         Long checkId = this.profilesRepository.checkActiveById(profileId)
                 .orElseThrow(() -> new ProfileNotFoundException(profileId));
+
+        if ((request.getMethod().equalsIgnoreCase("DELETE") || request.getMethod().equalsIgnoreCase("PATCH"))){
+            // Controllo prima la lista dei profili all'interno del jwt
+            if(!isInProfileListJwt(profileId)){
+                // Se non c'e' nel Jwt controllo direttamente in keycloack
+                // Questo e' necessario in quanto all'interno del jwt non viene aggiornata la profileList dopo ogni modifica
+                if (!this.keycloakService.isInProfileList(getJwtAccountId(), profileId)){
+                    throw new NotInProfileListException(profileId);
+                }
+
+            }
+        }
+
         log.info("\n\tProfile Interceptor: Profile ID-> "+checkId);
         return true;
     }
@@ -55,6 +70,23 @@ public class ProfileInterceptor implements HandlerInterceptor {
         HandlerInterceptor.super.afterCompletion(request, response, handler, ex);
     }
 
+    private static Boolean isInProfileListJwt(Long profileId) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        JwtAuthenticationToken oauthToken = (JwtAuthenticationToken) authentication;
+        List<Long> profileList = oauthToken.getToken().getClaim("profileList");
+        log.info("Jwt ProfileList --> "+profileList);
+        if (profileList != null){
+            return profileList.contains(profileId);
+        }
+        return false;
+    }
 
+    private static String getJwtAccountId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        JwtAuthenticationToken oauthToken = (JwtAuthenticationToken) authentication;
+        String jwtAccountId = oauthToken.getToken().getClaim("sub");
+        log.info("TOKEN ACCOUNT ID --> "+jwtAccountId);
+        return jwtAccountId;
+    }
 
 }

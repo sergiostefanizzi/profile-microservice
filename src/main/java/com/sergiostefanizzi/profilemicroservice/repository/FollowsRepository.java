@@ -24,4 +24,7 @@ public interface FollowsRepository extends JpaRepository<FollowsJpa, FollowsId> 
     @Query("SELECT f FROM FollowsJpa f WHERE f.id = :followsId AND ((f.requestStatus = '"+accepted+"') OR (f.requestStatus = '"+pending+"'))")
     Optional<FollowsJpa> findActiveById(FollowsId followsId);
 
+    @Query("SELECT f FROM FollowsJpa f WHERE f.id = :followsId AND f.requestStatus = '"+accepted+"'")
+    Optional<FollowsJpa> findActiveAcceptedById(FollowsId followsId);
+
 }

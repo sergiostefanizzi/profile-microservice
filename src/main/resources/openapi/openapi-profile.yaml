@@ -76,6 +76,13 @@ paths:
           schema:
             type: integer
             format: int64
+        - name: requestProfileId
+          in: query
+          description: Request Profile id
+          required: true
+          schema:
+            type: integer
+            format: int64
       responses:
         '200':
           description: Profile found

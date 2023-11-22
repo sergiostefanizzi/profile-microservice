@@ -4,14 +4,18 @@ import com.sergiostefanizzi.profilemicroservice.model.*;
 import com.sergiostefanizzi.profilemicroservice.model.converter.PostToPostJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfileJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.repository.*;
+import com.sergiostefanizzi.profilemicroservice.system.exception.FollowNotFoundException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.NotInProfileListException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -29,11 +33,10 @@ import java.util.stream.Collectors;
 public class ProfilesService {
     private final ProfilesRepository profilesRepository;
     private final PostsRepository postsRepository;
-    private final LikesRepository likesRepository;
-    private final CommentsRepository commentsRepository;
     private final FollowsRepository followsRepository;
     private final ProfileToProfileJpaConverter profileToProfileJpaConverter;
     private final PostToPostJpaConverter postToPostJpaConverter;
+    private final KeycloakService keycloakService;
 
     private static String getJwtAccountId() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
@@ -43,23 +46,32 @@ public class ProfilesService {
         return jwtAccountId;
     }
 
+
     @Transactional
     public Profile save(@NotNull Profile profile){
         if(this.profilesRepository.checkActiveByProfileName(profile.getProfileName()).isPresent()){
             throw new ProfileAlreadyCreatedException(profile.getProfileName());
         }
-
-        profile.setAccountId(getJwtAccountId());
+        String accountId = getJwtAccountId();
+        profile.setAccountId(accountId);
 
         ProfileJpa newProfileJpa = this.profileToProfileJpaConverter.convert(profile);
         Objects.requireNonNull(newProfileJpa).setCreatedAt(LocalDateTime.now());
-        return this.profileToProfileJpaConverter.convertBack(this.profilesRepository.save(newProfileJpa));
+
+        ProfileJpa savedProfile = this.profilesRepository.save(newProfileJpa);
+
+        this.keycloakService.updateProfileList(accountId, savedProfile.getId());
+
+        return this.profileToProfileJpaConverter.convertBack(savedProfile);
     }
 
     @Transactional
     public void remove(Long profileId) {
         ProfileJpa profileJpa = this.profilesRepository.getReferenceById(profileId);
         profileJpa.setDeletedAt(LocalDateTime.now());
+
+        this.keycloakService.removeFromProfileList(getJwtAccountId(), profileId);
+
         this.profilesRepository.save(profileJpa);
 
     }
@@ -95,26 +107,37 @@ public class ProfilesService {
 
 
     @Transactional
-    public FullProfile findFull(Long profileId) {
+    public FullProfile findFull(Long profileId, Long requestProfileId) {
         List<Post> postList = new ArrayList<>();
+        Boolean isProfileGranted = true;
 
 
         // controllo che il profilo non sia gia' stato eliminato o che non sia mai esistito
         ProfileJpa profileJpa = this.profilesRepository.getReferenceById(profileId);
         // cerco i post pubblicati dal profilo
 
+        if (profileJpa.getIsPrivate()){
+            if(this.keycloakService.isInProfileList(getJwtAccountId(), requestProfileId)){
+                if (this.followsRepository.findActiveAcceptedById(new FollowsId(requestProfileId, profileId)).isEmpty()){
+                    isProfileGranted = false;
+                }
+            } else {
+                throw new NotInProfileListException(requestProfileId);
+            }
+        }
+
         Optional<List<PostJpa>> postJpaList = this.postsRepository.findAllActiveByProfileId(profileId);
         if (postJpaList.isPresent()){
             postList = postJpaList.get().stream().map(this.postToPostJpaConverter::convertBack).collect(Collectors.toList());
         }
 
-        //TODO Devo controllare che il posso accedere al profilo
+
 
         return new FullProfile(
                 this.profileToProfileJpaConverter.convertBack(profileJpa),
                 postList,
                 postList.size(),
-                true
+                isProfileGranted
         );
     }
 }

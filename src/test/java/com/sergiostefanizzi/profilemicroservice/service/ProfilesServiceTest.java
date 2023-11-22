@@ -4,6 +4,7 @@ import com.sergiostefanizzi.profilemicroservice.model.*;
 import com.sergiostefanizzi.profilemicroservice.model.converter.PostToPostJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfileJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.repository.*;
+import com.sergiostefanizzi.profilemicroservice.system.exception.NotInProfileListException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.validator.routines.UrlValidator;
@@ -36,10 +37,13 @@ class ProfilesServiceTest {
     private ProfilesRepository profilesRepository;
     @Mock
     private PostsRepository postsRepository;
+    /*
     @Mock
     private LikesRepository likesRepository;
     @Mock
     private CommentsRepository commentsRepository;
+
+     */
     @Mock
     private FollowsRepository followsRepository;
     @Mock
@@ -48,6 +52,8 @@ class ProfilesServiceTest {
     private PostToPostJpaConverter postToPostJpaConverter;
     @Mock
     private SecurityContext securityContext;
+    @Mock
+    private KeycloakService keycloakService;
     @InjectMocks
     private ProfilesService profilesService;
     private JwtAuthenticationToken jwtAuthenticationToken;
@@ -109,6 +115,7 @@ class ProfilesServiceTest {
         ProfileJpa newProfileJpa = new ProfileJpa(profileName, isPrivate, accountId);
         newProfileJpa.setBio(bio);
         newProfileJpa.setPictureUrl(pictureUrl);
+        newProfileJpa.setId(profileId);
 
         // Profilo che verra' restituito service
         Profile convertedProfile = new Profile(profileName, isPrivate);
@@ -121,6 +128,7 @@ class ProfilesServiceTest {
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
         when(this.profileToProfileJpaConverter.convert(any(Profile.class))).thenReturn(newProfileJpa);
         when(this.profilesRepository.save(any(ProfileJpa.class))).thenReturn(newProfileJpa);
+        when(this.keycloakService.updateProfileList(anyString(), anyLong())).thenReturn(true);
         when(this.profileToProfileJpaConverter.convertBack(any(ProfileJpa.class))).thenReturn(convertedProfile);
 
         log.info("CREATED_AT before ---> "+newProfileJpa.getCreatedAt());
@@ -139,6 +147,7 @@ class ProfilesServiceTest {
         verify(this.securityContext, times(1)).getAuthentication();
         verify(this.profileToProfileJpaConverter, times(1)).convert(any(Profile.class));
         verify(this.profilesRepository, times(1)).save(any(ProfileJpa.class));
+        verify(this.keycloakService, times(1)).updateProfileList(anyString(), anyLong());
         verify(this.profileToProfileJpaConverter, times(1)).convertBack(any(ProfileJpa.class));
 
         log.info("CREATED_AT after ---> "+newProfileJpa.getCreatedAt());
@@ -159,6 +168,7 @@ class ProfilesServiceTest {
         verify(this.securityContext, times(0)).getAuthentication();
         verify(this.profileToProfileJpaConverter, times(0)).convert(any(Profile.class));
         verify(this.profilesRepository, times(0)).save(any(ProfileJpa.class));
+        verify(this.keycloakService, times(0)).updateProfileList(anyString(), anyLong());
         verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
     }
 
@@ -166,14 +176,17 @@ class ProfilesServiceTest {
     @Test
     void testRemoveSuccess(){
         when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(savedProfileJpa);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.removeFromProfileList(anyString(), anyLong())).thenReturn(true);
 
         this.profilesService.remove(profileId);
 
         // l'istante di rimozione deve essere NON nullo DOPO la rimozione
 
         verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(1)).removeFromProfileList(anyString(), anyLong());
         verify(this.profilesRepository, times(1)).save(any(ProfileJpa.class));
-
     }
 
 
@@ -271,9 +284,79 @@ class ProfilesServiceTest {
 
 
     @Test
-    void testFindFullSuccess(){
+    void testFindFull_PrivateProfile_Success(){
+        this.savedProfileJpa.setIsPrivate(true);
         // Profile che verra' restituito
-        Profile convertedProfile = new Profile(profileName, isPrivate);
+        Profile convertedProfile = new Profile(profileName, true);
+        convertedProfile.setAccountId(accountId);
+        convertedProfile.setBio(bio);
+        convertedProfile.setPictureUrl(pictureUrl);
+        convertedProfile.setId(profileId);
+
+        PostJpa newPostJpa1 = new PostJpa(contentUrl, postType);
+        newPostJpa1.setCaption("First: "+caption);
+        newPostJpa1.setProfile(this.savedProfileJpa);
+        newPostJpa1.setId(1L);
+
+        PostJpa newPostJpa2 = new PostJpa(contentUrl, postType);
+        newPostJpa2.setCaption("Second: "+caption);
+        newPostJpa2.setProfile(this.savedProfileJpa);
+        newPostJpa2.setId(2L);
+
+        List<PostJpa> postJpaList = new ArrayList<>();
+        postJpaList.add(newPostJpa1);
+        postJpaList.add(newPostJpa2);
+
+        Post newPost1 = new Post(contentUrl, postType, profileId);
+        newPost1.setCaption("First: "+caption);
+        newPost1.setId(1L);
+
+        Post newPost2 = new Post(contentUrl, postType, profileId);
+        newPost2.setCaption("Second: "+caption);
+        newPost2.setId(2L);
+
+
+        List<Post> postList = new ArrayList<>();
+        postList.add(newPost1);
+        postList.add(newPost2);
+
+        FullProfile convertedFullProfile = new FullProfile(
+                convertedProfile,
+                postList,
+                postList.size(),
+                true
+        );
+
+        when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.savedProfileJpa);
+        when(this.postsRepository.findAllActiveByProfileId(anyLong())).thenReturn(Optional.of(postJpaList));
+        when(this.postToPostJpaConverter.convertBack(postJpaList.get(0))).thenReturn(newPost1);
+        when(this.postToPostJpaConverter.convertBack(postJpaList.get(1))).thenReturn(newPost2);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(true);
+        when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.of(new FollowsJpa(new FollowsId(123L, profileId))));
+        when(this.profileToProfileJpaConverter.convertBack(any(ProfileJpa.class))).thenReturn(convertedProfile);
+
+        FullProfile fullProfile = this.profilesService.findFull(profileId, 123L);
+
+        assertNotNull(fullProfile);
+        assertEquals(convertedFullProfile, fullProfile);
+        verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
+        verify(this.postsRepository, times(1)).findAllActiveByProfileId(anyLong());
+        verify(this.postToPostJpaConverter, times(2)).convertBack(any(PostJpa.class));
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.followsRepository, times(1)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.profileToProfileJpaConverter, times(1)).convertBack(any(ProfileJpa.class));
+
+        log.info(fullProfile.toString());
+    }
+
+
+
+    @Test
+    void testFindFull_PublicProfile_Success(){
+        // Profile che verra' restituito
+        Profile convertedProfile = new Profile(profileName, false);
         convertedProfile.setAccountId(accountId);
         convertedProfile.setBio(bio);
         convertedProfile.setPictureUrl(pictureUrl);
@@ -319,49 +402,134 @@ class ProfilesServiceTest {
         when(this.postToPostJpaConverter.convertBack(postJpaList.get(1))).thenReturn(newPost2);
         when(this.profileToProfileJpaConverter.convertBack(any(ProfileJpa.class))).thenReturn(convertedProfile);
 
-        FullProfile fullProfile = this.profilesService.findFull(profileId);
+        FullProfile fullProfile = this.profilesService.findFull(profileId, 123L);
 
         assertNotNull(fullProfile);
         assertEquals(convertedFullProfile, fullProfile);
         verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
         verify(this.postsRepository, times(1)).findAllActiveByProfileId(anyLong());
         verify(this.postToPostJpaConverter, times(2)).convertBack(any(PostJpa.class));
+        verify(this.securityContext, times(0)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.profileToProfileJpaConverter, times(1)).convertBack(any(ProfileJpa.class));
 
         log.info(fullProfile.toString());
     }
 
     @Test
-    void testFindFull_NoPost_Success(){
-        // Post che verra' restituito
-        Profile convertedProfile = new Profile(profileName, isPrivate);
+    void testFindFull_PrivateProfile_NotInProfileList_Failed(){
+        this.savedProfileJpa.setIsPrivate(true);
+        // Profile che verra' restituito
+        Profile convertedProfile = new Profile(profileName, true);
         convertedProfile.setAccountId(accountId);
         convertedProfile.setBio(bio);
         convertedProfile.setPictureUrl(pictureUrl);
         convertedProfile.setId(profileId);
 
+        PostJpa newPostJpa1 = new PostJpa(contentUrl, postType);
+        newPostJpa1.setCaption("First: "+caption);
+        newPostJpa1.setProfile(this.savedProfileJpa);
+        newPostJpa1.setId(1L);
+
+        PostJpa newPostJpa2 = new PostJpa(contentUrl, postType);
+        newPostJpa2.setCaption("Second: "+caption);
+        newPostJpa2.setProfile(this.savedProfileJpa);
+        newPostJpa2.setId(2L);
+
+        List<PostJpa> postJpaList = new ArrayList<>();
+        postJpaList.add(newPostJpa1);
+        postJpaList.add(newPostJpa2);
+
+        Post newPost1 = new Post(contentUrl, postType, profileId);
+        newPost1.setCaption("First: "+caption);
+        newPost1.setId(1L);
+
+        Post newPost2 = new Post(contentUrl, postType, profileId);
+        newPost2.setCaption("Second: "+caption);
+        newPost2.setId(2L);
+
+
+        when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.savedProfileJpa);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(false);
+
+        assertThrows(NotInProfileListException.class, () -> this.profilesService.findFull(profileId, 123L));
+
+
+        verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
+        verify(this.postsRepository, times(0)).findAllActiveByProfileId(anyLong());
+        verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
+
+    }
+
+    @Test
+    void testFindFull_PrivateProfile_NotAFollower_Failed(){
+        this.savedProfileJpa.setIsPrivate(true);
+        // Profile che verra' restituito
+        Profile convertedProfile = new Profile(profileName, true);
+        convertedProfile.setAccountId(accountId);
+        convertedProfile.setBio(bio);
+        convertedProfile.setPictureUrl(pictureUrl);
+        convertedProfile.setId(profileId);
+
+        PostJpa newPostJpa1 = new PostJpa(contentUrl, postType);
+        newPostJpa1.setCaption("First: "+caption);
+        newPostJpa1.setProfile(this.savedProfileJpa);
+        newPostJpa1.setId(1L);
+
+        PostJpa newPostJpa2 = new PostJpa(contentUrl, postType);
+        newPostJpa2.setCaption("Second: "+caption);
+        newPostJpa2.setProfile(this.savedProfileJpa);
+        newPostJpa2.setId(2L);
+
+        List<PostJpa> postJpaList = new ArrayList<>();
+        postJpaList.add(newPostJpa1);
+        postJpaList.add(newPostJpa2);
+
+        Post newPost1 = new Post(contentUrl, postType, profileId);
+        newPost1.setCaption("First: "+caption);
+        newPost1.setId(1L);
+
+        Post newPost2 = new Post(contentUrl, postType, profileId);
+        newPost2.setCaption("Second: "+caption);
+        newPost2.setId(2L);
+
 
         List<Post> postList = new ArrayList<>();
+        postList.add(newPost1);
+        postList.add(newPost2);
 
         FullProfile convertedFullProfile = new FullProfile(
                 convertedProfile,
                 postList,
-                0,
-                true
+                postList.size(),
+                false
         );
 
         when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.savedProfileJpa);
-        when(this.postsRepository.findAllActiveByProfileId(anyLong())).thenReturn(Optional.of(new ArrayList<>()));
+        when(this.postsRepository.findAllActiveByProfileId(anyLong())).thenReturn(Optional.of(postJpaList));
+        when(this.postToPostJpaConverter.convertBack(postJpaList.get(0))).thenReturn(newPost1);
+        when(this.postToPostJpaConverter.convertBack(postJpaList.get(1))).thenReturn(newPost2);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(true);
+        when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.empty());
         when(this.profileToProfileJpaConverter.convertBack(any(ProfileJpa.class))).thenReturn(convertedProfile);
 
-        FullProfile fullProfile = this.profilesService.findFull(profileId);
+        FullProfile fullProfile = this.profilesService.findFull(profileId, 123L);
 
         assertNotNull(fullProfile);
         assertEquals(convertedFullProfile, fullProfile);
-        assertTrue(fullProfile.getProfileGranted());
         verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
         verify(this.postsRepository, times(1)).findAllActiveByProfileId(anyLong());
-        verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
+        verify(this.postToPostJpaConverter, times(2)).convertBack(any(PostJpa.class));
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.followsRepository, times(1)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.profileToProfileJpaConverter, times(1)).convertBack(any(ProfileJpa.class));
 
         log.info(fullProfile.toString());

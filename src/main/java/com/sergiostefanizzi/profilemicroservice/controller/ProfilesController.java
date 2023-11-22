@@ -48,12 +48,10 @@ public class ProfilesController implements ProfilesApi {
         return new ResponseEntity<>(profileList, HttpStatus.OK);
     }
 
+
     @Override
-    public ResponseEntity<FullProfile> findProfileById(Long profileId) {
-        FullProfile fullProfile = this.profilesService.findFull(profileId);
+    public ResponseEntity<FullProfile> findProfileById(Long profileId, @NotNull Long requestProfileId) {
+        FullProfile fullProfile = this.profilesService.findFull(profileId, requestProfileId);
         return new ResponseEntity<>(fullProfile, HttpStatus.OK);
     }
-
-
-
 }
