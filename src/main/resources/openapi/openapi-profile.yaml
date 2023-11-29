@@ -76,7 +76,7 @@ paths:
           schema:
             type: integer
             format: int64
-        - name: requestProfileId
+        - name: selectedUserProfileId
           in: query
           description: Request Profile id
           required: true

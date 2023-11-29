@@ -8,35 +8,38 @@ import com.sergiostefanizzi.profilemicroservice.repository.AlertsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
+import com.sergiostefanizzi.profilemicroservice.service.KeycloakService;
 import com.sergiostefanizzi.profilemicroservice.service.ProfilesService;
-import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.NotInProfileListException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.*;
@@ -49,9 +52,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(SpringExtension.class)
 @WebMvcTest(ProfilesController.class)
 @ActiveProfiles("test")
+@AutoConfigureMockMvc(addFilters = false)
 @Slf4j
 class ProfilesControllerTest {
-    /*
+
     @MockBean
     private ProfilesService profilesService;
     @MockBean
@@ -62,6 +66,10 @@ class ProfilesControllerTest {
     private CommentsRepository commentsRepository;
     @MockBean
     private AlertsRepository alertsRepository;
+    @MockBean
+    private KeycloakService keycloakService;
+    @MockBean
+    private SecurityContext securityContext;
     @Autowired
     private MockMvc mockMvc;
     @Autowired
@@ -71,7 +79,7 @@ class ProfilesControllerTest {
     String profileName = "giuseppe_verdi";
     Boolean isPrivate = false;
     Boolean updatedIsPrivate = true;
-    Long accountId = 1L;
+    String accountId = UUID.randomUUID().toString();
     String bio = "This is Giuseppe's profile!";
     String updatedBio = "New Giuseppe's bio";
     String pictureUrl = "https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg";
@@ -82,25 +90,90 @@ class ProfilesControllerTest {
     String contentUrl = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Cape_may.jpg";
     String caption = "This is the post caption";
     Post.PostTypeEnum postType = Post.PostTypeEnum.POST;
+    private JwtAuthenticationToken jwtAuthenticationToken;
+    private JwtAuthenticationToken jwtTokenError;
+
+    ProfilesControllerTest() {
+    }
 
 
     @BeforeEach
     void setUp() throws Exception{
-        this.newProfile = new Profile(profileName,isPrivate,accountId);
+        this.newProfile = new Profile(profileName,isPrivate);
+        this.newProfile.setAccountId(accountId);
         this.newProfile.setBio(bio);
         this.newProfile.setPictureUrl(pictureUrl);
 
         newProfileJson = this.objectMapper.writeValueAsString(this.newProfile);
 
-        this.savedProfile = new Profile(profileName,isPrivate,accountId);
+        this.savedProfile = new Profile(profileName,isPrivate);
+        this.savedProfile.setAccountId(accountId);
         this.savedProfile.setBio(bio);
         this.savedProfile.setPictureUrl(pictureUrl);
         this.savedProfile.setId(profileId);
+
+        SecurityContextHolder.setContext(this.securityContext);
+
+        Map<String, Object> headers = new HashMap<>();
+        headers.put("alg","HS256");
+        headers.put("typ","JWT");
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("sub", this.accountId);
+        claims.put("profileList", List.of(profileId, 1L , 2L));
+        Jwt jwt = new Jwt("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+                Instant.now(),
+                Instant.MAX,
+                headers,
+                claims);
+
+        Map<String, Object> errorClaims = new HashMap<>();
+        errorClaims.put("sub", this.accountId);
+        errorClaims.put("profileList", List.of(1L , 2L));
+        Jwt jwtError = new Jwt("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+                Instant.now(),
+                Instant.MAX,
+                headers,
+                errorClaims);
+
+        this.jwtAuthenticationToken = new JwtAuthenticationToken(jwt);
+        this.jwtTokenError = new JwtAuthenticationToken(jwtError);
     }
 
 
     @AfterEach
     void tearDown(){
+    }
+
+    private Profile getUpdatedProfile(ProfilePatch profilePatch) {
+        Profile updatedProfile = new Profile(profileName, isPrivate);
+        updatedProfile.setAccountId(accountId);
+        updatedProfile.setId(profileId);
+        updatedProfile.setBio(profilePatch.getBio() != null ? profilePatch.getBio() : bio);
+        updatedProfile.setPictureUrl(profilePatch.getPictureUrl() != null ? profilePatch.getPictureUrl() : pictureUrl);
+        updatedProfile.setIsPrivate(profilePatch.getIsPrivate() != null ? profilePatch.getIsPrivate() : isPrivate);
+        return updatedProfile;
+    }
+
+    private FullProfile getFullProfile(Long targetProfileId, Profile convertedProfile) {
+        Post newPost1 = new Post(contentUrl, postType, targetProfileId);
+        newPost1.setCaption(caption);
+        newPost1.setId(1L);
+
+        Post newPost2 = new Post(contentUrl, postType, targetProfileId);
+        newPost2.setCaption(caption);
+        newPost1.setId(2L);
+
+
+        List<Post> postList = new ArrayList<>();
+        postList.add(newPost1);
+        postList.add(newPost2);
+
+        return new FullProfile(
+                convertedProfile,
+                postList,
+                postList.size(),
+                true
+        );
     }
 
     @Test
@@ -162,7 +235,6 @@ class ProfilesControllerTest {
         List<String> errors = new ArrayList<>();
         errors.add("profileName must not be null");
         errors.add("isPrivate must not be null");
-        errors.add("accountId must not be null");
 
         // Imposto a null i campi richiesti
         this.newProfile.setProfileName(null);
@@ -181,10 +253,9 @@ class ProfilesControllerTest {
                         res.getResolvedException() instanceof MethodArgumentNotValidException)
                 )
                 .andExpect(jsonPath("$.error").isArray())
-                .andExpect(jsonPath("$.error", hasSize(3)))
+                .andExpect(jsonPath("$.error", hasSize(2)))
                 .andExpect(jsonPath("$.error[0]").value(in(errors)))
-                .andExpect(jsonPath("$.error[1]").value(in(errors)))
-                .andExpect(jsonPath("$.error[2]").value(in(errors))).andReturn();
+                .andExpect(jsonPath("$.error[1]").value(in(errors))).andReturn();
         // salvo risposta in result solo per visualizzarla
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n"+resultAsString);
@@ -269,6 +340,29 @@ class ProfilesControllerTest {
     }
 
     @Test
+    void testAddProfile_InvalidPictureUrlXSS_Then_400() throws Exception{
+        String error = "pictureUrl must be a valid URL";
+        this.newProfile.setPictureUrl(pictureUrlXSS);
+        newProfileJson = this.objectMapper.writeValueAsString(this.newProfile);
+
+        MvcResult result = this.mockMvc.perform(post("/profiles")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newProfileJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MethodArgumentNotValidException)
+                )
+                .andExpect(jsonPath("$.error").isArray())
+                .andExpect(jsonPath("$.error", hasSize(1)))
+                .andExpect(jsonPath("$.error[0]").value(error)).andReturn();
+
+        // salvo risposta in result solo per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+    }
+
+    @Test
     void testAddProfile_InvalidIsPrivate_Then_400() throws Exception{
         JsonNode jsonNode = this.objectMapper.readTree(newProfileJson);
 
@@ -289,28 +383,6 @@ class ProfilesControllerTest {
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
 
-    @Test
-    void testAddProfile_InvalidAccountId_Then_400() throws Exception{
-        JsonNode jsonNode = this.objectMapper.readTree(newProfileJson);
-        ((ObjectNode) jsonNode).put("account_id", "IdNotLong");
-        newProfileJson = this.objectMapper.writeValueAsString(jsonNode);
-
-        MvcResult result = this.mockMvc.perform(post("/profiles")
-                        .accept(MediaType.APPLICATION_JSON)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(newProfileJson))
-                .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof HttpMessageNotReadableException
-                ))
-                .andExpect(jsonPath("$.error").value("JSON parse error: Cannot deserialize value of type `java.lang.Long` from String \"IdNotLong\": not a valid `java.lang.Long` value")).andReturn();
-        String resultAsString = result.getResponse().getContentAsString();
-        log.info("Errors\n"+resultAsString);
-        log.info("Resolved Error ---> "+result.getResolvedException());
-    }
-
-    //TODO: In inserimento fare controllo permessi d'accesso account id, JWT
-
 
     @Test
     void testAddProfile_ProfileNameExists_Then_409() throws Exception {
@@ -327,15 +399,11 @@ class ProfilesControllerTest {
                         result.getResolvedException() instanceof ProfileAlreadyCreatedException))
                 .andExpect(jsonPath("$.error").value("Conflict! Profile with name "+profileName+" already created!"));
     }
+
     @Test
     void testDeleteProfileById_Then_204() throws Exception{
-        ProfileJpa profileJpa = new ProfileJpa(profileName, isPrivate, accountId);
-        profileJpa.setBio(bio);
-        profileJpa.setPictureUrl(pictureUrl);
-        profileJpa.setId(profileId);
-        profileJpa.setCreatedAt(LocalDateTime.MIN);
-
         when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.of(profileId));
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
         doNothing().when(this.profilesService).remove(profileId);
 
         this.mockMvc.perform(delete("/profiles/{profileId}",profileId))
@@ -343,12 +411,18 @@ class ProfilesControllerTest {
    }
 
     @Test
-    void testDeleteProfileById_Then_400() throws Exception{
-        MvcResult result = this.mockMvc.perform(delete("/profiles/IdNotLong"))
-                .andExpect(status().isBadRequest())
+    void testDeleteProfileById_Then_403() throws Exception{
+        when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.of(profileId));
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtTokenError);
+        doNothing().when(this.profilesService).remove(profileId);
+
+        MvcResult result = this.mockMvc.perform(delete("/profiles/{profileId}",profileId))
+                .andExpect(status().isForbidden())
                 .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof NumberFormatException
-                )).andReturn();
+                        res.getResolvedException() instanceof NotInProfileListException
+                ))
+                .andExpect(jsonPath("$.error").value("Profile "+profileId+" is not inside the profile list!"))
+                .andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n"+resultAsString);
@@ -375,7 +449,7 @@ class ProfilesControllerTest {
         log.info("Errors\n"+resultAsString);
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
-    
+
     @Test
     void testUpdateProfile_Then_200() throws Exception{
         ProfileJpa profileJpa = new ProfileJpa(profileName, isPrivate, accountId);
@@ -393,15 +467,12 @@ class ProfilesControllerTest {
         String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
 
         // Aggiorno il profilo che verra' restituito dal service con i nuovi valori
-        Profile updatedProfile = new Profile(profileName, isPrivate, accountId);
-        updatedProfile.setId(profileId);
-        updatedProfile.setBio(profilePatch.getBio() != null ? profilePatch.getBio() : bio);
-        updatedProfile.setPictureUrl(profilePatch.getPictureUrl() != null ? profilePatch.getPictureUrl() : pictureUrl);
-        updatedProfile.setIsPrivate(profilePatch.getIsPrivate() != null ? profilePatch.getIsPrivate() : isPrivate);
-        
-        
+        Profile updatedProfile = getUpdatedProfile(profilePatch);
+
+
         when(this.profilesService.update(profileId, profilePatch)).thenReturn(updatedProfile);
         when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.of(profileId));
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
         
         MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",profileId)
                 .accept(MediaType.APPLICATION_JSON)
@@ -423,30 +494,8 @@ class ProfilesControllerTest {
         log.info(profileResult.toString());
     }
 
-    @Test
-    void testUpdateProfile_InvalidId_Then_400() throws Exception{
-        // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
-        ProfilePatch profilePatch = new ProfilePatch();
-        profilePatch.setBio(updatedBio);
-        profilePatch.setPictureUrl(updatedPictureUrl);
-        profilePatch.setIsPrivate(updatedIsPrivate);
-
-        String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
 
 
-        MvcResult result = this.mockMvc.perform(patch("/profiles/IdNotLong")
-                        .accept(MediaType.APPLICATION_JSON)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(profilePatchJson))
-                .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof NumberFormatException
-                )).andReturn();
-        // Visualizzo l'errore
-        String resultAsString = result.getResponse().getContentAsString();
-        log.info("Errors\n"+resultAsString);
-        log.info("Resolved Error ---> "+result.getResolvedException());
-    }
 
     @Test
     void testUpdateProfile_BioLength_Then_400() throws Exception{
@@ -465,6 +514,7 @@ class ProfilesControllerTest {
         String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
 
         when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.of(profileId));
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
 
         MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",profileId)
                         .accept(MediaType.APPLICATION_JSON)
@@ -500,6 +550,7 @@ class ProfilesControllerTest {
         String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
 
         when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.of(profileId));
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
 
         MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",profileId)
                         .accept(MediaType.APPLICATION_JSON)
@@ -535,6 +586,7 @@ class ProfilesControllerTest {
         profilePatchJson = this.objectMapper.writeValueAsString(jsonNode);
 
         when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.of(profileId));
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
 
         MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",profileId)
                         .accept(MediaType.APPLICATION_JSON)
@@ -549,7 +601,37 @@ class ProfilesControllerTest {
         log.info("Errors\n"+resultAsString);
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
-    //:TODO 401 e 403
+
+
+    @Test
+    void testUpdateProfile_Then_403() throws Exception{
+        // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
+        ProfilePatch profilePatch = new ProfilePatch();
+        profilePatch.setBio(updatedBio);
+        profilePatch.setPictureUrl(updatedPictureUrl);
+        profilePatch.setIsPrivate(updatedIsPrivate);
+
+        String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
+
+        when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.of(profileId));
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtTokenError);
+
+        MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",profileId)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(profilePatchJson))
+                .andExpect(status().isForbidden())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof NotInProfileListException
+                ))
+                .andExpect(jsonPath("$.error").value("Profile "+profileId+" is not inside the profile list!"))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
     @Test
     void testUpdateProfile_Then_404() throws Exception{
         Long invalidProfileId = Long.MAX_VALUE;
@@ -561,7 +643,7 @@ class ProfilesControllerTest {
 
         String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
 
-        doThrow(new ProfileNotFoundException(invalidProfileId)).when(this.profilesService).update(invalidProfileId, profilePatch);
+        when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.empty());
 
         MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",invalidProfileId)
                 .accept(MediaType.APPLICATION_JSON)
@@ -581,7 +663,8 @@ class ProfilesControllerTest {
 
     @Test
     void testFindProfileByName_Then_200() throws Exception{
-        Profile savedProfile2 = new Profile(profileName+"_2",isPrivate,accountId);
+        Profile savedProfile2 = new Profile(profileName+"_2",isPrivate);
+        savedProfile2.setAccountId(accountId);
         savedProfile2.setBio(bio);
         savedProfile2.setPictureUrl(pictureUrl);
         savedProfile2.setId(13L);
@@ -615,8 +698,6 @@ class ProfilesControllerTest {
 
     @Test
     void testFindProfileByName_Then_400() throws Exception{
-        List<String> errors = new ArrayList<>();
-
         MvcResult result = this.mockMvc.perform(get("/profiles/search")
                         .contentType(MediaType.APPLICATION_JSON)
                         .queryParam("profileName", RandomStringUtils.randomAlphabetic(21)))
@@ -632,47 +713,33 @@ class ProfilesControllerTest {
         log.info("Errors\n"+resultAsString);
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
-    //TODO 401
+
 
 
     @Test
     void testFindFull_Then_200() throws Exception{
+        Long targetProfileId = 1L;
         ProfileJpa profileJpa = new ProfileJpa(profileName, isPrivate, accountId);
         profileJpa.setBio(bio);
         profileJpa.setPictureUrl(pictureUrl);
-        profileJpa.setId(profileId);
+        profileJpa.setId(targetProfileId);
         profileJpa.setCreatedAt(LocalDateTime.MIN);
 
 
-        Profile convertedProfile = new Profile(profileName, isPrivate, accountId);
+        Profile convertedProfile = new Profile(profileName, isPrivate);
+        convertedProfile.setAccountId(accountId);
         convertedProfile.setBio(bio);
         convertedProfile.setPictureUrl(pictureUrl);
-        convertedProfile.setId(profileId);
+        convertedProfile.setId(targetProfileId);
 
-        Post newPost1 = new Post(contentUrl, postType, profileId);
-        newPost1.setCaption(caption);
-        newPost1.setId(1L);
+        FullProfile convertedFullProfile = getFullProfile(targetProfileId, convertedProfile);
 
-        Post newPost2 = new Post(contentUrl, postType, profileId);
-        newPost2.setCaption(caption);
-        newPost1.setId(2L);
+        when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(targetProfileId));
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.profilesService.findFull(anyLong(), anyLong())).thenReturn(convertedFullProfile);
 
-
-        List<Post> postList = new ArrayList<>();
-        postList.add(newPost1);
-        postList.add(newPost2);
-
-        FullProfile convertedFullProfile = new FullProfile(
-                convertedProfile,
-                postList,
-                postList.size(),
-                true
-        );
-
-        when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.of(profileId));
-        when(this.profilesService.findFull(profileId)).thenReturn(convertedFullProfile);
-
-        MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}",profileId)
+        MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}",targetProfileId)
+                        .queryParam("selectedUserProfileId", String.valueOf(profileId))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.*", hasSize(4)))
@@ -689,70 +756,67 @@ class ProfilesControllerTest {
         log.info(getResult.toString());
     }
 
-    @Test
-    void testFindFull_NoPost_Then_200() throws Exception{
-        ProfileJpa profileJpa = new ProfileJpa(profileName, isPrivate, accountId);
-        profileJpa.setBio(bio);
-        profileJpa.setPictureUrl(pictureUrl);
-        profileJpa.setId(profileId);
-        profileJpa.setCreatedAt(LocalDateTime.MIN);
 
-        Profile convertedProfile = new Profile(profileName, isPrivate, accountId);
-        convertedProfile.setBio(bio);
-        convertedProfile.setPictureUrl(pictureUrl);
-        convertedProfile.setId(profileId);
-
-        List<Post> postList = new ArrayList<>();
-
-        FullProfile convertedFullProfile = new FullProfile(
-                convertedProfile,
-                postList,
-                0,
-                true
-        );
-        when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.of(profileId));
-        when(this.profilesService.findFull(profileId)).thenReturn(convertedFullProfile);
-
-        MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}",profileId)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.*", hasSize(4)))
-                .andExpect(jsonPath("$.profile.id").value(convertedProfile.getId()))
-                .andExpect(jsonPath("$.post_list", hasSize(0)))
-                .andExpect(jsonPath("$.post_count", is(0)))
-                .andExpect(jsonPath("$.profile_granted", is(true)))
-                .andReturn();
-
-        // salvo risposta in result per visualizzarla
-        String resultAsString = result.getResponse().getContentAsString();
-        FullProfile getResult = this.objectMapper.readValue(resultAsString, FullProfile.class);
-
-        log.info(getResult.toString());
-    }
 
     @Test
-    void testFindFull_Then_400() throws Exception{
-        List<String> errors = new ArrayList<>();
-
-
-        MvcResult result = this.mockMvc.perform(patch("/profiles/IdNotLong")
+    void testFindFull_ProfileId_NotValid_Then_400() throws Exception{
+        MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}","IdNotLong")
+                        .queryParam("selectedUserProfileId", String.valueOf(profileId))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof NumberFormatException
-                )).andReturn();
+                ))
+                .andExpect(jsonPath("$.error").value("ID is not valid!")).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+    }
+
+    @Test
+    void testFindFull_SelectedUserProfileId_NotValid_Then_400() throws Exception{
+        Long targetProfileId = 1L;
+        when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(targetProfileId));
+        MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}",targetProfileId)
+                        .queryParam("selectedUserProfileId", "IdNotLong")
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                ))
+                .andExpect(jsonPath("$.error").value("Type mismatch")).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+    }
+
+    @Test
+    void testFindFull_Then_403() throws Exception{
+        when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(profileId));
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtTokenError);
+        when(this.profilesService.findFull(anyLong(), anyLong())).thenThrow(new NotInProfileListException(Long.MAX_VALUE));
+
+        MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}",profileId)
+                        .queryParam("selectedUserProfileId", String.valueOf(Long.MAX_VALUE))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof NotInProfileListException
+                ))
+                .andExpect(jsonPath("$.error").value("Profile "+Long.MAX_VALUE+" is not inside the profile list!"))
+                .andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n"+resultAsString);
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
 
-    //TODO 401
-
     @Test
     void testFindFull_Then_404() throws Exception{
-        //doThrow(new ProfileNotFoundException(profileId)).when(this.profilesService).findFull(profileId);
-        doThrow(new ProfileNotFoundException(profileId)).when(this.profilesRepository).findActiveById(profileId);
+        when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.empty());
+
 
         MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}",profileId)
                         .contentType(MediaType.APPLICATION_JSON))
@@ -768,6 +832,6 @@ class ProfilesControllerTest {
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
 
-     */
+
 
 }

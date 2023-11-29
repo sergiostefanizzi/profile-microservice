@@ -26,10 +26,8 @@ import java.util.*;
 @Component
 @RequiredArgsConstructor
 public class ProfileInterceptor implements HandlerInterceptor {
-    @Autowired
-    private ProfilesRepository profilesRepository;
-    @Autowired
-    private KeycloakService keycloakService;
+    private final ProfilesRepository profilesRepository;
+    private final KeycloakService keycloakService;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -39,8 +37,8 @@ public class ProfileInterceptor implements HandlerInterceptor {
 
 
         Map pathVariables = (Map) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
-        Long profileId = Long.valueOf((String) pathVariables.get("profileId"));
 
+        Long profileId = Long.valueOf((String) pathVariables.get("profileId"));
         Long checkId = this.profilesRepository.checkActiveById(profileId)
                 .orElseThrow(() -> new ProfileNotFoundException(profileId));
 

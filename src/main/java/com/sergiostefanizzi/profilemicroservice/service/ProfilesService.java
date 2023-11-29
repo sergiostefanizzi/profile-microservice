@@ -107,7 +107,7 @@ public class ProfilesService {
 
 
     @Transactional
-    public FullProfile findFull(Long profileId, Long requestProfileId) {
+    public FullProfile findFull(Long profileId, Long selectedUserProfileId) {
         List<Post> postList = new ArrayList<>();
         Boolean isProfileGranted = true;
 
@@ -117,12 +117,12 @@ public class ProfilesService {
         // cerco i post pubblicati dal profilo
 
         if (profileJpa.getIsPrivate()){
-            if(this.keycloakService.isInProfileList(getJwtAccountId(), requestProfileId)){
-                if (this.followsRepository.findActiveAcceptedById(new FollowsId(requestProfileId, profileId)).isEmpty()){
+            if(this.keycloakService.isInProfileList(getJwtAccountId(), selectedUserProfileId)){
+                if (this.followsRepository.findActiveAcceptedById(new FollowsId(selectedUserProfileId, profileId)).isEmpty()){
                     isProfileGranted = false;
                 }
             } else {
-                throw new NotInProfileListException(requestProfileId);
+                throw new NotInProfileListException(selectedUserProfileId);
             }
         }
 
