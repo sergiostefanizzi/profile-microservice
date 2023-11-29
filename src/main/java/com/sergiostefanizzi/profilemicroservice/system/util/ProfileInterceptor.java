@@ -42,16 +42,14 @@ public class ProfileInterceptor implements HandlerInterceptor {
         Long checkId = this.profilesRepository.checkActiveById(profileId)
                 .orElseThrow(() -> new ProfileNotFoundException(profileId));
 
-        if ((request.getMethod().equalsIgnoreCase("DELETE") || request.getMethod().equalsIgnoreCase("PATCH"))){
-            // Controllo prima la lista dei profili all'interno del jwt
-            if(!isInProfileListJwt(profileId)){
+        if ((request.getMethod().equalsIgnoreCase("DELETE") || request.getMethod().equalsIgnoreCase("PATCH")) && (Boolean.FALSE.equals(JwtUtilityClass.isInProfileListJwt(profileId)))){
                 // Se non c'e' nel Jwt controllo direttamente in keycloack
                 // Questo e' necessario in quanto all'interno del jwt non viene aggiornata la profileList dopo ogni modifica
-                if (!this.keycloakService.isInProfileList(getJwtAccountId(), profileId)){
+                if (Boolean.FALSE.equals(this.keycloakService.isInProfileList(JwtUtilityClass.getJwtAccountId(), profileId))){
                     throw new NotInProfileListException(profileId);
                 }
 
-            }
+
         }
 
         log.info("\n\tProfile Interceptor: Profile ID-> "+checkId);
@@ -68,23 +66,5 @@ public class ProfileInterceptor implements HandlerInterceptor {
         HandlerInterceptor.super.afterCompletion(request, response, handler, ex);
     }
 
-    private static Boolean isInProfileListJwt(Long profileId) {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        JwtAuthenticationToken oauthToken = (JwtAuthenticationToken) authentication;
-        List<Long> profileList = oauthToken.getToken().getClaim("profileList");
-        log.info("Jwt ProfileList --> "+profileList);
-        if (profileList != null){
-            return profileList.contains(profileId);
-        }
-        return false;
-    }
-
-    private static String getJwtAccountId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        JwtAuthenticationToken oauthToken = (JwtAuthenticationToken) authentication;
-        String jwtAccountId = oauthToken.getToken().getClaim("sub");
-        log.info("TOKEN ACCOUNT ID --> "+jwtAccountId);
-        return jwtAccountId;
-    }
 
 }

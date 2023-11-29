@@ -20,11 +20,6 @@ public class PostsController implements PostsApi {
     private final PostsService postsService;
 
     @Override
-    public Optional<NativeWebRequest> getRequest() {
-        return PostsApi.super.getRequest();
-    }
-
-    @Override
     public ResponseEntity<Post> addPost(Post post) {
         Post savedPost = this.postsService.save(post);
         return new ResponseEntity<>(savedPost, HttpStatus.CREATED);
