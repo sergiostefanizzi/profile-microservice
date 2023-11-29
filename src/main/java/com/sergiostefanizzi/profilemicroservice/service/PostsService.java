@@ -9,6 +9,7 @@ import com.sergiostefanizzi.profilemicroservice.repository.LikesRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.system.exception.CommentOnStoryException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.NotInProfileListException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import jakarta.transaction.Transactional;
@@ -21,6 +22,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
+import static com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass.getJwtAccountId;
+import static com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass.isInProfileListJwt;
+
 
 @Service
 @RequiredArgsConstructor
@@ -28,26 +32,26 @@ import java.util.Optional;
 public class PostsService {
     private final PostsRepository postsRepository;
     private final PostToPostJpaConverter postToPostJpaConverter;
-    // TODO Per adesso uso il profileRepository per il controllo del profileId, ma in seguito serve il JWT
     private final ProfilesRepository profilesRepository;
     private final LikesRepository likesRepository;
     private final CommentsRepository commentsRepository;
     private final LikeToLikeJpaConverter likeToLikeJpaConverter;
     private final CommentToCommentJpaConverter commentToCommentJpaConverter;
+    private final KeycloakService keycloakService;
 
 
     @Transactional
     public Post save(Post post) {
-        //TODO controllo l'id del profilo all'interno del JWT
-        // controllo l'esistenza del profileId , altrimenti 403 Forbidden e non 404
-        ProfileJpa profileJpa = this.profilesRepository.findById(post.getProfileId()).orElseThrow(
-                () -> new ProfileNotFoundException(post.getProfileId())
-        );
+        if(Boolean.FALSE.equals(isInProfileListJwt(post.getProfileId())) && (Boolean.FALSE.equals(this.keycloakService.isInProfileList(getJwtAccountId(), post.getProfileId())))){
+                throw new NotInProfileListException(post.getProfileId());
+
+        }
+
         // il profileId e' valido quindi posso fare la conversione in postJpa
         PostJpa postJpa = this.postToPostJpaConverter.convert(post);
 
         assert postJpa != null;
-        postJpa.setProfile(profileJpa);
+        postJpa.setProfile(this.profilesRepository.getReferenceById(post.getProfileId()));
         postJpa.setCreatedAt(LocalDateTime.now());
         return this.postToPostJpaConverter.convertBack(
                 this.postsRepository.save(postJpa)

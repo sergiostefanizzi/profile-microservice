@@ -13,15 +13,14 @@ import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+
+import static com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass.getJwtAccountId;
 
 @Service
 @RequiredArgsConstructor
@@ -33,14 +32,6 @@ public class ProfilesService {
     private final ProfileToProfileJpaConverter profileToProfileJpaConverter;
     private final PostToPostJpaConverter postToPostJpaConverter;
     private final KeycloakService keycloakService;
-
-    private static String getJwtAccountId() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        JwtAuthenticationToken oauthToken = (JwtAuthenticationToken) authentication;
-        String jwtAccountId = oauthToken.getToken().getClaim("sub");
-        log.info("TOKEN ACCOUNT ID --> "+jwtAccountId);
-        return jwtAccountId;
-    }
 
 
     @Transactional
@@ -104,6 +95,7 @@ public class ProfilesService {
 
     @Transactional
     public FullProfile findFull(Long profileId, Long selectedUserProfileId) {
+        //TODO check prima nel jwt
         if (Boolean.FALSE.equals(this.keycloakService.isInProfileList(getJwtAccountId(), selectedUserProfileId))){
             throw new NotInProfileListException(selectedUserProfileId);
         }

@@ -1,26 +1,22 @@
 package com.sergiostefanizzi.profilemicroservice.system.util;
 
-import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
-import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.service.KeycloakService;
 import com.sergiostefanizzi.profilemicroservice.system.exception.NotInProfileListException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.ModelAndView;
 
-import java.util.*;
+import java.util.Map;
+
+import static com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass.getJwtAccountId;
+import static com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass.isInProfileListJwt;
 
 @Slf4j
 @Component
@@ -30,7 +26,7 @@ public class ProfileInterceptor implements HandlerInterceptor {
     private final KeycloakService keycloakService;
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler){
         log.info("\n\tProfile Interceptor -> "+request.getRequestURI());
         // Esco se e' un metodo post
         if (request.getMethod().equalsIgnoreCase("POST")) return true;
@@ -42,10 +38,10 @@ public class ProfileInterceptor implements HandlerInterceptor {
         Long checkId = this.profilesRepository.checkActiveById(profileId)
                 .orElseThrow(() -> new ProfileNotFoundException(profileId));
 
-        if ((request.getMethod().equalsIgnoreCase("DELETE") || request.getMethod().equalsIgnoreCase("PATCH")) && (Boolean.FALSE.equals(JwtUtilityClass.isInProfileListJwt(profileId)))){
-                // Se non c'e' nel Jwt controllo direttamente in keycloack
+        if ((request.getMethod().equalsIgnoreCase("DELETE") || request.getMethod().equalsIgnoreCase("PATCH")) && (Boolean.FALSE.equals(isInProfileListJwt(profileId)))){
+                // Se non c'e' nel Jwt controllo direttamente in keycloak
                 // Questo e' necessario in quanto all'interno del jwt non viene aggiornata la profileList dopo ogni modifica
-                if (Boolean.FALSE.equals(this.keycloakService.isInProfileList(JwtUtilityClass.getJwtAccountId(), profileId))){
+                if (Boolean.FALSE.equals(this.keycloakService.isInProfileList(getJwtAccountId(), profileId))){
                     throw new NotInProfileListException(profileId);
                 }
 
