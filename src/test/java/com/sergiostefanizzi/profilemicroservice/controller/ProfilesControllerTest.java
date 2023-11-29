@@ -383,7 +383,6 @@ class ProfilesControllerTest {
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
 
-
     @Test
     void testAddProfile_ProfileNameExists_Then_409() throws Exception {
         when(this.profilesService.save(this.newProfile)).thenThrow(

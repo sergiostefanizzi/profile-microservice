@@ -41,9 +41,10 @@ public class KeycloakService {
         List<String> profileList = attributes.get("profileList");
         if(profileList == null){
             profileList = Collections.singletonList(profileId.toString());
-        }else {
+        } else if (!profileList.contains(profileId.toString())) {
             profileList.add(profileId.toString());
         }
+
 
 
 
