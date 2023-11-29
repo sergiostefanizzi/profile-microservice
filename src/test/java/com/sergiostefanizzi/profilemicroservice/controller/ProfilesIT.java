@@ -11,9 +11,6 @@ import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.keycloak.admin.client.Keycloak;
-import org.keycloak.admin.client.resource.UserResource;
-import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -40,18 +37,16 @@ class ProfilesIT {
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
-    private Keycloak keycloak;
-    @Autowired
     private KeycloakService keycloakService;
     private Profile savedProfile1;
     private Profile savedProfile2;
     private Profile savedProfile3;
     private Profile savedProfile4;
+    private Profile savedProfile5;
     private Profile newProfile;
     String profileName = "giuseppe_verdi";
     Boolean isPrivate = false;
     Boolean updatedIsPrivate = true;
-    String accountId = "d7c2334d-9015-4b97-9768-5ba4d2f730dd";
     Long profileId;
     String bio = "This is Giuseppe's profile!";
     String updatedBio = "New Giuseppe's bio";
@@ -59,8 +54,7 @@ class ProfilesIT {
     String pictureUrlXSS = "http://www.example.com?d=<script type=\"javascript\" src=\"http://www.google.it\"/>"; //Cross site scripting XSS
     String updatedPictureUrl = "https://icons-for-free.com/iconfiles/png/512/avatar+person+profile+user+icon-1320086059654790795.png";
 
-    private final String password = "dshjdfkdjsf32!";
-    private Map<String, List<String>> profileMap = new HashMap<>();
+    private final Map<String, List<String>> profileMap = new HashMap<>();
 
     @BeforeEach
     void setUp() {
@@ -71,28 +65,29 @@ class ProfilesIT {
         this.newProfile.setPictureUrl(pictureUrl);
 
         this.savedProfile1 = new Profile("pinco_palla", false);
-        //this.savedProfile1.setAccountId("1fac5b86-7a95-439c-9940-d42691f0d9e5");
         this.savedProfile1.setId(101L);
         this.savedProfile1.setBio("Profilo di Pinco");
         this.savedProfile1.setPictureUrl(pictureUrl);
 
         this.savedProfile2 = new Profile("marioBros", false);
-        //this.savedProfile2.setAccountId("757c2d08-7ffb-4e75-967e-6d5c9be26713");
         this.savedProfile2.setId(102L);
         this.savedProfile2.setBio("Profilo di Mario");
         this.savedProfile2.setPictureUrl(pictureUrl);
 
         this.savedProfile3 = new Profile("luigiBros", false);
-        //this.savedProfile3.setAccountId("c365e7da-0650-4f29-9954-64cc9ba91ff1");
         this.savedProfile3.setId(103L);
         this.savedProfile3.setBio("Benvenuti!!");
         this.savedProfile3.setPictureUrl(pictureUrl);
 
         this.savedProfile4 = new Profile("pinco_palla2", false);
-        //this.savedProfile4.setAccountId("1fac5b86-7a95-439c-9940-d42691f0d9e5");
         this.savedProfile4.setId(104L);
         this.savedProfile4.setBio("Secondo profilo di Pinco");
         this.savedProfile4.setPictureUrl(pictureUrl);
+
+        this.savedProfile5 = new Profile("tony_stark", true);
+        this.savedProfile5.setId(105L);
+        this.savedProfile5.setBio("Profilo di Tony");
+        this.savedProfile5.setPictureUrl(pictureUrl);
 
 
         this.profileMap.put(this.newProfile.getProfileName(), List.of("giuseppe.verdi@gmail.com"));
@@ -101,6 +96,7 @@ class ProfilesIT {
         this.profileMap.put(this.savedProfile2.getProfileName(), List.of("mario.bros@gmail.com","757c2d08-7ffb-4e75-967e-6d5c9be26713"));
         this.profileMap.put(this.savedProfile3.getProfileName(), List.of("luigi.bros@gmail.com","c365e7da-0650-4f29-9954-64cc9ba91ff1"));
         this.profileMap.put(this.savedProfile4.getProfileName(), List.of("pinco.palla@gmail.com","1fac5b86-7a95-439c-9940-d42691f0d9e5"));
+        this.profileMap.put(this.savedProfile5.getProfileName(), List.of("tony.stark@gmail.com","8327af70-e826-4e2f-94ba-db02ccc180d4"));
     }
 
     @AfterEach
@@ -111,13 +107,13 @@ class ProfilesIT {
     private String getAccessToken(String email) throws JsonProcessingException {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        String loginBody = "grant_type=password&client_id=accounts-micro&username="+email+"&password="+this.password;
-        HttpEntity<String> request = new HttpEntity<>(loginBody,headers);
+        String password = "dshjdfkdjsf32!";
+        String loginBody = "grant_type=password&client_id=accounts-micro&username="+email+"&password="+ password;
 
         ResponseEntity<String> responseLogin = this.testRestTemplate.exchange(
                 "http://localhost:8082/realms/social-accounts/protocol/openid-connect/token",
                 HttpMethod.POST,
-                request,
+                new HttpEntity<>(loginBody, headers),
                 String.class);
 
 
@@ -128,28 +124,7 @@ class ProfilesIT {
         return accessToken;
     }
 
-    private void restoreProfileList(String accountId, Long profileId) {
-        UserResource userResource = this.keycloak.realm("social-accounts")
-                .users()
-                .get(accountId);
-        UserRepresentation userRepresentation = userResource
-                .toRepresentation();
 
-        Map<String, List<String>> attributes = userRepresentation.getAttributes();
-
-        List<String> profileList = attributes.get("profileList");
-        if(profileList == null){
-            profileList = Collections.singletonList(profileId.toString());
-        }else {
-            profileList.add(profileId.toString());
-        }
-
-
-        attributes.put("profileList", profileList);
-        userRepresentation.setAttributes(attributes);
-        userResource
-                .update(userRepresentation);
-    }
 
     @Test
     void testAddProfile_Then_201() throws JsonProcessingException {
@@ -157,10 +132,9 @@ class ProfilesIT {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<Profile> request = new HttpEntity<>(this.newProfile, headers);
         ResponseEntity<Profile> response = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
-                request,
+                new HttpEntity<>(this.newProfile, headers),
                 Profile.class);
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
@@ -193,11 +167,10 @@ class ProfilesIT {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<Profile> request = new HttpEntity<>(this.newProfile, headers);
 
         ResponseEntity<Profile> response = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
-                request,
+                new HttpEntity<>(this.newProfile, headers),
                 Profile.class);
 
         assertEquals(HttpStatus.CREATED, response.getStatusCode());
@@ -231,10 +204,9 @@ class ProfilesIT {
         this.newProfile.setProfileName(null);
         this.newProfile.setIsPrivate(null);
 
-        HttpEntity<Profile> request = new HttpEntity<>(this.newProfile, headers);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
-                request,
+                new HttpEntity<>(this.newProfile, headers),
                 String.class);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -265,10 +237,9 @@ class ProfilesIT {
         // imposto il profileName in modo che non rispetti le regole d'inserimento
         this.newProfile.setProfileName("g_v");
 
-        HttpEntity<Profile> request = new HttpEntity<>(this.newProfile, headers);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
-                request,
+                new HttpEntity<>(this.newProfile, headers),
                 String.class);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -289,16 +260,16 @@ class ProfilesIT {
         String error = "bio size must be between 0 and 150";
 
         // Imposto una bio di 160 caratteri
-        this.newProfile.setBio("Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient.");
+        this.newProfile.setBio(RandomStringUtils.randomAlphabetic(160));
+
 
         String accessToken = getAccessToken(this.profileMap.get(this.newProfile.getProfileName()).get(0));
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<Profile> request = new HttpEntity<>(this.newProfile, headers);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
-                request,
+                new HttpEntity<>(this.newProfile, headers),
                 String.class);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -317,16 +288,17 @@ class ProfilesIT {
         // messaggio d'errore che mi aspetto d'ottenere
         String error = "pictureUrl must be a valid URL";
         // imposto un url non valido
-        this.newProfile.setPictureUrl("https://upload.wikimedia.o/ ra-%%$^&& iuyi");
+        String invalidUrl = "https://upload.wikimedia.o/ "+RandomStringUtils.randomAscii(15);
+        log.info("Invalid URL --> "+invalidUrl);
+        this.newProfile.setPictureUrl(invalidUrl);
 
         String accessToken = getAccessToken(this.profileMap.get(this.newProfile.getProfileName()).get(0));
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<Profile> request = new HttpEntity<>(this.newProfile, headers);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
-                request,
+                new HttpEntity<>(this.newProfile, headers),
                 String.class);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -350,10 +322,9 @@ class ProfilesIT {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<Profile> request = new HttpEntity<>(this.newProfile, headers);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
-                request,
+                new HttpEntity<>(this.newProfile, headers),
                 String.class);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -384,10 +355,9 @@ class ProfilesIT {
         headers.setBearerAuth(accessToken);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> request = new HttpEntity<>(newProfileJson, headers);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
-                request,
+                new HttpEntity<>(newProfileJson, headers),
                 String.class);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -423,10 +393,9 @@ class ProfilesIT {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<Profile> request = new HttpEntity<>(this.savedProfile1, headers);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.POST,
-                request,
+                new HttpEntity<>(this.savedProfile1, headers),
                 String.class);
 
         assertEquals(HttpStatus.CONFLICT, response.getStatusCode());
@@ -444,10 +413,10 @@ class ProfilesIT {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<String> request = new HttpEntity<>(headers);
+
         ResponseEntity<Void> responseDelete = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
                 HttpMethod.DELETE,
-                request,
+                new HttpEntity<>(headers),
                 Void.class,
                 this.savedProfile2.getId());
 
@@ -466,10 +435,9 @@ class ProfilesIT {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<Profile> request = new HttpEntity<>(headers);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/IdNotLong",
                 HttpMethod.DELETE,
-                request,
+                new HttpEntity<>(headers),
                 String.class);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -481,7 +449,6 @@ class ProfilesIT {
         log.info("Error -> "+node.get("error"));
     }
 
-    //TODO: In rimozione fare controllo permessi d'accesso account id, JWT
 
     @Test
     void testDeleteProfileById_Then_401(){
@@ -501,10 +468,10 @@ class ProfilesIT {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<Profile> request = new HttpEntity<>(headers);
+
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
                 HttpMethod.DELETE,
-                request,
+                new HttpEntity<>(headers),
                 String.class,
                 this.savedProfile1.getId());
 
@@ -527,10 +494,9 @@ class ProfilesIT {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<Profile> request = new HttpEntity<>(headers);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
                 HttpMethod.DELETE,
-                request,
+                new HttpEntity<>(headers),
                 String.class,
                 invalidProfileId);
 
@@ -556,10 +522,10 @@ class ProfilesIT {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<ProfilePatch> request = new HttpEntity<>(profilePatch, headers);
+
         ResponseEntity<Profile> responsePatch = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
                 HttpMethod.PATCH,
-                request,
+                new HttpEntity<>(profilePatch, headers),
                 Profile.class,
                 this.savedProfile3.getId());
 
@@ -588,10 +554,9 @@ class ProfilesIT {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<ProfilePatch> request = new HttpEntity<>(profilePatch, headers);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
                 HttpMethod.PATCH,
-                request,
+                new HttpEntity<>(profilePatch, headers),
                 String.class,
                 "IdNotLong");
 
@@ -610,16 +575,15 @@ class ProfilesIT {
 
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();
-        profilePatch.setBio("Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient.");
+        profilePatch.setBio(RandomStringUtils.randomAlphabetic(160));
 
         String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0));
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<ProfilePatch> request = new HttpEntity<>(profilePatch, headers);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
                 HttpMethod.PATCH,
-                request,
+                new HttpEntity<>(profilePatch, headers),
                 String.class,
                 this.savedProfile3.getId());
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -639,18 +603,48 @@ class ProfilesIT {
 
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();
-        profilePatch.setPictureUrl("https://upload.wikimedia.o/ ra-%%$^&& iuyi");
-        //Test XSS
-        //profilePatch.setPictureUrl(pictureUrlXSS);
+        String invalidUrl = "https://upload.wikimedia.o/ "+RandomStringUtils.randomAscii(15);
+        log.info("Invalid URL --> "+invalidUrl);
+        profilePatch.setPictureUrl(invalidUrl);
 
         String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0));
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<ProfilePatch> request = new HttpEntity<>(profilePatch, headers);
+
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
                 HttpMethod.PATCH,
-                request,
+                new HttpEntity<>(profilePatch, headers),
+                String.class,
+                this.savedProfile3.getId());
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore e' un array di dimensione 1
+        assertTrue(node.get("error").isArray());
+        assertEquals(1, node.get("error").size());
+        assertEquals(error ,node.get("error").get(0).asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error").get(0));
+    }
+
+    @Test
+    void testUpdateProfile_InvalidPictureUrlXSS_Then_400() throws Exception{
+        String error = "pictureUrl must be a valid URL";
+
+        // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
+        ProfilePatch profilePatch = new ProfilePatch();
+
+        profilePatch.setPictureUrl(pictureUrlXSS);
+
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0));
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+                HttpMethod.PATCH,
+                new HttpEntity<>(profilePatch, headers),
                 String.class,
                 this.savedProfile3.getId());
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -683,10 +677,9 @@ class ProfilesIT {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<String> request = new HttpEntity<>(profilePatchJson, headers);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
                 HttpMethod.PATCH,
-                request,
+                new HttpEntity<>(profilePatchJson, headers),
                 String.class,
                 this.savedProfile3.getId());
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -698,17 +691,14 @@ class ProfilesIT {
         log.info("Error -> "+node.get("error"));
     }
 
-    //:TODO 401 e 403
 
     @Test
-    void testUpdateProfile_Then_401() throws Exception{
+    void testUpdateProfile_Then_401(){
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl,
                 HttpMethod.PATCH,
                 HttpEntity.EMPTY,
                 String.class);
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
-
-
     }
 
     @Test
@@ -721,10 +711,10 @@ class ProfilesIT {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<ProfilePatch> request = new HttpEntity<>(profilePatch, headers);
+
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
                 HttpMethod.PATCH,
-                request,
+                new HttpEntity<>(profilePatch, headers),
                 String.class,
                 this.savedProfile3.getId());
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
@@ -748,10 +738,10 @@ class ProfilesIT {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<ProfilePatch> request = new HttpEntity<>(profilePatch, headers);
+
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
                 HttpMethod.PATCH,
-                request,
+                new HttpEntity<>(profilePatch, headers),
                 String.class,
                 invalidProfileId);
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
@@ -773,10 +763,9 @@ class ProfilesIT {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<ProfilePatch> request = new HttpEntity<>(headers);
         ResponseEntity<String> responseGet = this.testRestTemplate.exchange(this.baseUrl+"/search?profileName={profileName}",
                 HttpMethod.GET,
-                request,
+                new HttpEntity<>(headers),
                 String.class,
                 "pinc");
 
@@ -795,10 +784,10 @@ class ProfilesIT {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<ProfilePatch> request = new HttpEntity<>(headers);
+
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/search?profileName={profileName}",
                 HttpMethod.GET,
-                request,
+                new HttpEntity<>(headers),
                 String.class,
                 RandomStringUtils.randomAlphabetic(21));
 
@@ -812,15 +801,14 @@ class ProfilesIT {
     }
 
     @Test
-    void testFindProfileByName_Then_400_2() throws Exception{
+    void testFindProfileByName_MissingQueryParameter_Then_400() throws Exception{
         String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0));
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        HttpEntity<ProfilePatch> request = new HttpEntity<>(headers);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/search",
                 HttpMethod.GET,
-                request,
+                new HttpEntity<>(headers),
                 String.class);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -862,20 +850,68 @@ class ProfilesIT {
         assertInstanceOf(FullProfile.class, responseGet.getBody());
         FullProfile fullProfile = responseGet.getBody();
         assertEquals(this.savedProfile1.getId(), fullProfile.getProfile().getId());
+        log.info(fullProfile.toString());
         assertTrue(fullProfile.getPostList().size()>=3);
         assertTrue(fullProfile.getPostCount()>=3);
         assertTrue(fullProfile.getProfileGranted());
 
         // visualizzo il profilo aggiornato
+
+    }
+
+    @Test
+    void testFindFull_PrivateProfileNotFollowed_Then_200() throws Exception{
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0));
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+        ResponseEntity<FullProfile> responseGet = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}?selectedUserProfileId={selectedUserProfileId}",
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                FullProfile.class,
+                this.savedProfile5.getId(),
+                this.savedProfile1.getId());
+
+        assertEquals(HttpStatus.OK, responseGet.getStatusCode());
+        assertNotNull(responseGet.getBody());
+        assertInstanceOf(FullProfile.class, responseGet.getBody());
+        FullProfile fullProfile = responseGet.getBody();
+        assertEquals(this.savedProfile5.getId(), fullProfile.getProfile().getId());
+        assertTrue(fullProfile.getPostList().isEmpty());
+        assertTrue(fullProfile.getPostCount()>=2);
+        assertFalse(fullProfile.getProfileGranted());
+
+        // visualizzo il profilo aggiornato
         log.info(fullProfile.toString());
     }
 
-    //TODO continuare da qui e modificare le HttpEntity dei metodi precedenti
+    @Test
+    void testFindFull_MissingQueryParameter_Then_400() throws Exception{
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0));
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                String.class,
+                this.savedProfile1.getId());
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals("Required request parameter 'selectedUserProfileId' for method parameter type Long is not present", node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
     @Test
     void testFindFull_Then_400() throws Exception{
-        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId]",
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0));
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
                 HttpMethod.GET,
-                HttpEntity.EMPTY,
+                new HttpEntity<>(headers),
                 String.class,
                 "IdNotLong");
 
@@ -884,21 +920,32 @@ class ProfilesIT {
 
         JsonNode node = this.objectMapper.readTree(response.getBody());
         // In questo caso l'errore NON è un array di dimensione 1
-        assertNotNull(node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        assertEquals("ID is not valid!", node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
 
-    //TODO 401
+    @Test
+    void testFindFull_Then_401(){
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl,
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class);
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+    }
 
     @Test
     void testFindFull_Then_404() throws Exception{
         Long invalidProfileId = Long.MAX_VALUE;
         String error = "Profile "+invalidProfileId+" not found!";
-        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0));
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.GET,
-                HttpEntity.EMPTY,
+                new HttpEntity<>(headers),
                 String.class,
-                invalidProfileId);
+                invalidProfileId,
+                this.savedProfile3.getId());
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertNotNull(response.getBody());
 
@@ -907,9 +954,5 @@ class ProfilesIT {
         assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
-
-
-
-
 
 }

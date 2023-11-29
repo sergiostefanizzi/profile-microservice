@@ -16,7 +16,7 @@ public interface PostsRepository extends JpaRepository<PostJpa, Long> {
     String postPostType = "POST";
 
     @Query("SELECT p FROM PostJpa p WHERE p.profile.id=:profileId AND p.deletedAt IS NULL ORDER BY p.createdAt DESC")
-    Optional<List<PostJpa>> findAllActiveByProfileId(Long profileId);
+    List<PostJpa> findAllActiveByProfileId(Long profileId);
 
     @Query("SELECT p FROM PostJpa p WHERE p.id=:postId AND p.deletedAt IS NULL")
     Optional<PostJpa> findActiveById(Long postId);

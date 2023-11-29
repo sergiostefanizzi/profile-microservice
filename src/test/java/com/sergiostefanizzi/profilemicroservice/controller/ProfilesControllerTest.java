@@ -293,7 +293,7 @@ class ProfilesControllerTest {
     void testAddProfile_BioLength_Then_400() throws Exception{
         String error = "bio size must be between 0 and 150";
 
-        this.newProfile.setBio("Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient.");
+        this.newProfile.setBio(RandomStringUtils.randomAlphabetic(160));
 
         newProfileJson = this.objectMapper.writeValueAsString(this.newProfile);
         log.info("New Account Json "+newProfileJson);
@@ -317,9 +317,10 @@ class ProfilesControllerTest {
     @Test
     void testAddProfile_InvalidPictureUrl_Then_400() throws Exception{
         String error = "pictureUrl must be a valid URL";
-        this.newProfile.setPictureUrl("https://upload.wikimedia.o/ ra-%%$^&& iuyi");
-        //Test XSS
-        //this.newProfile.setPictureUrl(pictureUrlXSS);
+        String invalidUrl = "https://upload.wikimedia.o/ "+RandomStringUtils.randomAscii(15);
+        log.info("Invalid URL --> "+invalidUrl);
+        this.newProfile.setPictureUrl(invalidUrl);
+
         newProfileJson = this.objectMapper.writeValueAsString(this.newProfile);
 
         MvcResult result = this.mockMvc.perform(post("/profiles")
@@ -377,7 +378,7 @@ class ProfilesControllerTest {
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof HttpMessageNotReadableException
                 ))
-                .andExpect(jsonPath("$.error").value("JSON parse error: Cannot deserialize value of type `java.lang.Boolean` from String \"FalseString\": only \"true\" or \"false\" recognized")).andReturn();
+                .andExpect(jsonPath("$.error").value("Message is not readable")).andReturn();
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n"+resultAsString);
         log.info("Resolved Error ---> "+result.getResolvedException());
@@ -427,8 +428,6 @@ class ProfilesControllerTest {
         log.info("Errors\n"+resultAsString);
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
-
-    //TODO: In rimozione fare controllo permessi d'accesso account id, JWT
 
 
     @Test
@@ -508,7 +507,7 @@ class ProfilesControllerTest {
 
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();
-        profilePatch.setBio("Lorem ipsum dolor sit amet, consectetuer adipiscing elit. Aenean commodo ligula eget dolor. Aenean massa. Cum sociis natoque penatibus et magnis dis parturient.");
+        profilePatch.setBio(RandomStringUtils.randomAlphabetic(160));
 
         String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
 
@@ -542,9 +541,10 @@ class ProfilesControllerTest {
         profileJpa.setCreatedAt(LocalDateTime.MIN);
 
         ProfilePatch profilePatch = new ProfilePatch();
-        profilePatch.setPictureUrl("https://upload.wikimedia.o/ ra-%%$^&& iuyi");
-        //Test XSS
-        //profilePatch.setPictureUrl(pictureUrlXSS);
+        String invalidUrl = "https://upload.wikimedia.o/ "+RandomStringUtils.randomAscii(15);
+        log.info("Invalid URL --> "+invalidUrl);
+        profilePatch.setPictureUrl(invalidUrl);
+
 
         String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
 
@@ -595,7 +595,7 @@ class ProfilesControllerTest {
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof HttpMessageNotReadableException
                 ))
-                .andExpect(jsonPath("$.error").value("JSON parse error: Cannot deserialize value of type `java.lang.Boolean` from String \"FalseString\": only \"true\" or \"false\" recognized")).andReturn();
+                .andExpect(jsonPath("$.error").value("Message is not readable")).andReturn();
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n"+resultAsString);
         log.info("Resolved Error ---> "+result.getResolvedException());

@@ -3,8 +3,9 @@ package com.sergiostefanizzi.profilemicroservice.service;
 import com.sergiostefanizzi.profilemicroservice.model.*;
 import com.sergiostefanizzi.profilemicroservice.model.converter.PostToPostJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfileJpaConverter;
-import com.sergiostefanizzi.profilemicroservice.repository.*;
-import com.sergiostefanizzi.profilemicroservice.system.exception.FollowNotFoundException;
+import com.sergiostefanizzi.profilemicroservice.repository.FollowsRepository;
+import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
+import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.system.exception.NotInProfileListException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
@@ -12,20 +13,15 @@ import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -108,36 +104,35 @@ public class ProfilesService {
 
     @Transactional
     public FullProfile findFull(Long profileId, Long selectedUserProfileId) {
-        List<Post> postList = new ArrayList<>();
-        Boolean isProfileGranted = true;
-
+        if (Boolean.FALSE.equals(this.keycloakService.isInProfileList(getJwtAccountId(), selectedUserProfileId))){
+            throw new NotInProfileListException(selectedUserProfileId);
+        }
 
         // controllo che il profilo non sia gia' stato eliminato o che non sia mai esistito
         ProfileJpa profileJpa = this.profilesRepository.getReferenceById(profileId);
+
+
         // cerco i post pubblicati dal profilo
+        List<PostJpa> postJpaList = this.postsRepository.findAllActiveByProfileId(profileId);
 
-        if (profileJpa.getIsPrivate()){
-            if(this.keycloakService.isInProfileList(getJwtAccountId(), selectedUserProfileId)){
-                if (this.followsRepository.findActiveAcceptedById(new FollowsId(selectedUserProfileId, profileId)).isEmpty()){
-                    isProfileGranted = false;
-                }
-            } else {
-                throw new NotInProfileListException(selectedUserProfileId);
-            }
+        List<Post> postList = postJpaList.stream().map(this.postToPostJpaConverter::convertBack).toList();
+        if (profileJpa.getIsPrivate() && (this.followsRepository.findActiveAcceptedById(new FollowsId(selectedUserProfileId, profileId)).isEmpty())){ // selectedUserProfileId non segue profileId privato
+                return new FullProfile(
+                        this.profileToProfileJpaConverter.convertBack(profileJpa),
+                        List.of(),
+                        postList.size(),
+                        false
+                );
+
         }
-
-        Optional<List<PostJpa>> postJpaList = this.postsRepository.findAllActiveByProfileId(profileId);
-        if (postJpaList.isPresent()){
-            postList = postJpaList.get().stream().map(this.postToPostJpaConverter::convertBack).collect(Collectors.toList());
-        }
-
-
 
         return new FullProfile(
                 this.profileToProfileJpaConverter.convertBack(profileJpa),
                 postList,
                 postList.size(),
-                isProfileGranted
+                true
         );
+
     }
+
 }
