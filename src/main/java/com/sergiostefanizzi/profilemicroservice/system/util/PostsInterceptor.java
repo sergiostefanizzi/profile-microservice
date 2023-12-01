@@ -2,6 +2,8 @@ package com.sergiostefanizzi.profilemicroservice.system.util;
 
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
+import com.sergiostefanizzi.profilemicroservice.service.KeycloakService;
+import com.sergiostefanizzi.profilemicroservice.system.exception.NotInProfileListException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,6 +22,7 @@ import java.util.Map;
 public class PostsInterceptor implements HandlerInterceptor {
     private final PostsRepository postsRepository;
     private final ProfilesRepository profilesRepository;
+    private final KeycloakService keycloakService;
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         log.info("\n\tPost Interceptor -> "+request.getRequestURI());
@@ -42,9 +45,16 @@ public class PostsInterceptor implements HandlerInterceptor {
             checkPostId = this.postsRepository.checkActiveById(postId)
                     .orElseThrow(() -> new PostNotFoundException(postId));
         }
-
+        // Controllo che il profilo che ha pubblicato quel post sia ancora attivo
         Long checkProfileId = this.profilesRepository.checkActiveByPostId(postId)
                 .orElseThrow(() -> new PostNotFoundException(checkPostId));
+        // Per le operazioni di rimozione e aggiornamento del post, controllo che
+        // chi le richiede abbia l'autorizzazione per farlo. Cioe' sia l'autore del post
+        if ((requestMethod.equalsIgnoreCase("DELETE") || requestMethod.equalsIgnoreCase("PATCH"))
+                && (Boolean.FALSE.equals(JwtUtilityClass.isInProfileListJwt(checkProfileId))
+                && (Boolean.FALSE.equals(this.keycloakService.isInProfileList(JwtUtilityClass.getJwtAccountId(),checkProfileId))))){
+                    throw new NotInProfileListException(checkProfileId);
+        }
 
         log.info("\n\tPost Interceptor: Post ID-> "+checkPostId+" Profile ID-> "+checkProfileId);
         return true;

@@ -185,7 +185,7 @@ class PostsServiceTest {
         verify(this.postsRepository, times(0)).save(any(PostJpa.class));
         verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
     }
-/*
+
     @Test
     void testRemoveSuccess(){
         when(this.postsRepository.getReferenceById(anyLong())).thenReturn(savedPostJpa);
@@ -196,10 +196,6 @@ class PostsServiceTest {
         verify(this.postsRepository, times(1)).save(any(PostJpa.class));
 
     }
-
-
-
-    //TODO fare test rimozione post con controllo autorizzazione
 
     @Test
     void testUpdateSuccess(){
@@ -252,7 +248,7 @@ class PostsServiceTest {
         verify(this.postToPostJpaConverter, times(1)).convertBack(this.savedPostJpa);
     }
 
-
+/*
     @Test
     void testAddLikeSuccess(){
         LikeJpa likeJpa = new LikeJpa(new LikeId(this.newLike.getProfileId(), this.newLike.getPostId()));

@@ -113,6 +113,13 @@ paths:
           schema:
             type: integer
             format: int64
+        - name: selectedUserProfileId
+          in: query
+          description: Request Profile id
+          required: true
+          schema:
+            type: integer
+            format: int64
       requestBody:
         content:
           application/json:
@@ -149,6 +156,13 @@ paths:
         - name: profileId
           in: path
           description: Id of the profile to be deleted
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: selectedUserProfileId
+          in: query
+          description: Request Profile id
           required: true
           schema:
             type: integer
@@ -248,6 +262,13 @@ paths:
           schema:
             type: integer
             format: int64
+        - name: selectedUserProfileId
+          in: query
+          description: Request Profile id
+          required: true
+          schema:
+            type: integer
+            format: int64
       responses:
         '200':
           description: Post found and returned
@@ -278,6 +299,13 @@ paths:
         - name: postId
           in: path
           description: Id of the post
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: selectedUserProfileId
+          in: query
+          description: Request Profile id
           required: true
           schema:
             type: integer
@@ -317,6 +345,13 @@ paths:
         - name: postId
           in: path
           description: Id of the post
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: selectedUserProfileId
+          in: query
+          description: Request Profile id
           required: true
           schema:
             type: integer

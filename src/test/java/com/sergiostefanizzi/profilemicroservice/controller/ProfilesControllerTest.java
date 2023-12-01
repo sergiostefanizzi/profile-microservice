@@ -404,7 +404,7 @@ class ProfilesControllerTest {
     void testDeleteProfileById_Then_204() throws Exception{
         when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.of(profileId));
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
-        doNothing().when(this.profilesService).remove(profileId);
+        doNothing().when(this.profilesService).remove(profileId, profileId);
 
         this.mockMvc.perform(delete("/profiles/{profileId}",profileId))
                 .andExpect(status().isNoContent());
@@ -414,7 +414,7 @@ class ProfilesControllerTest {
     void testDeleteProfileById_Then_403() throws Exception{
         when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.of(profileId));
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtTokenError);
-        doNothing().when(this.profilesService).remove(profileId);
+        doNothing().when(this.profilesService).remove(profileId, profileId);
 
         MvcResult result = this.mockMvc.perform(delete("/profiles/{profileId}",profileId))
                 .andExpect(status().isForbidden())
@@ -433,7 +433,7 @@ class ProfilesControllerTest {
     @Test
     void testDeleteProfileById_Then_404() throws Exception {
         Long invalidProfileId = Long.MAX_VALUE;
-        doThrow(new ProfileNotFoundException(invalidProfileId)).when(this.profilesService).remove(invalidProfileId);
+        doThrow(new ProfileNotFoundException(invalidProfileId)).when(this.profilesService).remove(invalidProfileId, profileId);
 
         MvcResult result = this.mockMvc.perform(delete("/profiles/{profileId}",invalidProfileId))
                 .andExpect(status().isNotFound())
@@ -468,7 +468,7 @@ class ProfilesControllerTest {
         Profile updatedProfile = getUpdatedProfile(profilePatch);
 
 
-        when(this.profilesService.update(profileId, profilePatch)).thenReturn(updatedProfile);
+        when(this.profilesService.update(profileId, profileId, profilePatch)).thenReturn(updatedProfile);
         when(this.profilesRepository.checkActiveById(profileId)).thenReturn(Optional.of(profileId));
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
         

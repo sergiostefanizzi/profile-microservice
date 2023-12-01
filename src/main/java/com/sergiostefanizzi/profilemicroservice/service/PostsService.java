@@ -15,7 +15,6 @@ import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFound
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -60,9 +59,6 @@ public class PostsService {
 
     @Transactional
     public void remove(Long postId) {
-        // TODO mi serve il JWT
-        // Controllo che chi richiede la rimozione abbia l'autorizzazione per farlo
-
         PostJpa postJpaToRemove = this.postsRepository.getReferenceById(postId);
         postJpaToRemove.setDeletedAt(LocalDateTime.now());
         this.postsRepository.save(postJpaToRemove);
@@ -70,15 +66,7 @@ public class PostsService {
 
     @Transactional
     public Post update(Long postId, PostPatch postPatch) {
-        // Controllo prima l'esistenza del post
         PostJpa postJpa = this.postsRepository.getReferenceById(postId);
-        // TODO mi serve il JWT
-        // Controllo che chi richiede l'aggiornamento abbia l'autorizzazione per farlo
-        /*
-        if (postJpa.getProfile().getId().equals(Long.MIN_VALUE)){
-            throw new PostNotFoundException(postId);
-        }
-        */
         postJpa.setCaption(postPatch.getCaption());
         postJpa.setUpdatedAt(LocalDateTime.now());
         return this.postToPostJpaConverter.convertBack(
@@ -88,8 +76,25 @@ public class PostsService {
 
     @Transactional
     public Post find(Long postId) {
+        PostJpa postJpa = this.postsRepository.getReferenceById(postId);
+        /*
+        Long profileId = postJpa.getProfile().getId();
+
+        // Se il profilo del post e' pubblico, il post puo' essere visto liberamente
+        // Se è privato controllo prima che il profile che ha pubblicato il post appartiene a chi ha inviato la richiesta
+        // Se non appartiene, controllo infine se chi ha inviato la richiesta segue il profilo privato che ha pubblicato il post
+        if (postJpa.getProfile().getIsPrivate()){
+            if(Boolean.FALSE.equals(isInProfileListJwt(profileId)) && (Boolean.FALSE.equals(this.keycloakService.isInProfileList(getJwtAccountId(), profileId)))){
+
+            }
+        }
+
+         */
+
+
+
         return this.postToPostJpaConverter.convertBack(
-                this.postsRepository.getReferenceById(postId)
+                postJpa
         );
     }
 

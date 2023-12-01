@@ -31,22 +31,21 @@ public class ProfileInterceptor implements HandlerInterceptor {
         // Esco se e' un metodo post
         if (request.getMethod().equalsIgnoreCase("POST")) return true;
 
-
         Map pathVariables = (Map) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
 
         Long profileId = Long.valueOf((String) pathVariables.get("profileId"));
         Long checkId = this.profilesRepository.checkActiveById(profileId)
                 .orElseThrow(() -> new ProfileNotFoundException(profileId));
-
+        /*
         if ((request.getMethod().equalsIgnoreCase("DELETE") || request.getMethod().equalsIgnoreCase("PATCH")) && (Boolean.FALSE.equals(isInProfileListJwt(profileId)))){
                 // Se non c'e' nel Jwt controllo direttamente in keycloak
                 // Questo e' necessario in quanto all'interno del jwt non viene aggiornata la profileList dopo ogni modifica
                 if (Boolean.FALSE.equals(this.keycloakService.isInProfileList(getJwtAccountId(), profileId))){
                     throw new NotInProfileListException(profileId);
                 }
-
-
         }
+
+         */
 
         log.info("\n\tProfile Interceptor: Profile ID-> "+checkId);
         return true;

@@ -9,6 +9,7 @@ import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.system.exception.NotInProfileListException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
+import com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,17 @@ public class ProfilesService {
     private final PostToPostJpaConverter postToPostJpaConverter;
     private final KeycloakService keycloakService;
 
+    private void checkProfileListAndIds(Long profileId, Long selectedUserProfileId) {
+        if (!Objects.equals(profileId, selectedUserProfileId) || (Boolean.FALSE.equals(JwtUtilityClass.isInProfileListJwt(selectedUserProfileId)) && (Boolean.FALSE.equals(this.keycloakService.isInProfileList(getJwtAccountId(), selectedUserProfileId))))){
+            throw new NotInProfileListException(selectedUserProfileId);
+        }
+    }
+
+    private void checkProfileList(Long selectedUserProfileId) {
+        if (Boolean.FALSE.equals(JwtUtilityClass.isInProfileListJwt(selectedUserProfileId)) && Boolean.FALSE.equals(this.keycloakService.isInProfileList(getJwtAccountId(), selectedUserProfileId))){
+            throw new NotInProfileListException(selectedUserProfileId);
+        }
+    }
 
     @Transactional
     public Profile save(@NotNull Profile profile){
@@ -53,19 +65,24 @@ public class ProfilesService {
     }
 
     @Transactional
-    public void remove(Long profileId) {
+    public void remove(Long profileId, Long selectedUserProfileId) {
+        checkProfileListAndIds(profileId, selectedUserProfileId);
+
         ProfileJpa profileJpa = this.profilesRepository.getReferenceById(profileId);
         profileJpa.setDeletedAt(LocalDateTime.now());
 
         this.keycloakService.removeFromProfileList(getJwtAccountId(), profileId);
 
         this.profilesRepository.save(profileJpa);
-
     }
 
+
+
     @Transactional
-    public Profile update(Long profileId,@NotNull ProfilePatch profilePatch) {
-        // cerco profili che non siano gia' stati eliminati o che non esistano proprio
+    public Profile update(Long profileId, Long selectedUserProfileId, @NotNull ProfilePatch profilePatch) {
+        checkProfileListAndIds(profileId, selectedUserProfileId);
+
+
         ProfileJpa profileJpa = this.profilesRepository.getReferenceById(profileId);
         // modifico solo i campi che devono essere aggiornati
         if (StringUtils.hasText(profilePatch.getBio())) profileJpa.setBio(profilePatch.getBio());
@@ -79,7 +96,11 @@ public class ProfilesService {
         log.info("Profile Updated At -> "+updatedProfileJpa.getUpdatedAt());
 
         return this.profileToProfileJpaConverter.convertBack(updatedProfileJpa);
+
+
     }
+
+
 
     @Transactional
     public List<Profile> findByProfileName(String profileName) {
@@ -95,12 +116,8 @@ public class ProfilesService {
 
     @Transactional
     public FullProfile findFull(Long profileId, Long selectedUserProfileId) {
-        //TODO check prima nel jwt
-        if (Boolean.FALSE.equals(this.keycloakService.isInProfileList(getJwtAccountId(), selectedUserProfileId))){
-            throw new NotInProfileListException(selectedUserProfileId);
-        }
+        checkProfileList(selectedUserProfileId);
 
-        // controllo che il profilo non sia gia' stato eliminato o che non sia mai esistito
         ProfileJpa profileJpa = this.profilesRepository.getReferenceById(profileId);
 
 
@@ -108,13 +125,14 @@ public class ProfilesService {
         List<PostJpa> postJpaList = this.postsRepository.findAllActiveByProfileId(profileId);
 
         List<Post> postList = postJpaList.stream().map(this.postToPostJpaConverter::convertBack).toList();
-        if (profileJpa.getIsPrivate() && (this.followsRepository.findActiveAcceptedById(new FollowsId(selectedUserProfileId, profileId)).isEmpty())){ // selectedUserProfileId non segue profileId privato
+        if(!Objects.equals(profileId, selectedUserProfileId) && (profileJpa.getIsPrivate() && (this.followsRepository.findActiveAcceptedById(new FollowsId(selectedUserProfileId, profileId)).isEmpty()))){ // selectedUserProfileId non segue profileId privato
                 return new FullProfile(
                         this.profileToProfileJpaConverter.convertBack(profileJpa),
                         List.of(),
                         postList.size(),
                         false
                 );
+
 
         }
 
@@ -126,5 +144,7 @@ public class ProfilesService {
         );
 
     }
+
+
 
 }

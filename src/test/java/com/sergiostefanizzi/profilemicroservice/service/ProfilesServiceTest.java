@@ -50,6 +50,7 @@ class ProfilesServiceTest {
     @InjectMocks
     private ProfilesService profilesService;
     private JwtAuthenticationToken jwtAuthenticationToken;
+    private JwtAuthenticationToken jwtAuthenticationTokenMissingProfileId;
 
     private final String profileName = "giuseppe_verdi";
     private final Boolean isPrivate = false;
@@ -57,12 +58,17 @@ class ProfilesServiceTest {
     private final String bio = "This is Giuseppe's profile!";
     private final String pictureUrl = "https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg";
     private final Long profileId = 12L;
+    private final Long invalidSelectedUserProfileId = Long.MAX_VALUE;
     private Profile newProfile;
     private ProfileJpa savedProfileJpa;
     private UrlValidator validator;
     private final String contentUrl = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Cape_may.jpg";
     private final String caption = "This is the post caption";
     Post.PostTypeEnum postType = Post.PostTypeEnum.POST;
+    private String updatedBio = "New Giuseppe's bio";
+    private String updatedPictureUrl = "https://icons-for-free.com/iconfiles/png/512/avatar+person+profile+user+icon-1320086059654790795.png";
+    private Boolean updatedIsPrivate = true;
+    private ProfilePatch profilePatch;
     @BeforeEach
     void setUp() {
         SecurityContextHolder.setContext(securityContext);
@@ -77,6 +83,11 @@ class ProfilesServiceTest {
         this.savedProfileJpa.setPictureUrl(pictureUrl);
         this.savedProfileJpa.setId(profileId);
 
+        this.profilePatch = new ProfilePatch();
+        this.profilePatch.setBio(updatedBio);
+        this.profilePatch.setPictureUrl(updatedPictureUrl);
+        this.profilePatch.setIsPrivate(updatedIsPrivate);
+
 
         this.validator = new UrlValidator();
 
@@ -85,13 +96,18 @@ class ProfilesServiceTest {
         headers.put("typ","JWT");
         Map<String, Object> claims = new HashMap<>();
         claims.put("sub", this.accountId);
-        Jwt jwt = new Jwt("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+        claims.put("profileList", List.of(profileId, 1L , 2L));
+        this.jwtAuthenticationToken = new JwtAuthenticationToken(new Jwt("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
                 Instant.now(),
                 Instant.MAX,
                 headers,
-                claims);
-
-        this.jwtAuthenticationToken = new JwtAuthenticationToken(jwt);
+                claims));
+        claims.put("profileList", List.of( 1L , 2L));
+        this.jwtAuthenticationTokenMissingProfileId = new JwtAuthenticationToken(new Jwt("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+                Instant.now(),
+                Instant.MAX,
+                headers,
+                claims));
     }
 
     @AfterEach
@@ -173,18 +189,61 @@ class ProfilesServiceTest {
     // REMOVE A PROFILE
     @Test
     void testRemoveSuccess(){
-        when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(savedProfileJpa);
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(savedProfileJpa);
         when(this.keycloakService.removeFromProfileList(anyString(), anyLong())).thenReturn(true);
 
-        this.profilesService.remove(profileId);
+        this.profilesService.remove(profileId, profileId);
 
         // l'istante di rimozione deve essere NON nullo DOPO la rimozione
 
         verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
-        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.securityContext, times(2)).getAuthentication();
         verify(this.keycloakService, times(1)).removeFromProfileList(anyString(), anyLong());
         verify(this.profilesRepository, times(1)).save(any(ProfileJpa.class));
+    }
+
+    @Test
+    void testRemove_ValidateOnKeycloak_Success(){
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenMissingProfileId);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(true);
+        when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(savedProfileJpa);
+        when(this.keycloakService.removeFromProfileList(anyString(), anyLong())).thenReturn(true);
+
+        this.profilesService.remove(profileId, profileId);
+
+        // l'istante di rimozione deve essere NON nullo DOPO la rimozione
+        verify(this.securityContext, times(3)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
+        verify(this.keycloakService, times(1)).removeFromProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(1)).save(any(ProfileJpa.class));
+    }
+
+    @Test
+    void testRemove_NotInProfileList_Failed(){
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenMissingProfileId);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(false);
+
+        assertThrows(NotInProfileListException.class, () -> this.profilesService.remove(profileId, profileId));
+        // l'istante di rimozione deve essere NON nullo DOPO la rimozione
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(0)).getReferenceById(anyLong());
+        verify(this.keycloakService, times(0)).removeFromProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(0)).save(any(ProfileJpa.class));
+    }
+
+    @Test
+    void testRemove_NotInProfileList_NotEqualProfileId_Failed(){
+        assertThrows(NotInProfileListException.class, () -> this.profilesService.remove(profileId, invalidSelectedUserProfileId));
+        // l'istante di rimozione deve essere NON nullo DOPO la rimozione
+        verify(this.securityContext, times(0)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(0)).getReferenceById(anyLong());
+        verify(this.keycloakService, times(0)).removeFromProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(0)).save(any(ProfileJpa.class));
     }
 
 
@@ -193,23 +252,16 @@ class ProfilesServiceTest {
 
     @Test
     void testUpdateSuccess(){
-        // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
-        ProfilePatch profilePatch = new ProfilePatch();
-        String updatedBio = "New Giuseppe's bio";
-        profilePatch.setBio(updatedBio);
-        String updatedPictureUrl = "https://icons-for-free.com/iconfiles/png/512/avatar+person+profile+user+icon-1320086059654790795.png";
-        profilePatch.setPictureUrl(updatedPictureUrl);
-        Boolean updatedIsPrivate = true;
-        profilePatch.setIsPrivate(updatedIsPrivate);
 
         // Aggiorno il profilo che verra' restituito dal service con i nuovi valori
         Profile convertedProfile = getConvertedProfile(profilePatch);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
         when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.savedProfileJpa);
         when(this.profilesRepository.save(any(ProfileJpa.class))).thenReturn(this.savedProfileJpa);
         when(this.profileToProfileJpaConverter.convertBack(any(ProfileJpa.class))).thenReturn(convertedProfile);
 
-        Profile updatedProfile = this.profilesService.update(profileId, profilePatch);
+        Profile updatedProfile = this.profilesService.update(profileId, profileId, profilePatch);
 
         assertNotNull(updatedProfile);
         assertEquals(profileId, updatedProfile.getId());
@@ -218,10 +270,64 @@ class ProfilesServiceTest {
         assertEquals(updatedPictureUrl, updatedProfile.getPictureUrl());
         assertEquals(updatedIsPrivate, updatedProfile.getIsPrivate());
 
-
+        verify(this.securityContext, times(1)).getAuthentication();
         verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
         verify(this.profilesRepository, times(1)).save(any(ProfileJpa.class));
         verify(this.profileToProfileJpaConverter, times(1)).convertBack(any(ProfileJpa.class));
+    }
+
+    @Test
+    void testUpdate_ValidateOnKeycloak_Success(){
+        // Aggiorno il profilo che verra' restituito dal service con i nuovi valori
+        Profile convertedProfile = getConvertedProfile(profilePatch);
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenMissingProfileId);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(true);
+        when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.savedProfileJpa);
+        when(this.profilesRepository.save(any(ProfileJpa.class))).thenReturn(this.savedProfileJpa);
+        when(this.profileToProfileJpaConverter.convertBack(any(ProfileJpa.class))).thenReturn(convertedProfile);
+
+        Profile updatedProfile = this.profilesService.update(profileId, profileId, profilePatch);
+
+        assertNotNull(updatedProfile);
+        assertEquals(profileId, updatedProfile.getId());
+        assertEquals(profileName, updatedProfile.getProfileName());
+        assertEquals(updatedBio, updatedProfile.getBio());
+        assertEquals(updatedPictureUrl, updatedProfile.getPictureUrl());
+        assertEquals(updatedIsPrivate, updatedProfile.getIsPrivate());
+
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
+        verify(this.profilesRepository, times(1)).save(any(ProfileJpa.class));
+        verify(this.profileToProfileJpaConverter, times(1)).convertBack(any(ProfileJpa.class));
+    }
+
+    @Test
+    void testUpdate_NotInProfileList_Failed(){
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenMissingProfileId);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(false);
+
+
+        assertThrows(NotInProfileListException.class, () -> this.profilesService.update(profileId, profileId, profilePatch));
+
+
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(0)).getReferenceById(anyLong());
+        verify(this.profilesRepository, times(0)).save(any(ProfileJpa.class));
+        verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
+    }
+
+    @Test
+    void testUpdate_NotInProfileList_NotEqualProfileId_Failed(){
+        assertThrows(NotInProfileListException.class, () -> this.profilesService.update(profileId, invalidSelectedUserProfileId, profilePatch));
+
+        verify(this.securityContext, times(0)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(0)).getReferenceById(anyLong());
+        verify(this.profilesRepository, times(0)).save(any(ProfileJpa.class));
+        verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
     }
 
 
@@ -339,7 +445,7 @@ class ProfilesServiceTest {
         verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
         verify(this.postsRepository, times(1)).findAllActiveByProfileId(anyLong());
         verify(this.postToPostJpaConverter, times(2)).convertBack(any(PostJpa.class));
-        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.securityContext, times(2)).getAuthentication();
         verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
         verify(this.followsRepository, times(1)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.profileToProfileJpaConverter, times(1)).convertBack(any(ProfileJpa.class));
@@ -408,7 +514,7 @@ class ProfilesServiceTest {
         verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
         verify(this.postsRepository, times(1)).findAllActiveByProfileId(anyLong());
         verify(this.postToPostJpaConverter, times(2)).convertBack(any(PostJpa.class));
-        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.securityContext, times(2)).getAuthentication();
         verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
         verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.profileToProfileJpaConverter, times(1)).convertBack(any(ProfileJpa.class));
@@ -447,7 +553,7 @@ class ProfilesServiceTest {
         verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
         verify(this.postsRepository, times(1)).findAllActiveByProfileId(anyLong());
         verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
-        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.securityContext, times(2)).getAuthentication();
         verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
         verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.profileToProfileJpaConverter, times(1)).convertBack(any(ProfileJpa.class));
@@ -488,7 +594,7 @@ class ProfilesServiceTest {
         verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
         verify(this.postsRepository, times(1)).findAllActiveByProfileId(anyLong());
         verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
-        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.securityContext, times(2)).getAuthentication();
         verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
         verify(this.followsRepository, times(1)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.profileToProfileJpaConverter, times(1)).convertBack(any(ProfileJpa.class));
@@ -508,7 +614,7 @@ class ProfilesServiceTest {
         verify(this.profilesRepository, times(0)).getReferenceById(anyLong());
         verify(this.postsRepository, times(0)).findAllActiveByProfileId(anyLong());
         verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
-        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.securityContext, times(2)).getAuthentication();
         verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
         verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
@@ -575,7 +681,7 @@ class ProfilesServiceTest {
         verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
         verify(this.postsRepository, times(1)).findAllActiveByProfileId(anyLong());
         verify(this.postToPostJpaConverter, times(2)).convertBack(any(PostJpa.class));
-        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.securityContext, times(2)).getAuthentication();
         verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
         verify(this.followsRepository, times(1)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.profileToProfileJpaConverter, times(1)).convertBack(any(ProfileJpa.class));
