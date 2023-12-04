@@ -4,6 +4,7 @@ import com.sergiostefanizzi.profilemicroservice.model.*;
 import com.sergiostefanizzi.profilemicroservice.model.converter.PostToPostJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfileJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.repository.*;
+import com.sergiostefanizzi.profilemicroservice.system.exception.IdsMismatchException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.NotInProfileListException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import lombok.extern.slf4j.Slf4j;
@@ -65,9 +66,9 @@ class ProfilesServiceTest {
     private final String contentUrl = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Cape_may.jpg";
     private final String caption = "This is the post caption";
     Post.PostTypeEnum postType = Post.PostTypeEnum.POST;
-    private String updatedBio = "New Giuseppe's bio";
-    private String updatedPictureUrl = "https://icons-for-free.com/iconfiles/png/512/avatar+person+profile+user+icon-1320086059654790795.png";
-    private Boolean updatedIsPrivate = true;
+    private final String updatedBio = "New Giuseppe's bio";
+    private final String updatedPictureUrl = "https://icons-for-free.com/iconfiles/png/512/avatar+person+profile+user+icon-1320086059654790795.png";
+    private final Boolean updatedIsPrivate = true;
     private ProfilePatch profilePatch;
     @BeforeEach
     void setUp() {
@@ -237,7 +238,7 @@ class ProfilesServiceTest {
 
     @Test
     void testRemove_NotInProfileList_NotEqualProfileId_Failed(){
-        assertThrows(NotInProfileListException.class, () -> this.profilesService.remove(profileId, invalidSelectedUserProfileId));
+        assertThrows(IdsMismatchException.class, () -> this.profilesService.remove(profileId, invalidSelectedUserProfileId));
         // l'istante di rimozione deve essere NON nullo DOPO la rimozione
         verify(this.securityContext, times(0)).getAuthentication();
         verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
@@ -321,7 +322,7 @@ class ProfilesServiceTest {
 
     @Test
     void testUpdate_NotInProfileList_NotEqualProfileId_Failed(){
-        assertThrows(NotInProfileListException.class, () -> this.profilesService.update(profileId, invalidSelectedUserProfileId, profilePatch));
+        assertThrows(IdsMismatchException.class, () -> this.profilesService.update(profileId, invalidSelectedUserProfileId, profilePatch));
 
         verify(this.securityContext, times(0)).getAuthentication();
         verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
@@ -605,7 +606,7 @@ class ProfilesServiceTest {
     void testFindFull_NotInProfileList_Failed(){
         this.savedProfileJpa.setIsPrivate(true);
 
-        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenMissingProfileId);
         when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(false);
 
         assertThrows(NotInProfileListException.class, () -> this.profilesService.findFull(profileId, 123L));

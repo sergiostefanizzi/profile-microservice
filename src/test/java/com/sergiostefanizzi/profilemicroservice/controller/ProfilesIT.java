@@ -414,10 +414,11 @@ class ProfilesIT {
         headers.setBearerAuth(accessToken);
 
 
-        ResponseEntity<Void> responseDelete = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+        ResponseEntity<Void> responseDelete = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.DELETE,
                 new HttpEntity<>(headers),
                 Void.class,
+                this.savedProfile2.getId(),
                 this.savedProfile2.getId());
 
         assertEquals(HttpStatus.NO_CONTENT, responseDelete.getStatusCode());
@@ -435,10 +436,11 @@ class ProfilesIT {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/IdNotLong",
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/IdNotLong?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.DELETE,
                 new HttpEntity<>(headers),
-                String.class);
+                String.class,
+                Long.MAX_VALUE);
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -459,6 +461,32 @@ class ProfilesIT {
 
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
+
+    @Test
+    void testDeleteProfileById_IdsMismatch_Then_400() throws Exception{
+        // messaggio d'errore che mi aspetto d'ottenere
+        String error = "Ids mismatch";
+
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0));
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}?selectedUserProfileId={selectedUserProfileId}",
+                HttpMethod.DELETE,
+                new HttpEntity<>(headers),
+                String.class,
+                this.savedProfile3.getId(),
+                this.savedProfile1.getId());
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
     @Test
     void testDeleteProfileById_Then_403() throws Exception{
         // messaggio d'errore che mi aspetto d'ottenere
@@ -469,10 +497,11 @@ class ProfilesIT {
         headers.setBearerAuth(accessToken);
 
 
-        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.DELETE,
                 new HttpEntity<>(headers),
                 String.class,
+                this.savedProfile1.getId(),
                 this.savedProfile1.getId());
 
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
@@ -494,10 +523,11 @@ class ProfilesIT {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.DELETE,
                 new HttpEntity<>(headers),
                 String.class,
+                invalidProfileId,
                 invalidProfileId);
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
@@ -523,10 +553,11 @@ class ProfilesIT {
         headers.setBearerAuth(accessToken);
 
 
-        ResponseEntity<Profile> responsePatch = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+        ResponseEntity<Profile> responsePatch = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.PATCH,
                 new HttpEntity<>(profilePatch, headers),
                 Profile.class,
+                this.savedProfile3.getId(),
                 this.savedProfile3.getId());
 
         assertEquals(HttpStatus.OK, responsePatch.getStatusCode());
@@ -554,11 +585,12 @@ class ProfilesIT {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.PATCH,
                 new HttpEntity<>(profilePatch, headers),
                 String.class,
-                "IdNotLong");
+                "IdNotLong",
+                this.savedProfile3.getId());
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -581,10 +613,11 @@ class ProfilesIT {
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
-        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.PATCH,
                 new HttpEntity<>(profilePatch, headers),
                 String.class,
+                this.savedProfile3.getId(),
                 this.savedProfile3.getId());
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -612,10 +645,11 @@ class ProfilesIT {
         headers.setBearerAuth(accessToken);
 
 
-        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.PATCH,
                 new HttpEntity<>(profilePatch, headers),
                 String.class,
+                this.savedProfile3.getId(),
                 this.savedProfile3.getId());
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -642,10 +676,11 @@ class ProfilesIT {
         headers.setBearerAuth(accessToken);
 
 
-        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.PATCH,
                 new HttpEntity<>(profilePatch, headers),
                 String.class,
+                this.savedProfile3.getId(),
                 this.savedProfile3.getId());
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -677,10 +712,11 @@ class ProfilesIT {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(accessToken);
 
-        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.PATCH,
                 new HttpEntity<>(profilePatchJson, headers),
                 String.class,
+                this.savedProfile3.getId(),
                 this.savedProfile3.getId());
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -702,8 +738,8 @@ class ProfilesIT {
     }
 
     @Test
-    void testUpdateProfile_Then_403() throws Exception{
-        String error = "Profile "+this.savedProfile3.getId()+" is not inside the profile list!";
+    void testUpdateProfile_IdsMismatch_Then_400() throws Exception{
+        String error = "Ids mismatch";
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();
 
@@ -712,11 +748,39 @@ class ProfilesIT {
         headers.setBearerAuth(accessToken);
 
 
-        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.PATCH,
                 new HttpEntity<>(profilePatch, headers),
                 String.class,
-                this.savedProfile3.getId());
+                this.savedProfile3.getId(),
+                this.savedProfile1.getId());
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+
+    }
+
+    @Test
+    void testUpdateProfile_Then_403() throws Exception{
+        String error = "Profile "+this.savedProfile1.getId()+" is not inside the profile list!";
+        // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
+        ProfilePatch profilePatch = new ProfilePatch();
+
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0));
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}?selectedUserProfileId={selectedUserProfileId}",
+                HttpMethod.PATCH,
+                new HttpEntity<>(profilePatch, headers),
+                String.class,
+                this.savedProfile1.getId(),
+                this.savedProfile1.getId());
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         assertNotNull(response.getBody());
 
@@ -739,10 +803,11 @@ class ProfilesIT {
         headers.setBearerAuth(accessToken);
 
 
-        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.PATCH,
                 new HttpEntity<>(profilePatch, headers),
                 String.class,
+                invalidProfileId,
                 invalidProfileId);
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertNotNull(response.getBody());

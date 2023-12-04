@@ -23,7 +23,6 @@ import static com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityCla
 @RequiredArgsConstructor
 public class ProfileInterceptor implements HandlerInterceptor {
     private final ProfilesRepository profilesRepository;
-    private final KeycloakService keycloakService;
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler){
@@ -36,16 +35,6 @@ public class ProfileInterceptor implements HandlerInterceptor {
         Long profileId = Long.valueOf((String) pathVariables.get("profileId"));
         Long checkId = this.profilesRepository.checkActiveById(profileId)
                 .orElseThrow(() -> new ProfileNotFoundException(profileId));
-        /*
-        if ((request.getMethod().equalsIgnoreCase("DELETE") || request.getMethod().equalsIgnoreCase("PATCH")) && (Boolean.FALSE.equals(isInProfileListJwt(profileId)))){
-                // Se non c'e' nel Jwt controllo direttamente in keycloak
-                // Questo e' necessario in quanto all'interno del jwt non viene aggiornata la profileList dopo ogni modifica
-                if (Boolean.FALSE.equals(this.keycloakService.isInProfileList(getJwtAccountId(), profileId))){
-                    throw new NotInProfileListException(profileId);
-                }
-        }
-
-         */
 
         log.info("\n\tProfile Interceptor: Profile ID-> "+checkId);
         return true;

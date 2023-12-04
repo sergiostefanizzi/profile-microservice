@@ -136,6 +136,15 @@ public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.FORBIDDEN, request);
     }
 
+    @ExceptionHandler(IdsMismatchException.class)
+    public ResponseEntity<Object> handleIdsMismatchException(IdsMismatchException ex, WebRequest request){
+        log.error(ex.getMessage(),ex);
+        String error = "Ids mismatch";
+        Map<String, String> body = new HashMap<>();
+        body.put("error", error);
+        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
+    }
+
     @ExceptionHandler(ProfileNotFoundException.class)
     public ResponseEntity<Object> handleProfileNotFoundException(ProfileNotFoundException ex, WebRequest request){
         log.error(ex.getMessage(),ex);

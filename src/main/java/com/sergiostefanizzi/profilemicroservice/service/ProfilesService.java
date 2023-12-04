@@ -6,6 +6,7 @@ import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfile
 import com.sergiostefanizzi.profilemicroservice.repository.FollowsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
+import com.sergiostefanizzi.profilemicroservice.system.exception.IdsMismatchException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.NotInProfileListException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
@@ -34,10 +35,13 @@ public class ProfilesService {
     private final PostToPostJpaConverter postToPostJpaConverter;
     private final KeycloakService keycloakService;
 
+
     private void checkProfileListAndIds(Long profileId, Long selectedUserProfileId) {
-        if (!Objects.equals(profileId, selectedUserProfileId) || (Boolean.FALSE.equals(JwtUtilityClass.isInProfileListJwt(selectedUserProfileId)) && (Boolean.FALSE.equals(this.keycloakService.isInProfileList(getJwtAccountId(), selectedUserProfileId))))){
-            throw new NotInProfileListException(selectedUserProfileId);
+        if(!Objects.equals(profileId, selectedUserProfileId)){
+            throw new IdsMismatchException();
         }
+
+        checkProfileList(selectedUserProfileId);
     }
 
     private void checkProfileList(Long selectedUserProfileId) {
