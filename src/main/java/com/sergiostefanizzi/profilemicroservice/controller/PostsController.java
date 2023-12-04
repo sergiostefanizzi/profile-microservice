@@ -27,13 +27,13 @@ public class PostsController implements PostsApi {
 
     @Override
     public ResponseEntity<Void> deletePostById(Long postId, Long selectedUserProfileId) {
-        this.postsService.remove(postId);
+        this.postsService.remove(postId, selectedUserProfileId);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     @Override
     public ResponseEntity<Post> updatePostById(Long postId, Long selectedUserProfileId, PostPatch postPatch) {
-        Post updatedPost = this.postsService.update(postId, postPatch);
+        Post updatedPost = this.postsService.update(postId, selectedUserProfileId, postPatch);
         return new ResponseEntity<>(updatedPost, HttpStatus.OK);
     }
 

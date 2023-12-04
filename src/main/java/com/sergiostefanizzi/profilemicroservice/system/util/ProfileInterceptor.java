@@ -15,9 +15,6 @@ import org.springframework.web.servlet.ModelAndView;
 
 import java.util.Map;
 
-import static com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass.getJwtAccountId;
-import static com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass.isInProfileListJwt;
-
 @Slf4j
 @Component
 @RequiredArgsConstructor

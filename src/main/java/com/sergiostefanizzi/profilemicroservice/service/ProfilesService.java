@@ -6,11 +6,8 @@ import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfile
 import com.sergiostefanizzi.profilemicroservice.repository.FollowsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
-import com.sergiostefanizzi.profilemicroservice.system.exception.IdsMismatchException;
-import com.sergiostefanizzi.profilemicroservice.system.exception.NotInProfileListException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
-import com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass;
 import jakarta.transaction.Transactional;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +19,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
 
-import static com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass.getJwtAccountId;
+import static com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass.*;
 
 @Service
 @RequiredArgsConstructor
@@ -36,19 +33,6 @@ public class ProfilesService {
     private final KeycloakService keycloakService;
 
 
-    private void checkProfileListAndIds(Long profileId, Long selectedUserProfileId) {
-        if(!Objects.equals(profileId, selectedUserProfileId)){
-            throw new IdsMismatchException();
-        }
-
-        checkProfileList(selectedUserProfileId);
-    }
-
-    private void checkProfileList(Long selectedUserProfileId) {
-        if (Boolean.FALSE.equals(JwtUtilityClass.isInProfileListJwt(selectedUserProfileId)) && Boolean.FALSE.equals(this.keycloakService.isInProfileList(getJwtAccountId(), selectedUserProfileId))){
-            throw new NotInProfileListException(selectedUserProfileId);
-        }
-    }
 
     @Transactional
     public Profile save(@NotNull Profile profile){
@@ -70,7 +54,7 @@ public class ProfilesService {
 
     @Transactional
     public void remove(Long profileId, Long selectedUserProfileId) {
-        checkProfileListAndIds(profileId, selectedUserProfileId);
+        checkProfileListAndIds(profileId, selectedUserProfileId, this.keycloakService);
 
         ProfileJpa profileJpa = this.profilesRepository.getReferenceById(profileId);
         profileJpa.setDeletedAt(LocalDateTime.now());
@@ -84,7 +68,7 @@ public class ProfilesService {
 
     @Transactional
     public Profile update(Long profileId, Long selectedUserProfileId, @NotNull ProfilePatch profilePatch) {
-        checkProfileListAndIds(profileId, selectedUserProfileId);
+        checkProfileListAndIds(profileId, selectedUserProfileId, this.keycloakService);
 
 
         ProfileJpa profileJpa = this.profilesRepository.getReferenceById(profileId);
@@ -120,7 +104,7 @@ public class ProfilesService {
 
     @Transactional
     public FullProfile findFull(Long profileId, Long selectedUserProfileId) {
-        checkProfileList(selectedUserProfileId);
+        checkProfileList(selectedUserProfileId, this.keycloakService);
 
         ProfileJpa profileJpa = this.profilesRepository.getReferenceById(profileId);
 

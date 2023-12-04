@@ -1,5 +1,8 @@
 package com.sergiostefanizzi.profilemicroservice.system.util;
 
+import com.sergiostefanizzi.profilemicroservice.service.KeycloakService;
+import com.sergiostefanizzi.profilemicroservice.system.exception.IdsMismatchException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.NotInProfileListException;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
@@ -8,6 +11,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 
 import java.util.List;
+import java.util.Objects;
 
 @Slf4j
 public final class JwtUtilityClass {
@@ -29,5 +33,19 @@ public final class JwtUtilityClass {
         String jwtAccountId = oauthToken.getToken().getClaim("sub");
         log.info("TOKEN ACCOUNT ID --> "+jwtAccountId);
         return jwtAccountId;
+    }
+
+    public static void checkProfileListAndIds(Long profileId, Long selectedUserProfileId, KeycloakService keycloakService) {
+        if(!Objects.equals(profileId, selectedUserProfileId)){
+            throw new IdsMismatchException();
+        }
+
+        checkProfileList(selectedUserProfileId, keycloakService);
+    }
+
+    public static void checkProfileList(Long selectedUserProfileId, KeycloakService keycloakService) {
+        if (Boolean.FALSE.equals(JwtUtilityClass.isInProfileListJwt(selectedUserProfileId)) && Boolean.FALSE.equals(keycloakService.isInProfileList(getJwtAccountId(), selectedUserProfileId))){
+            throw new NotInProfileListException(selectedUserProfileId);
+        }
     }
 }

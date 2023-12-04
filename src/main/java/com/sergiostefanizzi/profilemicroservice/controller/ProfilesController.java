@@ -5,8 +5,6 @@ import com.sergiostefanizzi.profilemicroservice.model.FullProfile;
 import com.sergiostefanizzi.profilemicroservice.model.Profile;
 import com.sergiostefanizzi.profilemicroservice.model.ProfilePatch;
 import com.sergiostefanizzi.profilemicroservice.service.ProfilesService;
-import com.sergiostefanizzi.profilemicroservice.system.exception.NotInProfileListException;
-import com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -15,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
-import static com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass.getJwtAccountId;
+
 
 @RestController
 @RequiredArgsConstructor

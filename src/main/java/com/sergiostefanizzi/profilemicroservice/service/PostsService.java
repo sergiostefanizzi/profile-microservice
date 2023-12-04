@@ -8,10 +8,8 @@ import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.LikesRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
-import com.sergiostefanizzi.profilemicroservice.system.exception.CommentOnStoryException;
-import com.sergiostefanizzi.profilemicroservice.system.exception.NotInProfileListException;
-import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
-import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.*;
+import com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -19,10 +17,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
-import static com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass.getJwtAccountId;
-import static com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass.isInProfileListJwt;
+import static com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass.*;
 
 
 @Service
@@ -41,10 +39,8 @@ public class PostsService {
 
     @Transactional
     public Post save(Post post) {
-        if(Boolean.FALSE.equals(isInProfileListJwt(post.getProfileId())) && (Boolean.FALSE.equals(this.keycloakService.isInProfileList(getJwtAccountId(), post.getProfileId())))){
-                throw new NotInProfileListException(post.getProfileId());
+        checkProfileList(post.getProfileId(), this.keycloakService);
 
-        }
 
         // il profileId e' valido quindi posso fare la conversione in postJpa
         PostJpa postJpa = this.postToPostJpaConverter.convert(post);
@@ -58,15 +54,19 @@ public class PostsService {
     }
 
     @Transactional
-    public void remove(Long postId) {
+    public void remove(Long postId, Long selectedUserProfileId) {
         PostJpa postJpaToRemove = this.postsRepository.getReferenceById(postId);
+        checkProfileListAndIds(postJpaToRemove.getProfile().getId(), selectedUserProfileId, this.keycloakService);
+
         postJpaToRemove.setDeletedAt(LocalDateTime.now());
         this.postsRepository.save(postJpaToRemove);
     }
-
+    //TODO: fare PostsServiceTest dell'update
     @Transactional
-    public Post update(Long postId, PostPatch postPatch) {
+    public Post update(Long postId, Long selectedUserProfileId, PostPatch postPatch) {
         PostJpa postJpa = this.postsRepository.getReferenceById(postId);
+        checkProfileListAndIds(postJpa.getProfile().getId(), selectedUserProfileId, this.keycloakService);
+
         postJpa.setCaption(postPatch.getCaption());
         postJpa.setUpdatedAt(LocalDateTime.now());
         return this.postToPostJpaConverter.convertBack(

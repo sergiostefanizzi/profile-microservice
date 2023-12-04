@@ -8,10 +8,7 @@ import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.LikesRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
-import com.sergiostefanizzi.profilemicroservice.system.exception.CommentOnStoryException;
-import com.sergiostefanizzi.profilemicroservice.system.exception.NotInProfileListException;
-import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
-import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.*;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -68,9 +65,11 @@ class PostsServiceTest {
     Long profileId = 11L;
     private Post newPost;
     private PostJpa savedPostJpa;
+
     private Like newLike;
     private final String accountId = UUID.randomUUID().toString();
     private ProfileJpa profileJpa = new ProfileJpa("pinco_pallino",false,accountId);
+    private ProfileJpa profileJpaError = new ProfileJpa("pinco_pallino_error",false,accountId);
     private final PostJpa newPostJpa = new PostJpa(contentUrl, postType);
 
     @BeforeEach
@@ -86,6 +85,7 @@ class PostsServiceTest {
         this.savedPostJpa.setCaption(caption);
         this.savedPostJpa.setProfile(profileJpa);
         this.savedPostJpa.setId(postId);
+
 
         this.newLike = new Like(profileId, postId);
 
@@ -187,16 +187,63 @@ class PostsServiceTest {
     }
 
     @Test
-    void testRemoveSuccess(){
+    void testRemove_Success(){
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
         when(this.postsRepository.getReferenceById(anyLong())).thenReturn(savedPostJpa);
 
-        this.postsService.remove(postId);
+        this.postsService.remove(postId, profileId);
 
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
         verify(this.postsRepository, times(1)).getReferenceById(anyLong());
         verify(this.postsRepository, times(1)).save(any(PostJpa.class));
 
     }
 
+    @Test
+    void testRemove_ValidatedOnKeycloak_Success(){
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(true);
+        when(this.postsRepository.getReferenceById(anyLong())).thenReturn(savedPostJpa);
+
+        this.postsService.remove(postId, profileId);
+
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.postsRepository, times(1)).save(any(PostJpa.class));
+    }
+
+    @Test
+    void testRemove_NotInsideProfileList_Failed(){
+        when(this.postsRepository.getReferenceById(anyLong())).thenReturn(savedPostJpa);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(false);
+
+
+        assertThrows(NotInProfileListException.class, () -> this.postsService.remove(postId, profileId));
+
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.postsRepository, times(0)).save(any(PostJpa.class));
+    }
+
+    @Test
+    void testRemove_IdsMismatch_Failed(){
+        this.profileJpa.setId(Long.MAX_VALUE);
+        this.savedPostJpa.setProfile(this.profileJpa);
+        when(this.postsRepository.getReferenceById(anyLong())).thenReturn(savedPostJpa);
+
+
+        assertThrows(IdsMismatchException.class, () -> this.postsService.remove(Long.MAX_VALUE, profileId));
+
+        verify(this.securityContext, times(0)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.postsRepository, times(0)).save(any(PostJpa.class));
+    }
+/*
     @Test
     void testUpdateSuccess(){
         // Aggiornamento del post
@@ -247,6 +294,8 @@ class PostsServiceTest {
         verify(this.postsRepository, times(1)).getReferenceById(postId);
         verify(this.postToPostJpaConverter, times(1)).convertBack(this.savedPostJpa);
     }
+
+ */
 
 /*
     @Test

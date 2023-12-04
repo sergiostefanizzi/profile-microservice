@@ -50,11 +50,14 @@ public class PostsInterceptor implements HandlerInterceptor {
                 .orElseThrow(() -> new PostNotFoundException(checkPostId));
         // Per le operazioni di rimozione e aggiornamento del post, controllo che
         // chi le richiede abbia l'autorizzazione per farlo. Cioe' sia l'autore del post
+        /*
         if ((requestMethod.equalsIgnoreCase("DELETE") || requestMethod.equalsIgnoreCase("PATCH"))
                 && (Boolean.FALSE.equals(JwtUtilityClass.isInProfileListJwt(checkProfileId))
                 && (Boolean.FALSE.equals(this.keycloakService.isInProfileList(JwtUtilityClass.getJwtAccountId(),checkProfileId))))){
                     throw new NotInProfileListException(checkProfileId);
         }
+
+         */
 
         log.info("\n\tPost Interceptor: Post ID-> "+checkPostId+" Profile ID-> "+checkProfileId);
         return true;
