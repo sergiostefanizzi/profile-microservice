@@ -65,8 +65,8 @@ class ProfilesControllerTest {
     @MockBean
     private AlertsRepository alertsRepository;
     // TODO togliere keycloakService dopo aver fatto tutti i test degli interceptor
-    @MockBean
-    private KeycloakService keycloakService;
+    //@MockBean
+    //private KeycloakService keycloakService;
 
     @Autowired
     private MockMvc mockMvc;
@@ -88,8 +88,6 @@ class ProfilesControllerTest {
     String contentUrl = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Cape_may.jpg";
     String caption = "This is the post caption";
     Post.PostTypeEnum postType = Post.PostTypeEnum.POST;
-    private JwtAuthenticationToken jwtAuthenticationToken;
-    private JwtAuthenticationToken jwtTokenError;
 
 
 
@@ -381,13 +379,13 @@ class ProfilesControllerTest {
    }
 
     @Test
-    void testDeleteProfileById_Then_400() throws Exception{
+    void testDeleteProfileById_IdsMismatch_Then_403() throws Exception{
         when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(profileId));
         doThrow(new IdsMismatchException()).when(this.profilesService).remove(anyLong(), anyLong());
 
         MvcResult result = this.mockMvc.perform(delete("/profiles/{profileId}",Long.MAX_VALUE)
                         .queryParam("selectedUserProfileId", String.valueOf(profileId)))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isForbidden())
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof IdsMismatchException
                 ))
@@ -593,7 +591,7 @@ class ProfilesControllerTest {
 
 
     @Test
-    void testUpdateProfile_Then_400() throws Exception{
+    void testUpdateProfile_IdsMismatch_Then_403() throws Exception{
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();
         profilePatch.setBio(updatedBio);
@@ -610,7 +608,7 @@ class ProfilesControllerTest {
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(profilePatchJson))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isForbidden())
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof IdsMismatchException
                 ))

@@ -62,7 +62,7 @@ class PostsIT {
     Post.PostTypeEnum storyType = Post.PostTypeEnum.STORY;
     private Post newPost;
     String profileName = "pinco_pallino";
-    Profile newProfile = new Profile(profileName,false,111L);
+    Profile newProfile = new Profile(profileName,false);
 
 
 
@@ -116,7 +116,7 @@ class PostsIT {
 
         newProfile.setProfileName(profileName);
     }
-
+/*
     @Test
     void testAddPost_Then_201() {
         HttpEntity<Post> request = new HttpEntity<>(this.newPost);

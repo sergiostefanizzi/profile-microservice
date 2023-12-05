@@ -470,7 +470,7 @@ class ProfilesIT {
     }
 
     @Test
-    void testDeleteProfileById_IdsMismatch_Then_400() throws Exception{
+    void testDeleteProfileById_IdsMismatch_Then_403() throws Exception{
         // messaggio d'errore che mi aspetto d'ottenere
         String error = "Ids mismatch";
 
@@ -486,7 +486,7 @@ class ProfilesIT {
                 this.savedProfile3.getId(),
                 this.savedProfile1.getId());
 
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         assertNotNull(response.getBody());
 
         JsonNode node = this.objectMapper.readTree(response.getBody());
@@ -745,7 +745,7 @@ class ProfilesIT {
     }
 
     @Test
-    void testUpdateProfile_IdsMismatch_Then_400() throws Exception{
+    void testUpdateProfile_IdsMismatch_Then_403() throws Exception{
         String error = "Ids mismatch";
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();
@@ -761,7 +761,7 @@ class ProfilesIT {
                 String.class,
                 this.savedProfile3.getId(),
                 this.savedProfile1.getId());
-        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         assertNotNull(response.getBody());
 
         JsonNode node = this.objectMapper.readTree(response.getBody());

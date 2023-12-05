@@ -11,10 +11,7 @@ import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.service.PostsService;
 import com.sergiostefanizzi.profilemicroservice.service.ProfilesService;
-import com.sergiostefanizzi.profilemicroservice.system.exception.CommentNotFoundException;
-import com.sergiostefanizzi.profilemicroservice.system.exception.CommentOnStoryException;
-import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
-import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.AfterAll;
@@ -23,6 +20,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
@@ -33,6 +31,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 
@@ -52,9 +51,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ExtendWith(SpringExtension.class)
 @WebMvcTest(PostsController.class)
 @ActiveProfiles("test")
+@AutoConfigureMockMvc(addFilters = false)
 @Slf4j
 class PostsControllerTest {
-    /*
+
     @MockBean
     private PostsService postsService;
     @MockBean
@@ -80,8 +80,8 @@ class PostsControllerTest {
     private Like newLike;
     String newPostJson;
     List<String> errors;
-    Long invalidProfileId = Long.MIN_VALUE;
-    Long invalidPostId = Long.MIN_VALUE;
+    Long invalidProfileId = Long.MAX_VALUE;
+    Long invalidPostId = Long.MAX_VALUE;
 
     @BeforeEach
     void setUp() throws JsonProcessingException {
@@ -237,6 +237,28 @@ class PostsControllerTest {
     }
 
     @Test
+    void testAddPost_InvalidContentUrlXSS_Then_400() throws Exception {
+        errors.add("contentUrl must be a valid URL");
+        // Url non valido
+        this.newPost.setContentUrl(contentUrlXSS);
+        newPostJson = this.objectMapper.writeValueAsString(this.newPost);
+
+        MvcResult result = this.mockMvc.perform(post("/posts")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newPostJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(res.getResolvedException() instanceof MethodArgumentNotValidException))
+                .andExpect(jsonPath("$.error").isArray())
+                .andExpect(jsonPath("$.error", hasSize(1)))
+                .andExpect(jsonPath("$.error[0]").value(in(errors)))
+                .andReturn();
+        // salvo risposta in result solo per visualizzarla
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+    }
+
+    @Test
     void testAddPost_InvalidPostType_Then_400() throws Exception {
         JsonNode jsonNode = this.objectMapper.readTree(newPostJson);
 
@@ -251,7 +273,7 @@ class PostsControllerTest {
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof HttpMessageNotReadableException
                 ))
-                .andExpect(jsonPath("$.error").value("JSON parse error: Cannot construct instance of `com.sergiostefanizzi.profilemicroservice.model.Post$PostTypeEnum`, problem: Unexpected value 'NOTVALID'"))
+                .andExpect(jsonPath("$.error").value("Message is not readable"))
                 .andReturn();
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n" + resultAsString);
@@ -272,28 +294,25 @@ class PostsControllerTest {
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof HttpMessageNotReadableException
                 ))
-                .andExpect(jsonPath("$.error").value("JSON parse error: Cannot deserialize value of type `java.lang.Long` from String \"IdNotLong\": not a valid `java.lang.Long` value")).andReturn();
+                .andExpect(jsonPath("$.error").value("Message is not readable")).andReturn();
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n" + resultAsString);
         log.info("Resolved Error ---> " + result.getResolvedException());
     }
 
-    //TODO 401, 403
-
-    // Questo dovra' essere sostituito con il 403
     @Test
-    void testAddPost_Then_404() throws Exception {
-        doThrow(new ProfileNotFoundException(invalidProfileId)).when(this.postsService).save(this.newPost);
+    void testAddPost_Then_403() throws Exception {
+        doThrow(new NotInProfileListException(invalidProfileId)).when(this.postsService).save(this.newPost);
 
         MvcResult result = this.mockMvc.perform(post("/posts")
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(newPostJson))
-                .andExpect(status().isNotFound())
+                .andExpect(status().isForbidden())
                 .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof ProfileNotFoundException
+                        res.getResolvedException() instanceof NotInProfileListException
                 ))
-                .andExpect(jsonPath("$.error").value("Profile " + invalidProfileId + " not found!"))
+                .andExpect(jsonPath("$.error").value("Profile " + invalidProfileId + " is not inside the profile list!"))
                 .andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -305,21 +324,56 @@ class PostsControllerTest {
     void testDeletePostById_Then_204() throws Exception {
         when(this.postsRepository.checkActiveForDeleteById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
-        doNothing().when(this.postsService).remove(postId);
 
-        this.mockMvc.perform(delete("/posts/{postId}", postId))
+        doNothing().when(this.postsService).remove(anyLong(), anyLong());
+
+        this.mockMvc.perform(delete("/posts/{postId}", postId)
+                        .queryParam("selectedUserProfileId", String.valueOf(profileId)))
                 .andExpect(status().isNoContent());
     }
 
     @Test
     void testDeletePostById_Then_400() throws Exception {
-        errors.add("ID is not valid!");
-        MvcResult result = this.mockMvc.perform(delete("/posts/IdNotLong"))
+        MvcResult result = this.mockMvc.perform(delete("/posts/IdNotLong")
+                        .queryParam("selectedUserProfileId", String.valueOf(profileId)))
                 .andExpect(status().isBadRequest())
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof NumberFormatException
                 ))
-                .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
+                .andExpect(jsonPath("$.error").value("ID is not valid!")).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+    }
+
+    @Test
+    void testDeletePostById_QueryParamNotValid_Then_400() throws Exception {
+        when(this.postsRepository.checkActiveForDeleteById(anyLong())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
+        MvcResult result = this.mockMvc.perform(delete("/posts/{postId}", postId)
+                        .queryParam("selectedUserProfileId", "IdNotLong"))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                ))
+                .andExpect(jsonPath("$.error").value("Type mismatch")).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n" + resultAsString);
+        log.info("Resolved Error ---> " + result.getResolvedException());
+    }
+
+    @Test
+    void testDeletePostById_MissingQueryParam_Then_400() throws Exception {
+        when(this.postsRepository.checkActiveForDeleteById(anyLong())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
+        MvcResult result = this.mockMvc.perform(delete("/posts/{postId}", postId))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MissingServletRequestParameterException
+                ))
+                .andExpect(jsonPath("$.error").value("Required request parameter 'selectedUserProfileId' for method parameter type Long is not present")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n" + resultAsString);
@@ -329,15 +383,18 @@ class PostsControllerTest {
     //TODO remove 401, 403
 
     @Test
-    void testDeletePostById_Then_404() throws Exception {
-        doThrow(new PostNotFoundException(invalidPostId)).when(this.postsService).remove(invalidPostId);
+    void testDeletePostById_Then_403() throws Exception {
+        when(this.postsRepository.checkActiveForDeleteById(anyLong())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
+        doThrow(new NotInProfileListException(profileId)).when(this.postsService).remove(anyLong(), anyLong());
 
-        MvcResult result = this.mockMvc.perform(delete("/posts/{postId}",invalidPostId))
-                .andExpect(status().isNotFound())
+        MvcResult result = this.mockMvc.perform(delete("/posts/{postId}",postId)
+                .queryParam("selectedUserProfileId", String.valueOf(profileId)))
+                .andExpect(status().isForbidden())
                 .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof PostNotFoundException
+                        res.getResolvedException() instanceof NotInProfileListException
                 ))
-                .andExpect(jsonPath("$.error").value("Post "+invalidPostId+" not found!"))
+                .andExpect(jsonPath("$.error").value("Profile " + profileId + " is not inside the profile list!"))
                 .andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -345,6 +402,63 @@ class PostsControllerTest {
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
 
+    @Test
+    void testDeletePostById_IdsMismatch_Then_403() throws Exception {
+        when(this.postsRepository.checkActiveForDeleteById(anyLong())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
+        doThrow(new IdsMismatchException()).when(this.postsService).remove(anyLong(), anyLong());
+        MvcResult result = this.mockMvc.perform(delete("/posts/{postId}",postId)
+                        .queryParam("selectedUserProfileId", String.valueOf(Long.MAX_VALUE)))
+                .andExpect(status().isForbidden())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof IdsMismatchException
+                ))
+                .andExpect(jsonPath("$.error").value("Ids mismatch"))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    @Test
+    void testDeletePostById_PostNotFound_Then_404() throws Exception {
+        when(this.postsRepository.checkActiveForDeleteById(anyLong())).thenReturn(Optional.empty());
+
+        MvcResult result = this.mockMvc.perform(delete("/posts/{postId}",postId)
+                        .queryParam("selectedUserProfileId", String.valueOf(profileId)))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof PostNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value("Post " + profileId + " not found!"))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    @Test
+    void testDeletePostById_ProfileNotFound_Then_404() throws Exception {
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.empty());
+
+        MvcResult result = this.mockMvc.perform(delete("/posts/{postId}",postId)
+                        .queryParam("selectedUserProfileId", String.valueOf(profileId)))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof PostNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value("Post " + profileId + " not found!"))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+// TODO continua
+
+/*
     @Test
     void testUpdatePostById_Then_200() throws Exception{
         // Definisco la caption da aggiornare tramite l'oggetto PostPatch
