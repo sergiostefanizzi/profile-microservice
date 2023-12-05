@@ -113,7 +113,8 @@ public class ProfilesService {
         List<PostJpa> postJpaList = this.postsRepository.findAllActiveByProfileId(profileId);
 
         List<Post> postList = postJpaList.stream().map(this.postToPostJpaConverter::convertBack).toList();
-        if(!Objects.equals(profileId, selectedUserProfileId) && (profileJpa.getIsPrivate() && (this.followsRepository.findActiveAcceptedById(new FollowsId(selectedUserProfileId, profileId)).isEmpty()))){ // selectedUserProfileId non segue profileId privato
+        if(!Objects.equals(profileId, selectedUserProfileId)
+                && (profileJpa.getIsPrivate() && (this.followsRepository.findActiveAcceptedById(new FollowsId(selectedUserProfileId, profileId)).isEmpty()))){ // selectedUserProfileId non segue profileId privato
                 return new FullProfile(
                         this.profileToProfileJpaConverter.convertBack(profileJpa),
                         List.of(),

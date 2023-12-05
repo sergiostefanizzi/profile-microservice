@@ -44,7 +44,7 @@ public final class JwtUtilityClass {
     }
 
     public static void checkProfileList(Long selectedUserProfileId, KeycloakService keycloakService) {
-        if (Boolean.FALSE.equals(JwtUtilityClass.isInProfileListJwt(selectedUserProfileId)) && Boolean.FALSE.equals(keycloakService.isInProfileList(getJwtAccountId(), selectedUserProfileId))){
+        if (Boolean.FALSE.equals(isInProfileListJwt(selectedUserProfileId)) && Boolean.FALSE.equals(keycloakService.isInProfileList(getJwtAccountId(), selectedUserProfileId))){
             throw new NotInProfileListException(selectedUserProfileId);
         }
     }

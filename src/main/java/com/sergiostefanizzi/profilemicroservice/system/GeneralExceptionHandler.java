@@ -53,6 +53,15 @@ public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
     }
 
+    @ExceptionHandler(PostAccessForbiddenException.class)
+    public ResponseEntity<Object> handlePostAccessForbiddenException(PostAccessForbiddenException ex, WebRequest request){
+        log.error(ex.getMessage(),ex);
+        String error = "Cannot access post with id "+ex.getMessage();
+        Map<String, String> body = new HashMap<>();
+        body.put("error", error);
+        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.FORBIDDEN, request);
+    }
+
     @ExceptionHandler(FollowNotFoundException.class)
     public ResponseEntity<Object> handleFollowNotFoundException(FollowNotFoundException ex, WebRequest request){
         log.error(ex.getMessage(),ex);

@@ -39,7 +39,7 @@ public class PostsController implements PostsApi {
 
     @Override
     public ResponseEntity<Post> findPostById(Long postId, Long selectedUserProfileId) {
-        Post post = this.postsService.find(postId);
+        Post post = this.postsService.find(postId, selectedUserProfileId);
         return new ResponseEntity<>(post, HttpStatus.OK);
     }
 

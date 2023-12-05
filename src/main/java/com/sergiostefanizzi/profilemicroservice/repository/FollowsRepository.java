@@ -4,6 +4,7 @@ import com.sergiostefanizzi.profilemicroservice.model.*;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
@@ -15,6 +16,7 @@ public interface FollowsRepository extends JpaRepository<FollowsJpa, FollowsId> 
     String accepted = "ACCEPTED";
     String pending = "PENDING";
 
+
     @Query("SELECT f.follower FROM FollowsJpa f WHERE f.followed = :profileJpa AND f.followedAt IS NOT NULL AND f.unfollowedAt IS NULL AND f.requestStatus = '"+accepted+"' AND f.follower.deletedAt IS NULL")
     List<ProfileJpa> findActiveFollowers(ProfileJpa profileJpa);
 
@@ -24,7 +26,8 @@ public interface FollowsRepository extends JpaRepository<FollowsJpa, FollowsId> 
     @Query("SELECT f FROM FollowsJpa f WHERE f.id = :followsId AND ((f.requestStatus = '"+accepted+"') OR (f.requestStatus = '"+pending+"'))")
     Optional<FollowsJpa> findActiveById(FollowsId followsId);
 
-    @Query("SELECT f FROM FollowsJpa f WHERE f.id = :followsId AND f.requestStatus = '"+accepted+"'")
-    Optional<FollowsJpa> findActiveAcceptedById(FollowsId followsId);
+    @Query("SELECT f.id FROM FollowsJpa f WHERE f.id = :followsId AND f.followedAt IS NOT NULL AND f.unfollowedAt IS NULL AND f.requestStatus = '"+accepted+"' AND f.follower.deletedAt IS NULL")
+    Optional<FollowsId> findActiveAcceptedById(FollowsId followsId);
+
 
 }

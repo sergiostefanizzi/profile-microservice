@@ -4,10 +4,7 @@ import com.sergiostefanizzi.profilemicroservice.model.*;
 import com.sergiostefanizzi.profilemicroservice.model.converter.CommentToCommentJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.model.converter.LikeToLikeJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.model.converter.PostToPostJpaConverter;
-import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
-import com.sergiostefanizzi.profilemicroservice.repository.LikesRepository;
-import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
-import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
+import com.sergiostefanizzi.profilemicroservice.repository.*;
 import com.sergiostefanizzi.profilemicroservice.system.exception.*;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,6 +50,8 @@ class PostsServiceTest {
     private CommentsRepository commentsRepository;
     @Mock
     private CommentToCommentJpaConverter commentToCommentJpaConverter;
+    @Mock
+    private FollowsRepository followsRepository;
     @InjectMocks
     private PostsService postsService;
     private JwtAuthenticationToken jwtAuthenticationToken;
@@ -243,9 +242,9 @@ class PostsServiceTest {
         verify(this.postsRepository, times(1)).getReferenceById(anyLong());
         verify(this.postsRepository, times(0)).save(any(PostJpa.class));
     }
-/*
+
     @Test
-    void testUpdateSuccess(){
+    void testUpdate_Success(){
         // Aggiornamento del post
         String newCaption = "Nuova caption del post";
         PostPatch postPatch = new PostPatch(newCaption);
@@ -254,11 +253,12 @@ class PostsServiceTest {
         convertedPost.setCaption(newCaption);
         convertedPost.setId(postId);
 
-        when(this.postsRepository.getReferenceById(postId)).thenReturn(this.savedPostJpa);
-        when(this.postsRepository.save(this.savedPostJpa)).thenReturn(this.savedPostJpa);
-        when(this.postToPostJpaConverter.convertBack(this.savedPostJpa)).thenReturn(convertedPost);
+        when(this.postsRepository.getReferenceById(anyLong())).thenReturn(this.savedPostJpa);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.postsRepository.save(any(PostJpa.class))).thenReturn(this.savedPostJpa);
+        when(this.postToPostJpaConverter.convertBack(any(PostJpa.class))).thenReturn(convertedPost);
 
-        Post updatedPost = this.postsService.update(postId, postPatch);
+        Post updatedPost = this.postsService.update(postId, profileId, postPatch);
 
         assertNotNull(updatedPost);
         assertEquals(postId, updatedPost.getId());
@@ -266,36 +266,244 @@ class PostsServiceTest {
         assertEquals(newCaption, updatedPost.getCaption());
         assertEquals(postType, updatedPost.getPostType());
         assertEquals(profileId, updatedPost.getProfileId());
-        verify(this.postsRepository, times(1)).getReferenceById(postId);
-        verify(this.postsRepository, times(1)).save(this.savedPostJpa);
+        log.info(updatedPost.toString());
+        verify(this.postsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(1)).save(any(PostJpa.class));
+        verify(this.postToPostJpaConverter, times(1)).convertBack(any(PostJpa.class));
+    }
+
+    @Test
+    void testUpdate_ValidatedOnKeycloak_Success(){
+        // Aggiornamento del post
+        String newCaption = "Nuova caption del post";
+        PostPatch postPatch = new PostPatch(newCaption);
+        // Post che verra' restituito
+        Post convertedPost = new Post(contentUrl, postType, profileId);
+        convertedPost.setCaption(newCaption);
+        convertedPost.setId(postId);
+
+        when(this.postsRepository.getReferenceById(anyLong())).thenReturn(this.savedPostJpa);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(true);
+        when(this.postsRepository.save(any(PostJpa.class))).thenReturn(this.savedPostJpa);
+        when(this.postToPostJpaConverter.convertBack(any(PostJpa.class))).thenReturn(convertedPost);
+
+        Post updatedPost = this.postsService.update(postId, profileId, postPatch);
+
+        assertNotNull(updatedPost);
+        assertEquals(postId, updatedPost.getId());
+        assertEquals(contentUrl, updatedPost.getContentUrl());
+        assertEquals(newCaption, updatedPost.getCaption());
+        assertEquals(postType, updatedPost.getPostType());
+        assertEquals(profileId, updatedPost.getProfileId());
+        log.info(updatedPost.toString());
+        verify(this.postsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(1)).save(any(PostJpa.class));
+        verify(this.postToPostJpaConverter, times(1)).convertBack(any(PostJpa.class));
+    }
+
+    @Test
+    void testUpdate_NotInsideProfileList_Failed(){
+        // Aggiornamento del post
+        String newCaption = "Nuova caption del post";
+        PostPatch postPatch = new PostPatch(newCaption);
+
+        when(this.postsRepository.getReferenceById(anyLong())).thenReturn(this.savedPostJpa);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(false);
+
+        assertThrows(NotInProfileListException.class, () -> this.postsService.update(postId, profileId, postPatch));
+        verify(this.postsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(0)).save(any(PostJpa.class));
+        verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
+    }
+
+    @Test
+    void testUpdate_IdsMismatch_Failed(){
+        // Aggiornamento del post
+        String newCaption = "Nuova caption del post";
+        PostPatch postPatch = new PostPatch(newCaption);
+
+        this.profileJpa.setId(Long.MAX_VALUE);
+        this.savedPostJpa.setProfile(this.profileJpa);
+
+        when(this.postsRepository.getReferenceById(anyLong())).thenReturn(this.savedPostJpa);
+
+        assertThrows(IdsMismatchException.class, () -> this.postsService.update(Long.MAX_VALUE, profileId, postPatch));
+        verify(this.postsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.securityContext, times(0)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(0)).save(any(PostJpa.class));
+        verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
+    }
+
+
+    @Test
+    void testFind_PublicProfile_Success(){
+        this.profileJpa.setId(12L);
+        this.savedPostJpa.setProfile(this.profileJpa);
+        // Post che verra' restituito
+        Post convertedPost = new Post(contentUrl, postType, this.profileJpa.getId());
+        convertedPost.setCaption(caption);
+        convertedPost.setId(postId);
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.postsRepository.getReferenceById(anyLong())).thenReturn(this.savedPostJpa);
+        when(this.postToPostJpaConverter.convertBack(any(PostJpa.class))).thenReturn(convertedPost);
+
+        Post post = this.postsService.find(postId, profileId);
+
+        assertEquals(convertedPost, post);
+        log.info(post.toString());
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.postToPostJpaConverter, times(1)).convertBack(this.savedPostJpa);
+    }
+
+    @Test
+    void testFind_PublicProfile_ValidateOnKeycloak_Success(){
+        this.profileJpa.setId(12L);
+        this.savedPostJpa.setProfile(this.profileJpa);
+        // Post che verra' restituito
+        Post convertedPost = new Post(contentUrl, postType, this.profileJpa.getId());
+        convertedPost.setCaption(caption);
+        convertedPost.setId(postId);
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(true);
+        when(this.postsRepository.getReferenceById(anyLong())).thenReturn(this.savedPostJpa);
+        when(this.postToPostJpaConverter.convertBack(any(PostJpa.class))).thenReturn(convertedPost);
+
+        Post post = this.postsService.find(postId, profileId);
+
+        assertEquals(convertedPost, post);
+        log.info(post.toString());
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.postToPostJpaConverter, times(1)).convertBack(this.savedPostJpa);
+    }
+
+    @Test
+    void testFind_PrivateProfile_Follower_Success(){
+        this.profileJpa.setId(12L);
+        this.profileJpa.setIsPrivate(true);
+        this.savedPostJpa.setProfile(this.profileJpa);
+        // Post che verra' restituito
+        Post convertedPost = new Post(contentUrl, postType, this.profileJpa.getId());
+        convertedPost.setCaption(caption);
+        convertedPost.setId(postId);
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.postsRepository.getReferenceById(anyLong())).thenReturn(this.savedPostJpa);
+        when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.of(new FollowsId(profileId, this.profileJpa.getId())));
+        when(this.postToPostJpaConverter.convertBack(any(PostJpa.class))).thenReturn(convertedPost);
+
+        Post post = this.postsService.find(postId, profileId);
+
+        assertEquals(convertedPost, post);
+        log.info(post.toString());
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.followsRepository, times(1)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.postToPostJpaConverter, times(1)).convertBack(this.savedPostJpa);
     }
 
 
 
     @Test
-    void testFindSuccess(){
+    void testFind_Failed(){
+        this.profileJpa.setId(12L);
+        this.savedPostJpa.setProfile(this.profileJpa);
         // Post che verra' restituito
-        Post convertedPost = new Post(contentUrl, postType, profileId);
+
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(false);
+
+        assertThrows(NotInProfileListException.class, () -> this.postsService.find(postId, profileId));
+
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(0)).getReferenceById(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.postToPostJpaConverter, times(0)).convertBack(this.savedPostJpa);
+    }
+
+    @Test
+    void testFind_MatchingIds_Success(){
+        // Post che verra' restituito
+        Post convertedPost = new Post(contentUrl, postType, this.profileJpa.getId());
         convertedPost.setCaption(caption);
         convertedPost.setId(postId);
 
-        when(this.postsRepository.getReferenceById(postId)).thenReturn(this.savedPostJpa);
-        when(this.postToPostJpaConverter.convertBack((this.savedPostJpa))).thenReturn(convertedPost);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.postsRepository.getReferenceById(anyLong())).thenReturn(this.savedPostJpa);
+        when(this.postToPostJpaConverter.convertBack(any(PostJpa.class))).thenReturn(convertedPost);
 
-        Post post = this.postsService.find(postId);
+        Post post = this.postsService.find(postId, profileId);
 
-        assertNotNull(post);
-        assertEquals(postId, post.getId());
-        assertEquals(contentUrl, post.getContentUrl());
-        assertEquals(caption, post.getCaption());
-        assertEquals(postType, post.getPostType());
-        assertEquals(profileId, post.getProfileId());
-        verify(this.postsRepository, times(1)).getReferenceById(postId);
+        assertEquals(convertedPost, post);
+        log.info(post.toString());
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.postToPostJpaConverter, times(1)).convertBack(this.savedPostJpa);
     }
 
- */
+    @Test
+    void testFind_PrivateProfile_MatchingIds_Success(){
+        this.profileJpa.setIsPrivate(true);
+        this.savedPostJpa.setProfile(this.profileJpa);
+        // Post che verra' restituito
+        Post convertedPost = new Post(contentUrl, postType, this.profileJpa.getId());
+        convertedPost.setCaption(caption);
+        convertedPost.setId(postId);
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.postsRepository.getReferenceById(anyLong())).thenReturn(this.savedPostJpa);
+        when(this.postToPostJpaConverter.convertBack(any(PostJpa.class))).thenReturn(convertedPost);
+
+        Post post = this.postsService.find(postId, profileId);
+
+        assertEquals(convertedPost, post);
+        log.info(post.toString());
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.postToPostJpaConverter, times(1)).convertBack(this.savedPostJpa);
+    }
+
+    @Test
+    void testFind_PrivateProfile_NotFollower_Failed(){
+        this.profileJpa.setId(12L);
+        this.profileJpa.setIsPrivate(true);
+        this.savedPostJpa.setProfile(this.profileJpa);
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.postsRepository.getReferenceById(anyLong())).thenReturn(this.savedPostJpa);
+        when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.empty());
+
+        assertThrows(PostAccessForbiddenException.class, () -> this.postsService.find(postId, profileId));
+
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.followsRepository, times(1)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
+    }
 
 /*
     @Test

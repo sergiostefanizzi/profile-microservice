@@ -43,6 +43,7 @@ class ProfilesIT {
     private Profile savedProfile3;
     private Profile savedProfile4;
     private Profile savedProfile5;
+    private Profile savedProfile6;
     private Profile newProfile;
     String profileName = "giuseppe_verdi";
     Boolean isPrivate = false;
@@ -89,6 +90,11 @@ class ProfilesIT {
         this.savedProfile5.setBio("Profilo di Tony");
         this.savedProfile5.setPictureUrl(pictureUrl);
 
+        this.savedProfile6 = new Profile("matt_murdock", true);
+        this.savedProfile6.setId(106L);
+        this.savedProfile6.setBio("Profilo di Murdock");
+        this.savedProfile6.setPictureUrl(pictureUrl);
+
 
         this.profileMap.put(this.newProfile.getProfileName(), List.of("giuseppe.verdi@gmail.com"));
         this.profileMap.put(this.newProfile.getProfileName()+"2", List.of("giuseppe.verdi@gmail.com"));
@@ -97,6 +103,7 @@ class ProfilesIT {
         this.profileMap.put(this.savedProfile3.getProfileName(), List.of("luigi.bros@gmail.com","c365e7da-0650-4f29-9954-64cc9ba91ff1"));
         this.profileMap.put(this.savedProfile4.getProfileName(), List.of("pinco.palla@gmail.com","1fac5b86-7a95-439c-9940-d42691f0d9e5"));
         this.profileMap.put(this.savedProfile5.getProfileName(), List.of("tony.stark@gmail.com","8327af70-e826-4e2f-94ba-db02ccc180d4"));
+        this.profileMap.put(this.savedProfile6.getProfileName(), List.of("matt.murdock@gmail.com","b8f8ea8f-5d16-43a2-83d1-6e851296921d"));
     }
 
     @AfterEach
@@ -945,6 +952,33 @@ class ProfilesIT {
         assertTrue(fullProfile.getPostList().isEmpty());
         assertTrue(fullProfile.getPostCount()>=2);
         assertFalse(fullProfile.getProfileGranted());
+
+        // visualizzo il profilo aggiornato
+        log.info(fullProfile.toString());
+    }
+
+    @Test
+    void testFindFull_PrivateProfileFollowed_Then_200() throws Exception{
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile6.getProfileName()).get(0));
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+        ResponseEntity<FullProfile> responseGet = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}?selectedUserProfileId={selectedUserProfileId}",
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                FullProfile.class,
+                this.savedProfile5.getId(),
+                this.savedProfile6.getId());
+
+        assertEquals(HttpStatus.OK, responseGet.getStatusCode());
+        assertNotNull(responseGet.getBody());
+        assertInstanceOf(FullProfile.class, responseGet.getBody());
+        FullProfile fullProfile = responseGet.getBody();
+        assertEquals(this.savedProfile5.getId(), fullProfile.getProfile().getId());
+        log.info(fullProfile.toString());
+        assertTrue(fullProfile.getPostList().size()>=2);
+        assertTrue(fullProfile.getPostCount()>=2);
+        assertTrue(fullProfile.getProfileGranted());
 
         // visualizzo il profilo aggiornato
         log.info(fullProfile.toString());

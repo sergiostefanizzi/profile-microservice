@@ -436,7 +436,7 @@ class ProfilesServiceTest {
         when(this.postsRepository.findAllActiveByProfileId(anyLong())).thenReturn(postJpaList);
         when(this.postToPostJpaConverter.convertBack(postJpaList.get(0))).thenReturn(newPost1);
         when(this.postToPostJpaConverter.convertBack(postJpaList.get(1))).thenReturn(newPost2);
-        when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.of(new FollowsJpa(new FollowsId(123L, profileId))));
+        when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.of(new FollowsId(123L, profileId)));
         when(this.profileToProfileJpaConverter.convertBack(any(ProfileJpa.class))).thenReturn(convertedProfile);
 
         FullProfile fullProfile = this.profilesService.findFull(profileId, 123L);
@@ -585,7 +585,7 @@ class ProfilesServiceTest {
         when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(true);
         when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.savedProfileJpa);
         when(this.postsRepository.findAllActiveByProfileId(anyLong())).thenReturn(List.of());
-        when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.of(new FollowsJpa(new FollowsId(123L, profileId))));
+        when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.of((new FollowsId(123L, profileId))));
         when(this.profileToProfileJpaConverter.convertBack(any(ProfileJpa.class))).thenReturn(convertedProfile);
 
         FullProfile fullProfile = this.profilesService.findFull(profileId, 123L);

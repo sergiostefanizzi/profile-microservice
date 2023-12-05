@@ -4,10 +4,7 @@ import com.sergiostefanizzi.profilemicroservice.model.*;
 import com.sergiostefanizzi.profilemicroservice.model.converter.CommentToCommentJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.model.converter.LikeToLikeJpaConverter;
 import com.sergiostefanizzi.profilemicroservice.model.converter.PostToPostJpaConverter;
-import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
-import com.sergiostefanizzi.profilemicroservice.repository.LikesRepository;
-import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
-import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
+import com.sergiostefanizzi.profilemicroservice.repository.*;
 import com.sergiostefanizzi.profilemicroservice.system.exception.*;
 import com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass;
 import jakarta.transaction.Transactional;
@@ -32,6 +29,7 @@ public class PostsService {
     private final ProfilesRepository profilesRepository;
     private final LikesRepository likesRepository;
     private final CommentsRepository commentsRepository;
+    private final FollowsRepository followsRepository;
     private final LikeToLikeJpaConverter likeToLikeJpaConverter;
     private final CommentToCommentJpaConverter commentToCommentJpaConverter;
     private final KeycloakService keycloakService;
@@ -61,7 +59,7 @@ public class PostsService {
         postJpaToRemove.setDeletedAt(LocalDateTime.now());
         this.postsRepository.save(postJpaToRemove);
     }
-    //TODO: fare PostsServiceTest dell'update
+
     @Transactional
     public Post update(Long postId, Long selectedUserProfileId, PostPatch postPatch) {
         PostJpa postJpa = this.postsRepository.getReferenceById(postId);
@@ -75,22 +73,22 @@ public class PostsService {
     }
 
     @Transactional
-    public Post find(Long postId) {
+    public Post find(Long postId, Long selectedUserProfileId) {
+        checkProfileList(selectedUserProfileId, this.keycloakService);
+
         PostJpa postJpa = this.postsRepository.getReferenceById(postId);
-        /*
-        Long profileId = postJpa.getProfile().getId();
+        ProfileJpa profileJpa = postJpa.getProfile();
+        Long profileId = profileJpa.getId();
 
         // Se il profilo del post e' pubblico, il post puo' essere visto liberamente
         // Se è privato controllo prima che il profile che ha pubblicato il post appartiene a chi ha inviato la richiesta
         // Se non appartiene, controllo infine se chi ha inviato la richiesta segue il profilo privato che ha pubblicato il post
-        if (postJpa.getProfile().getIsPrivate()){
-            if(Boolean.FALSE.equals(isInProfileListJwt(profileId)) && (Boolean.FALSE.equals(this.keycloakService.isInProfileList(getJwtAccountId(), profileId)))){
+        if (profileJpa.getIsPrivate() && (!Objects.equals(profileId, selectedUserProfileId))){
+                FollowsId checkId = this.followsRepository.findActiveAcceptedById(new FollowsId(selectedUserProfileId, profileId))
+                        .orElseThrow(() ->  new PostAccessForbiddenException(postId));
 
-            }
+                log.info("Id "+checkId.getFollowerId()+"e' segue da ID "+selectedUserProfileId);
         }
-
-         */
-
 
 
         return this.postToPostJpaConverter.convertBack(
