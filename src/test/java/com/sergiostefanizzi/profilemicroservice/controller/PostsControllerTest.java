@@ -755,7 +755,6 @@ class PostsControllerTest {
 
     @Test
     void testFindPostById_Then_400() throws Exception{
-
         MvcResult result = this.mockMvc.perform(get("/posts/{postId}","IdNotLong")
                         .queryParam("selectedUserProfileId", String.valueOf(profileId))
                         .contentType(MediaType.APPLICATION_JSON))
@@ -880,7 +879,7 @@ class PostsControllerTest {
         log.info("Errors\n"+resultAsString);
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
-    /*
+
 
     @Test
     void testAddLike_Then_204() throws Exception {
@@ -911,9 +910,30 @@ class PostsControllerTest {
     }
 
     @Test
-    void testAddLike_Then_400() throws Exception {
-        errors.add("JSON parse error: Cannot deserialize value of type `java.lang.Long` from String \"IdNotLong\": not a valid `java.lang.Long` value");
+    void testAddLike_MissingQueryParam_Then_400() throws Exception {
+        this.newLike = new Like(profileId, postId);
+        String newLikeJson = this.objectMapper.writeValueAsString(this.newLike);
 
+        doNothing().when(this.postsService).addLike(false, this.newLike);
+
+
+        MvcResult result = this.mockMvc.perform(put("/posts/likes")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newLikeJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MissingServletRequestParameterException
+                ))
+                .andExpect(jsonPath("$.error").value("Required request parameter 'removeLike' for method parameter type Boolean is not present")).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    @Test
+    void testAddLike_Then_400() throws Exception {
         this.newLike = new Like(profileId, postId);
         String newLikeJson = this.objectMapper.writeValueAsString(this.newLike);
         JsonNode jsonNode = this.objectMapper.readTree(newLikeJson);
@@ -932,19 +952,58 @@ class PostsControllerTest {
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof HttpMessageNotReadableException
                 ))
-                .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
+                .andExpect(jsonPath("$.error").value("Message is not readable")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n"+resultAsString);
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
 
-    //TODO 401 e 403
+    @Test
+    void testAddLike_Then_403() throws Exception {
+        this.newLike = new Like(profileId, invalidPostId);
+        String newLikeJson = this.objectMapper.writeValueAsString(this.newLike);
+
+        doThrow(new NotInProfileListException(profileId)).when(this.postsService).addLike(false, this.newLike);
+
+        MvcResult result = this.mockMvc.perform(put("/posts/likes?removeLike={removeLike}",false)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newLikeJson))
+                .andExpect(status().isForbidden())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof NotInProfileListException
+                ))
+                .andExpect(jsonPath("$.error").value("Profile " + profileId + " is not inside the profile list!")).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    @Test
+    void testAddLike_PrivatePost_Then_403() throws Exception {
+        this.newLike = new Like(profileId, invalidPostId);
+        String newLikeJson = this.objectMapper.writeValueAsString(this.newLike);
+
+        doThrow(new PostAccessForbiddenException(postId)).when(this.postsService).addLike(false, this.newLike);
+
+        MvcResult result = this.mockMvc.perform(put("/posts/likes?removeLike={removeLike}",false)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newLikeJson))
+                .andExpect(status().isForbidden())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof PostAccessForbiddenException
+                ))
+                .andExpect(jsonPath("$.error").value("Cannot access post with id "+postId)).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
     @Test
     void testAddLike_PostNotFound_Then_404() throws Exception {
-        //errors.add("Profile " + invalidProfileId + " not found!");
-        errors.add("Post " + invalidPostId + " not found!");
-
         this.newLike = new Like(profileId, invalidPostId);
         String newLikeJson = this.objectMapper.writeValueAsString(this.newLike);
 
@@ -958,7 +1017,7 @@ class PostsControllerTest {
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof PostNotFoundException
                 ))
-                .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
+                .andExpect(jsonPath("$.error").value("Post " + invalidPostId + " not found!")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n"+resultAsString);
@@ -967,9 +1026,6 @@ class PostsControllerTest {
 
     @Test
     void testAddLike_ProfileNotFound_Then_404() throws Exception {
-        errors.add("Profile " + invalidProfileId + " not found!");
-
-
         this.newLike = new Like(invalidProfileId, postId);
         String newLikeJson = this.objectMapper.writeValueAsString(this.newLike);
 
@@ -983,13 +1039,13 @@ class PostsControllerTest {
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof ProfileNotFoundException
                 ))
-                .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
+                .andExpect(jsonPath("$.error").value("Profile " + invalidProfileId + " not found!")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n"+resultAsString);
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
-
+/*
     @Test
     void testFindAllLikesByPostId_Then_200() throws Exception {
         List<Like> likeList = asList(

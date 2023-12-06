@@ -423,6 +423,7 @@ paths:
         - name: removeLike
           in: query
           description: Remove or create the like
+          required: true
           schema:
             type: boolean
       requestBody:
