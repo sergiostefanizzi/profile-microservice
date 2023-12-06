@@ -36,4 +36,7 @@ public interface ProfilesRepository extends JpaRepository<ProfileJpa, Long> {
     @Query("SELECT p.id FROM ProfileJpa p INNER JOIN PostJpa q ON p.id = q.profile.id WHERE q.id=:postId AND p.deletedAt IS NULL AND p.blockedUntil IS NULL")
     Optional<Long> checkActiveByPostId(Long postId);
 
+    @Query("SELECT p FROM ProfileJpa p INNER JOIN PostJpa q ON p.id = q.profile.id WHERE q.id=:postId AND p.deletedAt IS NULL AND p.blockedUntil IS NULL")
+    Optional<ProfileJpa> findActiveByPostId(Long postId);
+
 }

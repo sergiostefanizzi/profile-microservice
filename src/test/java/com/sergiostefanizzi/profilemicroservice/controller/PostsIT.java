@@ -522,8 +522,6 @@ class PostsIT {
         log.info("Error -> "+node.get("error"));
     }
 
-    //TODO remove 401, 403
-
 
     @Test
     void testDeletePostById_Then_401(){
@@ -961,6 +959,18 @@ class PostsIT {
         // In questo caso l'errore NON è un array di dimensione 1
         assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
+    void testFindPostById_Then_401() throws Exception{
+        ResponseEntity<String> responseGet = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
+                HttpMethod.GET,
+                HttpEntity.EMPTY,
+                String.class,
+                this.savedPost3.getId(),
+                this.savedProfile4.getId());
+
+        assertEquals(HttpStatus.UNAUTHORIZED, responseGet.getStatusCode());
     }
 
     @Test

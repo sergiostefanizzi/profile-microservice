@@ -34,6 +34,30 @@ public class PostsService {
     private final CommentToCommentJpaConverter commentToCommentJpaConverter;
     private final KeycloakService keycloakService;
 
+    private void checkPostAccess(ProfileJpa postOwnerProfileJpa, Long postOwnerProfileId, Long selectedUserProfileId, Long postId) {
+        if (postOwnerProfileJpa.getIsPrivate() && (!Objects.equals(postOwnerProfileId, selectedUserProfileId))){
+            FollowsId checkId = this.followsRepository.findActiveAcceptedById(new FollowsId(selectedUserProfileId, postOwnerProfileId))
+                    .orElseThrow(() ->  new PostAccessForbiddenException(postId));
+            log.info("Id "+checkId.getFollowerId()+"e' segue da ID "+ selectedUserProfileId);
+        }
+    }
+
+    private void createLike(Like like, ProfileJpa profileJpa, PostJpa postJpa) {
+        LikeJpa likeJpa;
+        likeJpa = this.likeToLikeJpaConverter.convert(like);
+        assert likeJpa != null;
+        likeJpa.setCreatedAt(LocalDateTime.now());
+        likeJpa.setDeletedAt(null);
+        likeJpa.setProfile(profileJpa);
+        likeJpa.setPost(postJpa);
+        this.likesRepository.save(likeJpa);
+    }
+
+    private void removeLike(LikeJpa likeJpa) {
+        likeJpa.setDeletedAt(LocalDateTime.now());
+        this.likesRepository.save(likeJpa);
+    }
+
 
     @Transactional
     public Post save(Post post) {
@@ -83,12 +107,7 @@ public class PostsService {
         // Se il profilo del post e' pubblico, il post puo' essere visto liberamente
         // Se è privato controllo prima che il profile che ha pubblicato il post appartiene a chi ha inviato la richiesta
         // Se non appartiene, controllo infine se chi ha inviato la richiesta segue il profilo privato che ha pubblicato il post
-        if (profileJpa.getIsPrivate() && (!Objects.equals(profileId, selectedUserProfileId))){
-                FollowsId checkId = this.followsRepository.findActiveAcceptedById(new FollowsId(selectedUserProfileId, profileId))
-                        .orElseThrow(() ->  new PostAccessForbiddenException(postId));
-
-                log.info("Id "+checkId.getFollowerId()+"e' segue da ID "+selectedUserProfileId);
-        }
+        checkPostAccess(profileJpa, profileId, selectedUserProfileId, postId);
 
 
         return this.postToPostJpaConverter.convertBack(
@@ -98,42 +117,38 @@ public class PostsService {
 
     @Transactional
     public void addLike(Boolean removeLike, Like like) {
-        // TODO mi serve il JWT
-        // Controllo che chi vuole mettere il abbia l'autorizzazione per farlo
-        // sia controllando il profilo
-        // sia controllando che il profilo a cui appartiene il posto sia visibile da chi vuole mettere like
+        Long postId = like.getPostId();
+        Long selectedUserProfileId = like.getProfileId();
+        // Controllo che chi vuole mettere il like sia presente all'interno del jwt
+        checkProfileList(like.getProfileId(), this.keycloakService);
 
         // Controllo prima l'esistenza del post
-        PostJpa postJpa = this.postsRepository.findActiveById(like.getPostId())
-                .orElseThrow(() -> new PostNotFoundException(like.getPostId()));
+        PostJpa postJpa = this.postsRepository.findActiveById(postId)
+                .orElseThrow(() -> new PostNotFoundException(postId));
+        // Controllo che l'autore del post non sia stato eliminato o bloccato
+        ProfileJpa postOwnerProfileJpa = this.profilesRepository.findActiveByPostId(postId)
+                .orElseThrow(() -> new PostNotFoundException(postId));
+
         // Controllo poi l'esistenza del profilo di chi vuole mettere like
-        ProfileJpa profileJpa = this.profilesRepository.findActiveById(like.getProfileId())
-                .orElseThrow(() -> new ProfileNotFoundException(like.getProfileId()));
+        ProfileJpa selectedProfileJpa = this.profilesRepository.findActiveById(selectedUserProfileId)
+                .orElseThrow(() -> new ProfileNotFoundException(selectedUserProfileId));
+
+        Long postOwnerProfileId = postOwnerProfileJpa.getId();
+
+        // se il post appartiene a un profilo privato oppure non appartiene a chi ha messo il like
+        // controllo che chi mette like segua regolarmente l'autore del post
+        checkPostAccess(postOwnerProfileJpa, postOwnerProfileId, selectedUserProfileId, postId);
 
         // Controllo l'esistenza del like, se non esiste lo creo con il like ottenuto dal controller
-        Optional<LikeJpa> optionalLikeJpa = this.likesRepository.findActiveById(new LikeId(profileJpa.getId(), postJpa.getId()));
-        if (optionalLikeJpa.isPresent() && removeLike){
+        Optional<LikeJpa> optionalLikeJpa = this.likesRepository.findActiveById(new LikeId(selectedUserProfileId, postId));
+        if (optionalLikeJpa.isPresent() && Boolean.TRUE.equals(removeLike)){
             removeLike(optionalLikeJpa.get());
-        } else if (optionalLikeJpa.isEmpty() && !removeLike){
-            createLike(like, profileJpa, postJpa);
+        } else if (optionalLikeJpa.isEmpty() && Boolean.TRUE.equals(!removeLike)){
+            createLike(like, selectedProfileJpa, postJpa);
         }
     }
 
-    private void createLike(Like like, ProfileJpa profileJpa, PostJpa postJpa) {
-        LikeJpa likeJpa;
-        likeJpa = this.likeToLikeJpaConverter.convert(like);
-        assert likeJpa != null;
-        likeJpa.setCreatedAt(LocalDateTime.now());
-        likeJpa.setDeletedAt(null);
-        likeJpa.setProfile(profileJpa);
-        likeJpa.setPost(postJpa);
-        this.likesRepository.save(likeJpa);
-    }
 
-    private void removeLike(LikeJpa likeJpa) {
-        likeJpa.setDeletedAt(LocalDateTime.now());
-        this.likesRepository.save(likeJpa);
-    }
 
     @Transactional
     public List<Like> findAllLikesByPostId(Long postId) {
