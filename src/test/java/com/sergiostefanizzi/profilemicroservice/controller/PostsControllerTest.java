@@ -804,7 +804,25 @@ class PostsControllerTest {
         log.info("Errors\n"+resultAsString);
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
-    //TODO 401 e 403
+    @Test
+    void testFindPostById_PrivateProfile_Then_403() throws Exception{
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
+        when(this.postsService.find(anyLong(), anyLong())).thenThrow(new PostAccessForbiddenException(postId));
+        MvcResult result = this.mockMvc.perform(get("/posts/{postId}",postId)
+                        .queryParam("selectedUserProfileId", String.valueOf(invalidProfileId))
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isForbidden())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof PostAccessForbiddenException
+                ))
+                .andExpect(jsonPath("$.error").value("Cannot access post with id "+postId))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
     @Test
     void testFindPostById_Then_403() throws Exception{
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));

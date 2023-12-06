@@ -56,9 +56,12 @@ class PostsIT {
     private Profile savedProfile4;
     private Profile savedProfile5;
     private Profile savedProfile6;
+    private Profile savedProfile7;
     private Post savedPostToDelete1;
     private Post savedPost1;
     private Post savedPost2;
+    private Post savedPost3;
+    private Post savedPost4;
     private Post savedStory1;
     private Comment savedComment1;
     String pictureUrl = "https://upload.wikimedia.org/wikipedia/commons/7/7e/Circle-icons-profile.svg";
@@ -112,11 +115,17 @@ class PostsIT {
         this.savedProfile5.setPictureUrl(pictureUrl);
         this.savedProfile5.setAccountId("8327af70-e826-4e2f-94ba-db02ccc180d4");
 
-        this.savedProfile6 = new Profile("matt_murdock", true);
+        this.savedProfile6 = new Profile("matt_murdock", false);
         this.savedProfile6.setId(106L);
         this.savedProfile6.setBio("Profilo di Murdock");
         this.savedProfile6.setPictureUrl(pictureUrl);
         this.savedProfile6.setAccountId("b8f8ea8f-5d16-43a2-83d1-6e851296921d");
+
+        this.savedProfile7 = new Profile("indiana_jones", false);
+        this.savedProfile7.setId(107L);
+        this.savedProfile7.setBio("Profilo di Indiana Jones");
+        this.savedProfile7.setPictureUrl(pictureUrl);
+        this.savedProfile7.setAccountId("b8f8ea8f-5d16-43a2-83d1-6e851296921d");
 
 
         this.profileMap.put(this.newProfile.getProfileName(), List.of("giuseppe.verdi@gmail.com"));
@@ -127,6 +136,7 @@ class PostsIT {
         this.profileMap.put(this.savedProfile4.getProfileName(), List.of("pinco.palla@gmail.com",this.savedProfile4.getAccountId()));
         this.profileMap.put(this.savedProfile5.getProfileName(), List.of("tony.stark@gmail.com",this.savedProfile5.getAccountId()));
         this.profileMap.put(this.savedProfile6.getProfileName(), List.of("matt.murdock@gmail.com",this.savedProfile6.getAccountId()));
+        this.profileMap.put(this.savedProfile7.getProfileName(), List.of("matt.murdock@gmail.com",this.savedProfile7.getAccountId()));
 
         this.newPost = new Post(contentUrl, postType, savedProfile1.getId());
         this.newPost.setCaption(caption);
@@ -141,7 +151,15 @@ class PostsIT {
 
         this.savedPost2 = new Post(contentUrl, postType, savedProfile2.getId());
         this.savedPost2.setCaption(caption);
-        this.savedPost2.setId(116L);
+        this.savedPost2.setId(104L);
+
+        this.savedPost3 = new Post(contentUrl, postType, savedProfile5.getId());
+        this.savedPost3.setCaption(caption);
+        this.savedPost3.setId(113L);
+
+        this.savedPost4 = new Post(contentUrl, postType, savedProfile7.getId());
+        this.savedPost4.setCaption(caption);
+        this.savedPost4.setId(119L);
 
         this.savedStory1 = new Post(contentUrl, storyType, savedProfile1.getId());
         this.savedStory1.setCaption(caption);
@@ -470,7 +488,7 @@ class PostsIT {
                 HttpMethod.DELETE,
                 new HttpEntity<>(headers),
                 String.class,
-                this.savedPostToDelete1.getId(),
+                this.savedPost1.getId(),
                 "IdNotLong");
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -493,7 +511,7 @@ class PostsIT {
                 HttpMethod.DELETE,
                 new HttpEntity<>(headers),
                 String.class,
-                this.savedPostToDelete1.getId());
+                this.savedPost1.getId());
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -554,7 +572,7 @@ class PostsIT {
                 HttpMethod.DELETE,
                 new HttpEntity<>(headers),
                 String.class,
-                this.savedPostToDelete1.getId(),
+                this.savedPost1.getId(),
                 invalidProfileId);
 
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
@@ -589,31 +607,33 @@ class PostsIT {
         assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
-/*
+
     @Test
     void testUpdatePost_Then_200() throws Exception{
         // Definisco la caption da aggiornare tramite l'oggetto PostPatch
         String newCaption = "Nuova caption del post";
         PostPatch postPatch = new PostPatch(newCaption);
 
-        this.savedPost2.setCaption(newCaption);
+        this.savedPost1.setCaption(newCaption);
 
-        HttpEntity<PostPatch> requestPatch = new HttpEntity<>(postPatch);
-        ResponseEntity<Post> responsePatch = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<Post> responsePatch = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.PATCH,
-                requestPatch,
+                new HttpEntity<>(postPatch, headers),
                 Post.class,
-                this.savedPost2.getId());
+                this.savedPost1.getId(),
+                this.savedProfile1.getId());
 
         assertEquals(HttpStatus.OK, responsePatch.getStatusCode());
         assertNotNull(responsePatch.getBody());
         assertInstanceOf(Post.class, responsePatch.getBody());
         Post updatedPost = responsePatch.getBody();
-        assertEquals(this.savedPost2, updatedPost);
+        assertEquals(this.savedPost1, updatedPost);
 
         // visualizzo il profilo aggiornato
         log.info(updatedPost.toString());
-        this.savedPost1.setCaption(caption);
     }
 
     @Test
@@ -623,11 +643,66 @@ class PostsIT {
         String newCaption = "Nuova caption del post";
         PostPatch postPatch = new PostPatch(newCaption);
 
-        HttpEntity<PostPatch> requestPatch = new HttpEntity<>(postPatch);
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
+                HttpMethod.PATCH,
+                new HttpEntity<>(postPatch, headers),
+                String.class,
+                "IdNotLong",
+                this.savedProfile1.getId());
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
+    void testUpdatePost_MissingQueryParam_Then_400() throws Exception{
+        String error = "Required request parameter 'selectedUserProfileId' for method parameter type Long is not present";
+        // Definisco la caption da aggiornare tramite l'oggetto PostPatch
+        String newCaption = "Nuova caption del post";
+        PostPatch postPatch = new PostPatch(newCaption);
+
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
                 HttpMethod.PATCH,
-                requestPatch,
+                new HttpEntity<>(postPatch, headers),
                 String.class,
+                this.savedPost1.getId(),
+                this.savedProfile1.getId());
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
+    void testUpdatePost_QueryParamNotValid_Then_400() throws Exception{
+        String error = "Type mismatch";
+        // Definisco la caption da aggiornare tramite l'oggetto PostPatch
+        String newCaption = "Nuova caption del post";
+        PostPatch postPatch = new PostPatch(newCaption);
+
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
+                HttpMethod.PATCH,
+                new HttpEntity<>(postPatch, headers),
+                String.class,
+                this.savedPost1.getId(),
                 "IdNotLong");
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -646,24 +721,90 @@ class PostsIT {
         // genero una caption di 2210 caratteri, superando di 10 il limite
         PostPatch postPatch = new PostPatch(RandomStringUtils.randomAlphabetic(2210));
 
-        HttpEntity<PostPatch> requestPatch = new HttpEntity<>(postPatch);
-        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.PATCH,
-                requestPatch,
+                new HttpEntity<>(postPatch, headers),
                 String.class,
-                this.savedPost2.getId());
+                this.savedPost1.getId(),
+                this.savedProfile1.getId());
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
 
         JsonNode node = this.objectMapper.readTree(response.getBody());
-        // In questo caso l'errore e' un array di dimensione 1
         assertTrue(node.get("error").isArray());
         assertEquals(1, node.get("error").size());
         assertEquals(error ,node.get("error").get(0).asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error").get(0));
     }
 
-    //:TODO 401 e 403
+    @Test
+    void testUpdatePost_Then_401(){
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
+                HttpMethod.PATCH,
+                HttpEntity.EMPTY,
+                String.class,
+                this.savedPost2.getId(),
+                this.savedProfile1.getId());
+
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+
+    }
+
+    @Test
+    void testUpdatePost_Then_403() throws Exception{
+        String error = "Profile " + this.savedProfile2.getId() + " is not inside the profile list!";
+        // Definisco la caption da aggiornare tramite l'oggetto PostPatch
+        String newCaption = "Nuova caption del post";
+        PostPatch postPatch = new PostPatch(newCaption);
+
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
+                HttpMethod.PATCH,
+                new HttpEntity<>(postPatch, headers),
+                String.class,
+                this.savedPost2.getId(),
+                this.savedProfile2.getId());
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
+    void testUpdatePost_IdsMismatch_Then_403() throws Exception{
+        String error = "Ids mismatch";
+        // Definisco la caption da aggiornare tramite l'oggetto PostPatch
+        String newCaption = "Nuova caption del post";
+        PostPatch postPatch = new PostPatch(newCaption);
+
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
+                HttpMethod.PATCH,
+                new HttpEntity<>(postPatch, headers),
+                String.class,
+                this.savedPost2.getId(),
+                this.savedProfile1.getId());
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
     @Test
     void testUpdatePost_Then_404() throws Exception{
         Long invalidPostId = Long.MAX_VALUE;
@@ -672,12 +813,15 @@ class PostsIT {
         String newCaption = "Nuova caption del post";
         PostPatch postPatch = new PostPatch(newCaption);
 
-        HttpEntity<PostPatch> requestPatch = new HttpEntity<>(postPatch);
-        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.PATCH,
-                requestPatch,
+                new HttpEntity<>(postPatch, headers),
                 String.class,
-                invalidPostId);
+                invalidPostId,
+                this.savedProfile1.getId());
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertNotNull(response.getBody());
 
@@ -688,12 +832,16 @@ class PostsIT {
     }
 
     @Test
-    void testFindPostById_Then_200() throws Exception{
-        ResponseEntity<Post> responseGet = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
+    void testFindPostById_OwnPost_Then_200() throws Exception{
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<Post> responseGet = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.GET,
-                HttpEntity.EMPTY,
+                new HttpEntity<>(headers),
                 Post.class,
-                this.savedPost1.getId());
+                this.savedPost1.getId(),
+                this.savedProfile1.getId());
 
         assertEquals(HttpStatus.OK, responseGet.getStatusCode());
         assertNotNull(responseGet.getBody());
@@ -706,13 +854,83 @@ class PostsIT {
     }
 
     @Test
+    void testFindPostById_PublicProfile_Then_200() throws Exception{
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<Post> responseGet = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                Post.class,
+                this.savedPost2.getId(),
+                this.savedProfile1.getId());
+
+        assertEquals(HttpStatus.OK, responseGet.getStatusCode());
+        assertNotNull(responseGet.getBody());
+        assertInstanceOf(Post.class, responseGet.getBody());
+        Post savedPost = responseGet.getBody();
+        assertEquals(this.savedPost2, savedPost);
+
+        // visualizzo il profilo aggiornato
+        log.info(savedPost.toString());
+    }
+
+    @Test
+    void testFindPostById_PrivateProfile_Then_200() throws Exception{
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile6.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<Post> responseGet = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                Post.class,
+                this.savedPost3.getId(),
+                this.savedProfile6.getId());
+
+        assertEquals(HttpStatus.OK, responseGet.getStatusCode());
+        assertNotNull(responseGet.getBody());
+        assertInstanceOf(Post.class, responseGet.getBody());
+        Post savedPost = responseGet.getBody();
+        assertEquals(this.savedPost3, savedPost);
+
+        // visualizzo il profilo aggiornato
+        log.info(savedPost.toString());
+    }
+
+
+    @Test
     void testFindPostById_Then_400() throws Exception{
         String error = "ID is not valid!";
-
-        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.GET,
-                HttpEntity.EMPTY,
+                new HttpEntity<>(headers),
                 String.class,
+                "IdNotLong",
+                this.savedProfile1.getId());
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
+    void testFindPostById_QueryParamNotValid_Then_400() throws Exception{
+        String error = "Type mismatch";
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                String.class,
+                this.savedPost2.getId(),
                 "IdNotLong");
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -724,17 +942,83 @@ class PostsIT {
         log.info("Error -> "+node.get("error"));
     }
 
-    //TODO 401 e 403
+    @Test
+    void testFindPostById_MissingQueryParam_Then_400() throws Exception{
+        String error = "Required request parameter 'selectedUserProfileId' for method parameter type Long is not present";
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                String.class,
+                this.savedPost2.getId());
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
+    void testFindPostById_PrivateProfile_Then_403() throws Exception{
+        String error = "Cannot access post with id "+this.savedPost3.getId();
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile4.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<String> responseGet = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                String.class,
+                this.savedPost3.getId(),
+                this.savedProfile4.getId());
+
+        assertEquals(HttpStatus.FORBIDDEN, responseGet.getStatusCode());
+        assertNotNull(responseGet.getBody());
+
+        JsonNode node = this.objectMapper.readTree(responseGet.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
+    void testFindPostById_Then_403() throws Exception{
+        String error = "Profile " + this.savedProfile2.getId() + " is not inside the profile list!";
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<String> responseGet = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                String.class,
+                this.savedPost2.getId(),
+                this.savedProfile2.getId());
+
+        assertEquals(HttpStatus.FORBIDDEN, responseGet.getStatusCode());
+        assertNotNull(responseGet.getBody());
+
+        JsonNode node = this.objectMapper.readTree(responseGet.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
     @Test
     void testFindPostById_Then_404() throws Exception{
         Long invalidPostId = Long.MIN_VALUE;
         String error = "Post "+invalidPostId+" not found!";
-
-        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}",
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.GET,
-                HttpEntity.EMPTY,
+                new HttpEntity<>(headers),
                 String.class,
-                invalidPostId);
+                invalidPostId,
+                this.savedProfile1.getId());
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertNotNull(response.getBody());
 
@@ -744,6 +1028,30 @@ class PostsIT {
         log.info("Error -> "+node.get("error"));
     }
 
+    @Test
+    void testFindPostById_DeletedProfile_Then_404() throws Exception{
+
+        String error = "Post "+this.savedPost4.getId()+" not found!";
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
+                HttpMethod.GET,
+                new HttpEntity<>(headers),
+                String.class,
+                this.savedPost4.getId(),
+                this.savedProfile1.getId());
+        assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+
+/*
 
     @Test
     void testAddLike_Then_204() throws Exception {
