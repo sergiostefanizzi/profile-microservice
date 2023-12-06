@@ -20,6 +20,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.util.*;
 
+import static com.sergiostefanizzi.profilemicroservice.util.JwtTestUtilityClass.getAccessToken;
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -69,41 +70,47 @@ class ProfilesIT {
         this.savedProfile1.setId(101L);
         this.savedProfile1.setBio("Profilo di Pinco");
         this.savedProfile1.setPictureUrl(pictureUrl);
+        this.savedProfile1.setAccountId("1fac5b86-7a95-439c-9940-d42691f0d9e5");
 
         this.savedProfile2 = new Profile("marioBros", false);
         this.savedProfile2.setId(102L);
         this.savedProfile2.setBio("Profilo di Mario");
         this.savedProfile2.setPictureUrl(pictureUrl);
+        this.savedProfile2.setAccountId("757c2d08-7ffb-4e75-967e-6d5c9be26713");
 
         this.savedProfile3 = new Profile("luigiBros", false);
         this.savedProfile3.setId(103L);
         this.savedProfile3.setBio("Benvenuti!!");
         this.savedProfile3.setPictureUrl(pictureUrl);
+        this.savedProfile3.setAccountId("c365e7da-0650-4f29-9954-64cc9ba91ff1");
 
         this.savedProfile4 = new Profile("pinco_palla2", false);
         this.savedProfile4.setId(104L);
         this.savedProfile4.setBio("Secondo profilo di Pinco");
         this.savedProfile4.setPictureUrl(pictureUrl);
+        this.savedProfile4.setAccountId("1fac5b86-7a95-439c-9940-d42691f0d9e5");
 
         this.savedProfile5 = new Profile("tony_stark", true);
         this.savedProfile5.setId(105L);
         this.savedProfile5.setBio("Profilo di Tony");
         this.savedProfile5.setPictureUrl(pictureUrl);
+        this.savedProfile5.setAccountId("8327af70-e826-4e2f-94ba-db02ccc180d4");
 
         this.savedProfile6 = new Profile("matt_murdock", true);
         this.savedProfile6.setId(106L);
         this.savedProfile6.setBio("Profilo di Murdock");
         this.savedProfile6.setPictureUrl(pictureUrl);
+        this.savedProfile6.setAccountId("b8f8ea8f-5d16-43a2-83d1-6e851296921d");
 
 
         this.profileMap.put(this.newProfile.getProfileName(), List.of("giuseppe.verdi@gmail.com"));
         this.profileMap.put(this.newProfile.getProfileName()+"2", List.of("giuseppe.verdi@gmail.com"));
-        this.profileMap.put(this.savedProfile1.getProfileName(), List.of("pinco.palla@gmail.com","1fac5b86-7a95-439c-9940-d42691f0d9e5"));
-        this.profileMap.put(this.savedProfile2.getProfileName(), List.of("mario.bros@gmail.com","757c2d08-7ffb-4e75-967e-6d5c9be26713"));
-        this.profileMap.put(this.savedProfile3.getProfileName(), List.of("luigi.bros@gmail.com","c365e7da-0650-4f29-9954-64cc9ba91ff1"));
-        this.profileMap.put(this.savedProfile4.getProfileName(), List.of("pinco.palla@gmail.com","1fac5b86-7a95-439c-9940-d42691f0d9e5"));
-        this.profileMap.put(this.savedProfile5.getProfileName(), List.of("tony.stark@gmail.com","8327af70-e826-4e2f-94ba-db02ccc180d4"));
-        this.profileMap.put(this.savedProfile6.getProfileName(), List.of("matt.murdock@gmail.com","b8f8ea8f-5d16-43a2-83d1-6e851296921d"));
+        this.profileMap.put(this.savedProfile1.getProfileName(), List.of("pinco.palla@gmail.com", this.savedProfile1.getAccountId()));
+        this.profileMap.put(this.savedProfile2.getProfileName(), List.of("mario.bros@gmail.com",this.savedProfile2.getAccountId()));
+        this.profileMap.put(this.savedProfile3.getProfileName(), List.of("luigi.bros@gmail.com",this.savedProfile3.getAccountId()));
+        this.profileMap.put(this.savedProfile4.getProfileName(), List.of("pinco.palla@gmail.com",this.savedProfile4.getAccountId()));
+        this.profileMap.put(this.savedProfile5.getProfileName(), List.of("tony.stark@gmail.com",this.savedProfile5.getAccountId()));
+        this.profileMap.put(this.savedProfile6.getProfileName(), List.of("matt.murdock@gmail.com",this.savedProfile6.getAccountId()));
     }
 
     @AfterEach
@@ -111,31 +118,13 @@ class ProfilesIT {
         this.profileMap.clear();
     }
 
-    private String getAccessToken(String email) throws JsonProcessingException {
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_FORM_URLENCODED);
-        String password = "dshjdfkdjsf32!";
-        String loginBody = "grant_type=password&client_id=accounts-micro&username="+email+"&password="+ password;
 
-        ResponseEntity<String> responseLogin = this.testRestTemplate.exchange(
-                "http://localhost:8082/realms/social-accounts/protocol/openid-connect/token",
-                HttpMethod.POST,
-                new HttpEntity<>(loginBody, headers),
-                String.class);
-
-
-        assertEquals(HttpStatus.OK, responseLogin.getStatusCode());
-        JsonNode node = this.objectMapper.readTree(responseLogin.getBody());
-        String accessToken = node.get("access_token").asText();
-        log.info("Access token = "+accessToken);
-        return accessToken;
-    }
 
 
 
     @Test
     void testAddProfile_Then_201() throws JsonProcessingException {
-        String accessToken = getAccessToken(this.profileMap.get(this.newProfile.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.newProfile.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -170,7 +159,7 @@ class ProfilesIT {
         this.newProfile.setBio(null);
         this.newProfile.setPictureUrl(null);
 
-        String accessToken = getAccessToken(this.profileMap.get(this.newProfile.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.newProfile.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -203,7 +192,7 @@ class ProfilesIT {
         errors.add("isPrivate must not be null");
 
 
-        String accessToken = getAccessToken(this.profileMap.get(this.newProfile.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.newProfile.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -237,7 +226,7 @@ class ProfilesIT {
 
 
 
-        String accessToken = getAccessToken(this.profileMap.get(this.newProfile.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.newProfile.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -270,7 +259,7 @@ class ProfilesIT {
         this.newProfile.setBio(RandomStringUtils.randomAlphabetic(160));
 
 
-        String accessToken = getAccessToken(this.profileMap.get(this.newProfile.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.newProfile.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -299,7 +288,7 @@ class ProfilesIT {
         log.info("Invalid URL --> "+invalidUrl);
         this.newProfile.setPictureUrl(invalidUrl);
 
-        String accessToken = getAccessToken(this.profileMap.get(this.newProfile.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.newProfile.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -325,7 +314,7 @@ class ProfilesIT {
         String error = "pictureUrl must be a valid URL";
         // imposto un url non valido
         this.newProfile.setPictureUrl(pictureUrlXSS);
-        String accessToken = getAccessToken(this.profileMap.get(this.newProfile.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.newProfile.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -357,7 +346,7 @@ class ProfilesIT {
         newProfileJson = this.objectMapper.writeValueAsString(jsonNode);
 
         // Dato che invio direttamente il json del profile, devo impostare il contentType application/json
-        String accessToken = getAccessToken(this.profileMap.get(this.newProfile.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.newProfile.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -396,7 +385,7 @@ class ProfilesIT {
         // messaggio d'errore che mi aspetto d'ottenere
         String error = "Conflict! Profile with name "+this.savedProfile1.getProfileName()+" already created!";
         this.savedProfile1.setId(null);
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -416,7 +405,7 @@ class ProfilesIT {
 
     @Test
     void testDeleteProfileById_Then_204() throws Exception{
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile2.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile2.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -439,7 +428,7 @@ class ProfilesIT {
         //String error = "Failed to convert value of type 'java.lang.String' to required type 'java.lang.Long'; For input string: \"IdNotLong\"";
         String error = "ID is not valid!";
 
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile2.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile2.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -474,7 +463,7 @@ class ProfilesIT {
         // messaggio d'errore che mi aspetto d'ottenere
         String error = "Ids mismatch";
 
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -499,7 +488,7 @@ class ProfilesIT {
         // messaggio d'errore che mi aspetto d'ottenere
         String error = "Profile "+this.savedProfile1.getId()+" is not inside the profile list!";
 
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile2.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile2.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -526,7 +515,7 @@ class ProfilesIT {
         // messaggio d'errore che mi aspetto d'ottenere
         String error = "Profile "+invalidProfileId+" not found!";
 
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile2.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile2.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -555,7 +544,7 @@ class ProfilesIT {
         profilePatch.setPictureUrl(updatedPictureUrl);
         profilePatch.setIsPrivate(updatedIsPrivate);
 
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -588,7 +577,7 @@ class ProfilesIT {
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();
 
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -616,7 +605,7 @@ class ProfilesIT {
         ProfilePatch profilePatch = new ProfilePatch();
         profilePatch.setBio(RandomStringUtils.randomAlphabetic(160));
 
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -647,7 +636,7 @@ class ProfilesIT {
         log.info("Invalid URL --> "+invalidUrl);
         profilePatch.setPictureUrl(invalidUrl);
 
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -678,7 +667,7 @@ class ProfilesIT {
 
         profilePatch.setPictureUrl(pictureUrlXSS);
 
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -714,7 +703,7 @@ class ProfilesIT {
         profilePatchJson = this.objectMapper.writeValueAsString(jsonNode);
 
 
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(accessToken);
@@ -750,7 +739,7 @@ class ProfilesIT {
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();
 
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -777,7 +766,7 @@ class ProfilesIT {
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();
 
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -805,7 +794,7 @@ class ProfilesIT {
         // Definisco un o piu' campi del profilo da aggiornare tramite l'oggetto ProfilePatch
         ProfilePatch profilePatch = new ProfilePatch();
 
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -831,7 +820,7 @@ class ProfilesIT {
         this.savedProfile1.setAccountId(this.profileMap.get(this.savedProfile1.getProfileName()).get(1));
         this.savedProfile4.setAccountId(this.profileMap.get(this.savedProfile4.getProfileName()).get(1));
 
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -852,7 +841,7 @@ class ProfilesIT {
 
     @Test
     void testFindProfileByName_Then_400() throws Exception{
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -874,7 +863,7 @@ class ProfilesIT {
 
     @Test
     void testFindProfileByName_MissingQueryParameter_Then_400() throws Exception{
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -906,7 +895,7 @@ class ProfilesIT {
 
     @Test
     void testFindFull_Then_200() throws Exception{
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -933,7 +922,7 @@ class ProfilesIT {
 
     @Test
     void testFindFull_PrivateProfileNotFollowed_Then_200() throws Exception{
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -959,7 +948,7 @@ class ProfilesIT {
 
     @Test
     void testFindFull_PrivateProfileFollowed_Then_200() throws Exception{
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile6.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile6.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
 
@@ -986,7 +975,7 @@ class ProfilesIT {
 
     @Test
     void testFindFull_MissingQueryParameter_Then_400() throws Exception{
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
@@ -1005,7 +994,7 @@ class ProfilesIT {
     }
     @Test
     void testFindFull_Then_400() throws Exception{
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}",
@@ -1036,7 +1025,7 @@ class ProfilesIT {
     void testFindFull_Then_404() throws Exception{
         Long invalidProfileId = Long.MAX_VALUE;
         String error = "Profile "+invalidProfileId+" not found!";
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0));
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{profileId}?selectedUserProfileId={selectedUserProfileId}",
