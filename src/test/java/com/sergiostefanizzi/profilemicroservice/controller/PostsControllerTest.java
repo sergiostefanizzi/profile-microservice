@@ -19,6 +19,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentMatchers;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -238,8 +239,6 @@ class PostsControllerTest {
 
     @Test
     void testAddPost_InvalidContentUrlXSS_Then_400() throws Exception {
-        errors.add("contentUrl must be a valid URL");
-        // Url non valido
         this.newPost.setContentUrl(contentUrlXSS);
         newPostJson = this.objectMapper.writeValueAsString(this.newPost);
 
@@ -251,7 +250,7 @@ class PostsControllerTest {
                 .andExpect(res -> assertTrue(res.getResolvedException() instanceof MethodArgumentNotValidException))
                 .andExpect(jsonPath("$.error").isArray())
                 .andExpect(jsonPath("$.error", hasSize(1)))
-                .andExpect(jsonPath("$.error[0]").value(in(errors)))
+                .andExpect(jsonPath("$.error[0]").value("contentUrl must be a valid URL"))
                 .andReturn();
         // salvo risposta in result solo per visualizzarla
         String resultAsString = result.getResponse().getContentAsString();
@@ -380,7 +379,6 @@ class PostsControllerTest {
         log.info("Resolved Error ---> " + result.getResolvedException());
     }
 
-    //TODO remove 401, 403
 
     @Test
     void testDeletePostById_Then_403() throws Exception {
@@ -456,9 +454,7 @@ class PostsControllerTest {
         log.info("Errors\n"+resultAsString);
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
-// TODO continua
 
-/*
     @Test
     void testUpdatePostById_Then_200() throws Exception{
         // Definisco la caption da aggiornare tramite l'oggetto PostPatch
@@ -473,9 +469,10 @@ class PostsControllerTest {
 
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
-        when(this.postsService.update(postId, postPatch)).thenReturn(this.savedPost);
+        when(this.postsService.update(anyLong(), anyLong(), ArgumentMatchers.any(PostPatch.class))).thenReturn(this.savedPost);
 
         MvcResult result = this.mockMvc.perform(patch("/posts/{postId}",postId)
+                        .queryParam("selectedUserProfileId", String.valueOf(profileId))
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(postPatchJson))
@@ -495,9 +492,9 @@ class PostsControllerTest {
         log.info(postResult.toString());
     }
 
+
     @Test
     void testUpdatePost_InvalidId_Then_400() throws Exception{
-        errors.add("ID is not valid!");
         // Definisco la caption da aggiornare tramite l'oggetto PostPatch
         String newCaption = "Nuova caption del post";
         PostPatch postPatch = new PostPatch(newCaption);
@@ -509,6 +506,7 @@ class PostsControllerTest {
 
 
         MvcResult result = this.mockMvc.perform(patch("/posts/IdNotLong")
+                .queryParam("selectedUserProfileId", String.valueOf(profileId))
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(postPatchJson))
@@ -516,7 +514,7 @@ class PostsControllerTest {
                 .andExpect(res -> assertTrue(
                         res.getResolvedException() instanceof NumberFormatException
                 ))
-                .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
+                .andExpect(jsonPath("$.error").value("ID is not valid!")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n"+resultAsString);
@@ -524,8 +522,99 @@ class PostsControllerTest {
     }
 
     @Test
+    void testUpdatePost_Then_403() throws Exception{
+        // Definisco la caption da aggiornare tramite l'oggetto PostPatch
+        String newCaption = "Nuova caption del post";
+        PostPatch postPatch = new PostPatch(newCaption);
+
+        String postPatchJson = this.objectMapper.writeValueAsString(postPatch);
+
+        // Aggiorno il post che verra' restituito dal service con il nuovo valore
+        this.savedPost.setCaption(newCaption);
+
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
+        when(this.postsService.update(anyLong(), anyLong(), ArgumentMatchers.any(PostPatch.class))).thenThrow(new NotInProfileListException(profileId));
+
+        MvcResult result = this.mockMvc.perform(patch("/posts/{postId}",postId)
+                        .queryParam("selectedUserProfileId", String.valueOf(profileId))
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(postPatchJson))
+                .andExpect(status().isForbidden())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof NotInProfileListException
+                ))
+                .andExpect(jsonPath("$.error").value("Profile " + profileId + " is not inside the profile list!")).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    @Test
+    void testUpdatePost_IdsMismatch_Then_403() throws Exception{
+        // Definisco la caption da aggiornare tramite l'oggetto PostPatch
+        String newCaption = "Nuova caption del post";
+        PostPatch postPatch = new PostPatch(newCaption);
+
+        String postPatchJson = this.objectMapper.writeValueAsString(postPatch);
+
+        // Aggiorno il post che verra' restituito dal service con il nuovo valore
+        this.savedPost.setCaption(newCaption);
+
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
+        when(this.postsService.update(anyLong(), anyLong(), ArgumentMatchers.any(PostPatch.class))).thenThrow(new NotInProfileListException(invalidProfileId));
+
+        MvcResult result = this.mockMvc.perform(patch("/posts/{postId}",postId)
+                        .queryParam("selectedUserProfileId", String.valueOf(invalidProfileId))
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(postPatchJson))
+                .andExpect(status().isForbidden())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof NotInProfileListException
+                ))
+                .andExpect(jsonPath("$.error").value("Profile " + invalidProfileId + " is not inside the profile list!")).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+    @Test
+    void testUpdatePost_MissingQueryParam_Then_400() throws Exception{
+        // Definisco la caption da aggiornare tramite l'oggetto PostPatch
+        String newCaption = "Nuova caption del post";
+        PostPatch postPatch = new PostPatch(newCaption);
+
+        String postPatchJson = this.objectMapper.writeValueAsString(postPatch);
+
+        // Aggiorno il post che verra' restituito dal service con il nuovo valore
+        this.savedPost.setCaption(newCaption);
+
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
+
+        MvcResult result = this.mockMvc.perform(patch("/posts/{postId}",postId)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(postPatchJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MissingServletRequestParameterException
+                ))
+                .andExpect(jsonPath("$.error").value("Required request parameter 'selectedUserProfileId' for method parameter type Long is not present")).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+
+
+    @Test
     void testUpdatePost_CaptionLength_Then_400() throws Exception{
-        errors.add("caption size must be between 0 and 2200");
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
 
@@ -535,6 +624,7 @@ class PostsControllerTest {
         String postPatchJson = this.objectMapper.writeValueAsString(postPatch);
 
         MvcResult result = this.mockMvc.perform(patch("/posts/{postId}",postId)
+                        .queryParam("selectedUserProfileId", String.valueOf(profileId))
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(postPatchJson))
@@ -544,12 +634,41 @@ class PostsControllerTest {
                 )
                 .andExpect(jsonPath("$.error").isArray())
                 .andExpect(jsonPath("$.error", hasSize(1)))
-                .andExpect(jsonPath("$.error[0]").value(errors.get(0))).andReturn();
+                .andExpect(jsonPath("$.error[0]").value("caption size must be between 0 and 2200")).andReturn();
         // salvo risposta in result solo per visualizzarla
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n"+resultAsString);
     }
     //TODO 401 e 403
+    @Test
+    void testUpdatePost_QueryParamNotValid_Then_400() throws Exception{
+        // Definisco la caption da aggiornare tramite l'oggetto PostPatch
+        String newCaption = "Nuova caption del post";
+        PostPatch postPatch = new PostPatch(newCaption);
+
+        String postPatchJson = this.objectMapper.writeValueAsString(postPatch);
+
+        // Aggiorno il post che verra' restituito dal service con il nuovo valore
+        this.savedPost.setCaption(newCaption);
+
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
+
+        MvcResult result = this.mockMvc.perform(patch("/posts/{postId}",postId)
+                        .queryParam("selectedUserProfileId", "IdNotLong")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(postPatchJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
+                ))
+                .andExpect(jsonPath("$.error").value("Type mismatch")).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
 
     @Test
     void testUpdatePost_Then_404() throws Exception{
@@ -559,10 +678,11 @@ class PostsControllerTest {
 
         String postPatchJson = this.objectMapper.writeValueAsString(postPatch);
 
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.empty());
 
-        doThrow(new PostNotFoundException(invalidPostId)).when(this.postsService).update(invalidPostId, postPatch);
 
         MvcResult result = this.mockMvc.perform(patch("/posts/{postId}",invalidPostId)
+                        .queryParam("selectedUserProfileId", String.valueOf(profileId))
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(postPatchJson))
@@ -578,6 +698,35 @@ class PostsControllerTest {
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
 
+    @Test
+    void testUpdatePost_DeletedProfile_Then_404() throws Exception{
+        // Definisco la caption da aggiornare tramite l'oggetto PostPatch
+        String newCaption = "Nuova caption del post";
+        PostPatch postPatch = new PostPatch(newCaption);
+
+        String postPatchJson = this.objectMapper.writeValueAsString(postPatch);
+
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(invalidPostId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.empty());
+
+
+        MvcResult result = this.mockMvc.perform(patch("/posts/{postId}",invalidPostId)
+                        .queryParam("selectedUserProfileId", String.valueOf(profileId))
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(postPatchJson))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertTrue(
+                        res.getResolvedException() instanceof PostNotFoundException
+                ))
+                .andExpect(jsonPath("$.error").value("Post "+invalidPostId+" not found!"))
+                .andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+/*
     @Test
     void testFindPostById_Then_200() throws Exception{
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
