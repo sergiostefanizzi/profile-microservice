@@ -461,6 +461,13 @@ paths:
           schema:
             type: integer
             format: int64
+        - name: selectedUserProfileId
+          in: query
+          description: Request Profile id
+          required: true
+          schema:
+            type: integer
+            format: int64
       responses:
         '200':
           description: List of likes found and returned

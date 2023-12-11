@@ -16,7 +16,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
-import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -535,19 +534,17 @@ class PostsIT {
 
     @Test
     void testDeletePostById_Then_403() throws Exception {
-        this.savedPostToDelete1.setId(104L);
-        this.savedPostToDelete1.setProfileId(this.savedProfile2.getId());
         // messaggio d'errore che mi aspetto d'ottenere
-        String error = "Profile " + this.savedProfile2.getId() + " is not inside the profile list!";
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        String error = "Profile " + this.savedProfile1.getId() + " is not inside the profile list!";
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.DELETE,
                 new HttpEntity<>(headers),
                 String.class,
-                this.savedPostToDelete1.getId(),
-                this.savedProfile2.getId());
+                this.savedPost1.getId(),
+                this.savedProfile1.getId());
 
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -753,20 +750,20 @@ class PostsIT {
 
     @Test
     void testUpdatePost_Then_403() throws Exception{
-        String error = "Profile " + this.savedProfile2.getId() + " is not inside the profile list!";
+        String error = "Profile " + this.savedProfile1.getId() + " is not inside the profile list!";
         // Definisco la caption da aggiornare tramite l'oggetto PostPatch
         String newCaption = "Nuova caption del post";
         PostPatch postPatch = new PostPatch(newCaption);
 
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.PATCH,
                 new HttpEntity<>(postPatch, headers),
                 String.class,
-                this.savedPost2.getId(),
-                this.savedProfile2.getId());
+                this.savedPost1.getId(),
+                this.savedProfile1.getId());
 
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -791,7 +788,7 @@ class PostsIT {
                 HttpMethod.PATCH,
                 new HttpEntity<>(postPatch, headers),
                 String.class,
-                this.savedPost2.getId(),
+                this.savedPost3.getId(),
                 this.savedProfile1.getId());
 
         assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
@@ -853,21 +850,21 @@ class PostsIT {
 
     @Test
     void testFindPostById_PublicProfile_Then_200() throws Exception{
-        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
         ResponseEntity<Post> responseGet = this.testRestTemplate.exchange(this.baseUrl+"/{postId}?selectedUserProfileId={selectedUserProfileId}",
                 HttpMethod.GET,
                 new HttpEntity<>(headers),
                 Post.class,
-                this.savedPost2.getId(),
-                this.savedProfile1.getId());
+                this.savedStory1.getId(),
+                this.savedProfile3.getId());
 
         assertEquals(HttpStatus.OK, responseGet.getStatusCode());
         assertNotNull(responseGet.getBody());
         assertInstanceOf(Post.class, responseGet.getBody());
         Post savedPost = responseGet.getBody();
-        assertEquals(this.savedPost2, savedPost);
+        assertEquals(this.savedStory1, savedPost);
 
         // visualizzo il profilo aggiornato
         log.info(savedPost.toString());
@@ -928,7 +925,7 @@ class PostsIT {
                 HttpMethod.GET,
                 new HttpEntity<>(headers),
                 String.class,
-                this.savedPost2.getId(),
+                this.savedPost1.getId(),
                 "IdNotLong");
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
@@ -950,7 +947,7 @@ class PostsIT {
                 HttpMethod.GET,
                 new HttpEntity<>(headers),
                 String.class,
-                this.savedPost2.getId());
+                this.savedPost1.getId());
 
         assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
         assertNotNull(response.getBody());
@@ -997,7 +994,7 @@ class PostsIT {
 
     @Test
     void testFindPostById_Then_403() throws Exception{
-        String error = "Profile " + this.savedProfile2.getId() + " is not inside the profile list!";
+        String error = "Profile " + this.savedProfile3.getId() + " is not inside the profile list!";
         String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
@@ -1005,8 +1002,8 @@ class PostsIT {
                 HttpMethod.GET,
                 new HttpEntity<>(headers),
                 String.class,
-                this.savedPost2.getId(),
-                this.savedProfile2.getId());
+                this.savedPost1.getId(),
+                this.savedProfile3.getId());
 
         assertEquals(HttpStatus.FORBIDDEN, responseGet.getStatusCode());
         assertNotNull(responseGet.getBody());
@@ -1061,57 +1058,86 @@ class PostsIT {
     }
 
 
-/*
-
     @Test
     void testAddLike_Then_204() throws Exception {
-        Like newLike = new Like(this.savedProfile2.getId(), this.savedPost1.getId());
-        HttpEntity<Like> requestLike = new HttpEntity<>(newLike);
-        // elimino il profilo appena inserito
-        ResponseEntity<Void> responseLike = this.testRestTemplate.exchange(this.baseUrlLike+"?removeLike={removeLike}",
+        Like newLike = new Like(this.savedProfile3.getId(), this.savedPost1.getId());
+
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+        ResponseEntity<Void> response = this.testRestTemplate.exchange(this.baseUrlLike+"?removeLike={removeLike}",
                 HttpMethod.PUT,
-                requestLike,
+                new HttpEntity<>(newLike, headers),
                 Void.class,
                 false);
 
-        assertEquals(HttpStatus.NO_CONTENT, responseLike.getStatusCode());
-        assertNull(responseLike.getBody());
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+        assertNull(response.getBody());
     }
 
     @Test
     void testAddLike_Remove_Then_204() throws Exception {
-        Like savedLike = new Like(this.savedProfile1.getId(), this.savedPost1.getId());
+        Like newLike = new Like(this.savedProfile1.getId(), this.savedPost1.getId());
 
-        HttpEntity<Like> requestLike2 = new HttpEntity<>(savedLike);
-        // elimino il profilo appena inserito
-        ResponseEntity<Void> responseLike = this.testRestTemplate.exchange(this.baseUrlLike+"?removeLike={removeLike}",
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+        ResponseEntity<Void> response = this.testRestTemplate.exchange(this.baseUrlLike+"?removeLike={removeLike}",
                 HttpMethod.PUT,
-                requestLike2,
+                new HttpEntity<>(newLike, headers),
                 Void.class,
                 true);
 
-        assertEquals(HttpStatus.NO_CONTENT, responseLike.getStatusCode());
-        assertNull(responseLike.getBody());
+        assertEquals(HttpStatus.NO_CONTENT, response.getStatusCode());
+        assertNull(response.getBody());
+    }
+
+    @Test
+    void testAddLike_MissingQueryParam_Then_400() throws Exception {
+        String error = "Required request parameter 'removeLike' for method parameter type Boolean is not present";
+        Like newLike = new Like(this.savedProfile3.getId(), this.savedPost1.getId());
+
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrlLike,
+                HttpMethod.PUT,
+                new HttpEntity<>(newLike, headers),
+                String.class);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+
+        assertEquals(error,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
     }
 
     @Test
     void testAddLike_Then_400() throws Exception {
-        String error = "JSON parse error: Cannot deserialize value of type `java.lang.Long` from String \"IdNotLong\": not a valid `java.lang.Long` value";
-        Like newLike = new Like(this.savedProfile2.getId(), this.savedPost1.getId());
+        String error = "Message is not readable";
+        Like newLike = new Like(this.savedProfile3.getId(), this.savedPost1.getId());
         String newLikeJson = this.objectMapper.writeValueAsString(newLike);
         JsonNode jsonNode = this.objectMapper.readTree(newLikeJson);
 
         ((ObjectNode) jsonNode).put("profile_id", "IdNotLong");
         ((ObjectNode) jsonNode).put("post_id", "IdNotLong");
         newLikeJson = this.objectMapper.writeValueAsString(jsonNode);
-        // Dato che invio direttamente il json del like, devo impostare il contentType application/json
+
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
         headers.setContentType(MediaType.APPLICATION_JSON);
 
-        HttpEntity<String> request = new HttpEntity<>(newLikeJson, headers);
+
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrlLike+"?removeLike={removeLike}",
                 HttpMethod.PUT,
-                request,
+                new HttpEntity<>(newLikeJson, headers),
                 String.class,
                 false);
 
@@ -1124,51 +1150,107 @@ class PostsIT {
         log.info("Error -> "+node.get("error"));
     }
 
-    //TODO 401 e 403
     @Test
-    void testAddLike_PostNotFound_Then_404() throws Exception {
-        String error = "Post " + Long.MAX_VALUE + " not found!";
+    void testAddLike_Then_401() throws Exception {
+        Like newLike = new Like(this.savedProfile3.getId(), this.savedPost1.getId());
 
+        ResponseEntity<Void> response = this.testRestTemplate.exchange(this.baseUrlLike+"?removeLike={removeLike}",
+                HttpMethod.PUT,
+                new HttpEntity<>(newLike),
+                Void.class,
+                false);
 
-        Like newLike = new Like(this.savedProfile1.getId(), Long.MAX_VALUE);
-        HttpEntity<Like> request = new HttpEntity<>(newLike);
+        assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
+        assertNull(response.getBody());
+    }
+    @Test
+    void testAddLike_Then_403() throws Exception {
+        Like newLike = new Like(this.savedProfile1.getId(), this.savedPost1.getId());
+
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile3.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrlLike+"?removeLike={removeLike}",
                 HttpMethod.PUT,
-                request,
+                new HttpEntity<>(newLike, headers),
+                String.class,
+                false);
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertNotNull(response.getBody());
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals("Profile " + this.savedProfile1.getId() + " is not inside the profile list!" ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
+    void testAddLike_PrivatePost_Then_403() throws Exception {
+        Like newLike = new Like(this.savedProfile1.getId(), this.savedPost3.getId());
+
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrlLike+"?removeLike={removeLike}",
+                HttpMethod.PUT,
+                new HttpEntity<>(newLike, headers),
+                String.class,
+                false);
+
+        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertNotNull(response.getBody());
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals("Cannot access post with id "+this.savedPost3.getId() ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
+
+    @Test
+    void testAddLike_PostNotFound_Then_404() throws Exception {
+        Like newLike = new Like(this.savedProfile1.getId(), Long.MAX_VALUE );
+
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrlLike+"?removeLike={removeLike}",
+                HttpMethod.PUT,
+                new HttpEntity<>(newLike, headers),
                 String.class,
                 false);
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertNotNull(response.getBody());
-
         JsonNode node = this.objectMapper.readTree(response.getBody());
         // In questo caso l'errore NON è un array di dimensione 1
-        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        assertEquals("Post " + Long.MAX_VALUE + " not found!" ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
 
     @Test
     void testAddLike_ProfileNotFound_Then_404() throws Exception {
-        String error = "Profile " + Long.MAX_VALUE + " not found!";
-
-
         Like newLike = new Like(Long.MAX_VALUE, this.savedPost1.getId());
-        HttpEntity<Like> request = new HttpEntity<>(newLike);
+
+        String accessToken = getAccessToken(this.profileMap.get(this.savedProfile1.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
         ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrlLike+"?removeLike={removeLike}",
                 HttpMethod.PUT,
-                request,
+                new HttpEntity<>(newLike, headers),
                 String.class,
                 false);
 
         assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
         assertNotNull(response.getBody());
-
         JsonNode node = this.objectMapper.readTree(response.getBody());
         // In questo caso l'errore NON è un array di dimensione 1
-        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        assertEquals("Profile " + Long.MAX_VALUE + " not found!" ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
-
+/*
     @Test
     void testFindAllLikesByPostId_Then_200() throws Exception {
         List<Like> likeList = asList(

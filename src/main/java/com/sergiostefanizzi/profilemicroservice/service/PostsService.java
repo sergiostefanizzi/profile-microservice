@@ -119,6 +119,10 @@ public class PostsService {
     public void addLike(Boolean removeLike, Like like) {
         Long postId = like.getPostId();
         Long selectedUserProfileId = like.getProfileId();
+        // Controllo poi l'esistenza del profilo di chi vuole mettere like
+        ProfileJpa selectedProfileJpa = this.profilesRepository.findActiveById(selectedUserProfileId)
+                .orElseThrow(() -> new ProfileNotFoundException(selectedUserProfileId));
+
         // Controllo che chi vuole mettere il like sia presente all'interno del jwt
         checkProfileList(like.getProfileId(), this.keycloakService);
 
@@ -129,9 +133,6 @@ public class PostsService {
         ProfileJpa postOwnerProfileJpa = this.profilesRepository.findActiveByPostId(postId)
                 .orElseThrow(() -> new PostNotFoundException(postId));
 
-        // Controllo poi l'esistenza del profilo di chi vuole mettere like
-        ProfileJpa selectedProfileJpa = this.profilesRepository.findActiveById(selectedUserProfileId)
-                .orElseThrow(() -> new ProfileNotFoundException(selectedUserProfileId));
 
         Long postOwnerProfileId = postOwnerProfileJpa.getId();
 
@@ -151,14 +152,18 @@ public class PostsService {
 
 
     @Transactional
-    public List<Like> findAllLikesByPostId(Long postId) {
-        // TODO mi serve il JWT
-        // Controllo che chi vuole mettere il like abbia l'autorizzazione per farlo
-        // sia controllando il profilo
-        // sia controllando che il profilo a cui appartiene il post sia visibile da chi vuole mettere like
+    public List<Like> findAllLikesByPostId(Long postId, Long selectedUserProfileId) {
+        // Controllo poi l'esistenza del profilo di chi vuole vedere i like
+        ProfileJpa selectedProfileJpa = this.profilesRepository.findActiveById(selectedUserProfileId)
+                .orElseThrow(() -> new ProfileNotFoundException(selectedUserProfileId));
+        // Controllo che questo profilo sia all'interno del jwt
+        checkProfileList(selectedUserProfileId, this.keycloakService);
 
-        // Controllo prima l'esistenza del post
-        //PostJpa postJpa = this.postsRepository.getReferenceById(postId);
+        ProfileJpa postOwnerProfileJpa = this.profilesRepository.findActiveByPostId(postId)
+                .orElseThrow(() -> new PostNotFoundException(postId));
+
+        checkPostAccess(selectedProfileJpa, postOwnerProfileJpa.getId(), selectedUserProfileId, postId);
+
 
         return this.likesRepository.findAllActiveByPostId(postId)
                 .stream().map(this.likeToLikeJpaConverter::convertBack).toList();

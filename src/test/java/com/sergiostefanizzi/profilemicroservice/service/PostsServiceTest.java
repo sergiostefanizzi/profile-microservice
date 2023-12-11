@@ -22,6 +22,7 @@ import org.springframework.test.context.ActiveProfiles;
 import java.time.Instant;
 import java.util.*;
 
+import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
@@ -518,8 +519,8 @@ class PostsServiceTest {
 
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
         when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa));
-        when(this.profilesRepository.findActiveByPostId(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
-        when(this.profilesRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa));
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
         when(this.likesRepository.findActiveById(any(LikeId.class))).thenReturn(Optional.empty());
         when(this.likeToLikeJpaConverter.convert(any(Like.class))).thenReturn(likeJpa);
         when(this.likesRepository.save(any(LikeJpa.class))).thenReturn(likeJpa);
@@ -532,8 +533,8 @@ class PostsServiceTest {
         verify(this.securityContext, times(1)).getAuthentication();
         verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
         verify(this.postsRepository, times(1)).findActiveById(anyLong());
-        verify(this.profilesRepository, times(1)).findActiveById(any(Long.class));
-        verify(this.profilesRepository, times(1)).findActiveByPostId(any(Long.class));
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
         verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.likesRepository, times(1)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(1)).convert(any(Like.class));
@@ -546,8 +547,8 @@ class PostsServiceTest {
 
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
         when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa));
-        when(this.profilesRepository.findActiveByPostId(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
-        when(this.profilesRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa));
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
         when(this.likesRepository.findActiveById(any(LikeId.class))).thenReturn(Optional.of(likeJpa));
         when(this.likesRepository.save(any(LikeJpa.class))).thenReturn(likeJpa);
 
@@ -558,41 +559,41 @@ class PostsServiceTest {
         verify(this.securityContext, times(1)).getAuthentication();
         verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
         verify(this.postsRepository, times(1)).findActiveById(anyLong());
-        verify(this.profilesRepository, times(1)).findActiveById(any(Long.class));
-        verify(this.profilesRepository, times(1)).findActiveByPostId(any(Long.class));
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
         verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.likesRepository, times(1)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(0)).convert(any(Like.class));
         verify(this.likesRepository, times(1)).save(any(LikeJpa.class));
     }
 
-        @Test
-        void testAddLike_PublicPost_Success(){
-            LikeJpa likeJpa = new LikeJpa(new LikeId(this.profileJpa.getId(), savedPostJpa2.getId()));
+    @Test
+    void testAddLike_PublicPost_Success(){
+        LikeJpa likeJpa = new LikeJpa(new LikeId(this.profileJpa.getId(), savedPostJpa2.getId()));
 
-            when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
-            when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa2));
-            when(this.profilesRepository.findActiveByPostId(any(Long.class))).thenReturn(Optional.of(this.profileJpa2));
-            when(this.profilesRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
-            when(this.likesRepository.findActiveById(any(LikeId.class))).thenReturn(Optional.empty());
-            when(this.likeToLikeJpaConverter.convert(any(Like.class))).thenReturn(likeJpa);
-            when(this.likesRepository.save(any(LikeJpa.class))).thenReturn(likeJpa);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa2));
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa2));
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
+        when(this.likesRepository.findActiveById(any(LikeId.class))).thenReturn(Optional.empty());
+        when(this.likeToLikeJpaConverter.convert(any(Like.class))).thenReturn(likeJpa);
+        when(this.likesRepository.save(any(LikeJpa.class))).thenReturn(likeJpa);
 
-            this.postsService.addLike(false, new Like(this.profileJpa.getId(), savedPostJpa2.getId()));
+        this.postsService.addLike(false, new Like(this.profileJpa.getId(), savedPostJpa2.getId()));
 
-            log.info("Like Created at -> "+likeJpa.getCreatedAt());
-            assertNotNull(likeJpa.getCreatedAt());
-            assertNull(likeJpa.getDeletedAt());
-            verify(this.securityContext, times(1)).getAuthentication();
-            verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
-            verify(this.postsRepository, times(1)).findActiveById(anyLong());
-            verify(this.profilesRepository, times(1)).findActiveById(any(Long.class));
-            verify(this.profilesRepository, times(1)).findActiveByPostId(any(Long.class));
-            verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
-            verify(this.likesRepository, times(1)).findActiveById(any(LikeId.class));
-            verify(this.likeToLikeJpaConverter, times(1)).convert(any(Like.class));
-            verify(this.likesRepository, times(1)).save(any(LikeJpa.class));
-        }
+        log.info("Like Created at -> "+likeJpa.getCreatedAt());
+        assertNotNull(likeJpa.getCreatedAt());
+        assertNull(likeJpa.getDeletedAt());
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.likesRepository, times(1)).findActiveById(any(LikeId.class));
+        verify(this.likeToLikeJpaConverter, times(1)).convert(any(Like.class));
+        verify(this.likesRepository, times(1)).save(any(LikeJpa.class));
+    }
 
     @Test
     void testAddLike_PrivatePost_Success(){
@@ -601,8 +602,8 @@ class PostsServiceTest {
 
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
         when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa2));
-        when(this.profilesRepository.findActiveByPostId(any(Long.class))).thenReturn(Optional.of(this.profileJpa2));
-        when(this.profilesRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa2));
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
         when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.of(new FollowsId(this.profileJpa.getId(), this.profileJpa2.getId())));
         when(this.likesRepository.findActiveById(any(LikeId.class))).thenReturn(Optional.empty());
         when(this.likeToLikeJpaConverter.convert(any(Like.class))).thenReturn(likeJpa);
@@ -616,8 +617,8 @@ class PostsServiceTest {
         verify(this.securityContext, times(1)).getAuthentication();
         verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
         verify(this.postsRepository, times(1)).findActiveById(anyLong());
-        verify(this.profilesRepository, times(1)).findActiveById(any(Long.class));
-        verify(this.profilesRepository, times(1)).findActiveByPostId(any(Long.class));
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
         verify(this.followsRepository, times(1)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.likesRepository, times(1)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(1)).convert(any(Like.class));
@@ -631,8 +632,8 @@ class PostsServiceTest {
 
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
         when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa2));
-        when(this.profilesRepository.findActiveByPostId(any(Long.class))).thenReturn(Optional.of(this.profileJpa2));
-        when(this.profilesRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa2));
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
         when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.empty());
 
         assertThrows(PostAccessForbiddenException.class, () -> this.postsService.addLike(false, like));
@@ -640,8 +641,8 @@ class PostsServiceTest {
         verify(this.securityContext, times(1)).getAuthentication();
         verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
         verify(this.postsRepository, times(1)).findActiveById(anyLong());
-        verify(this.profilesRepository, times(1)).findActiveById(any(Long.class));
-        verify(this.profilesRepository, times(1)).findActiveByPostId(any(Long.class));
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
         verify(this.followsRepository, times(1)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.likesRepository, times(0)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(0)).convert(any(Like.class));
@@ -655,8 +656,8 @@ class PostsServiceTest {
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
         when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(true);
         when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa2));
-        when(this.profilesRepository.findActiveByPostId(any(Long.class))).thenReturn(Optional.of(this.profileJpa2));
-        when(this.profilesRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa2));
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
         when(this.likesRepository.findActiveById(any(LikeId.class))).thenReturn(Optional.empty());
         when(this.likeToLikeJpaConverter.convert(any(Like.class))).thenReturn(likeJpa);
         when(this.likesRepository.save(any(LikeJpa.class))).thenReturn(likeJpa);
@@ -669,8 +670,8 @@ class PostsServiceTest {
         verify(this.securityContext, times(2)).getAuthentication();
         verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
         verify(this.postsRepository, times(1)).findActiveById(anyLong());
-        verify(this.profilesRepository, times(1)).findActiveById(any(Long.class));
-        verify(this.profilesRepository, times(1)).findActiveByPostId(any(Long.class));
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
         verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.likesRepository, times(1)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(1)).convert(any(Like.class));
@@ -681,6 +682,7 @@ class PostsServiceTest {
     void testAddLike_PublicPost_NotInsideProfileList_Failed(){
         Like like = new Like(this.profileJpa.getId(), savedPostJpa2.getId());
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
         when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(false);
 
         assertThrows(NotInProfileListException.class, () -> this.postsService.addLike(false, like));
@@ -688,8 +690,8 @@ class PostsServiceTest {
         verify(this.securityContext, times(2)).getAuthentication();
         verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
         verify(this.postsRepository, times(0)).findActiveById(anyLong());
-        verify(this.profilesRepository, times(0)).findActiveById(any(Long.class));
-        verify(this.profilesRepository, times(0)).findActiveByPostId(any(Long.class));
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(0)).findActiveByPostId(anyLong());
         verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.likesRepository, times(0)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(0)).convert(any(Like.class));
@@ -701,6 +703,7 @@ class PostsServiceTest {
         Like like = new Like(this.profileJpa.getId(), savedPostJpa2.getId());
 
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
         when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.empty());
 
         assertThrows(PostNotFoundException.class, () -> this.postsService.addLike(false, like));
@@ -708,8 +711,8 @@ class PostsServiceTest {
         verify(this.securityContext, times(1)).getAuthentication();
         verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
         verify(this.postsRepository, times(1)).findActiveById(anyLong());
-        verify(this.profilesRepository, times(0)).findActiveById(any(Long.class));
-        verify(this.profilesRepository, times(0)).findActiveByPostId(any(Long.class));
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(0)).findActiveByPostId(anyLong());
         verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.likesRepository, times(0)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(0)).convert(any(Like.class));
@@ -721,16 +724,17 @@ class PostsServiceTest {
         Like like = new Like(this.profileJpa.getId(), savedPostJpa2.getId());
 
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
         when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa2));
-        when(this.profilesRepository.findActiveByPostId(any(Long.class))).thenReturn(Optional.empty());
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.empty());
 
         assertThrows(PostNotFoundException.class, () -> this.postsService.addLike(false, like));
 
         verify(this.securityContext, times(1)).getAuthentication();
         verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
         verify(this.postsRepository, times(1)).findActiveById(anyLong());
-        verify(this.profilesRepository, times(0)).findActiveById(any(Long.class));
-        verify(this.profilesRepository, times(1)).findActiveByPostId(any(Long.class));
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
         verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.likesRepository, times(0)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(0)).convert(any(Like.class));
@@ -741,18 +745,15 @@ class PostsServiceTest {
     void testAddLike_PublicPost_ProfileNotFound_Failed(){
         Like like = new Like(this.profileJpa.getId(), savedPostJpa2.getId());
 
-        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
-        when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa2));
-        when(this.profilesRepository.findActiveByPostId(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
-        when(this.profilesRepository.findActiveById(any(Long.class))).thenReturn(Optional.empty());
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.empty());
 
         assertThrows(ProfileNotFoundException.class, () -> this.postsService.addLike(false, like));
 
-        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.securityContext, times(0)).getAuthentication();
         verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
-        verify(this.postsRepository, times(1)).findActiveById(anyLong());
-        verify(this.profilesRepository, times(1)).findActiveById(any(Long.class));
-        verify(this.profilesRepository, times(1)).findActiveByPostId(any(Long.class));
+        verify(this.postsRepository, times(0)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(0)).findActiveByPostId(anyLong());
         verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.likesRepository, times(0)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(0)).convert(any(Like.class));
@@ -766,8 +767,8 @@ class PostsServiceTest {
 
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
         when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa2));
-        when(this.profilesRepository.findActiveByPostId(any(Long.class))).thenReturn(Optional.of(this.profileJpa2));
-        when(this.profilesRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa2));
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
         when(this.likesRepository.findActiveById(any(LikeId.class))).thenReturn(Optional.of(likeJpa));
 
         this.postsService.addLike(false, new Like(this.profileJpa.getId(), savedPostJpa2.getId()));
@@ -775,8 +776,8 @@ class PostsServiceTest {
         verify(this.securityContext, times(1)).getAuthentication();
         verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
         verify(this.postsRepository, times(1)).findActiveById(anyLong());
-        verify(this.profilesRepository, times(1)).findActiveById(any(Long.class));
-        verify(this.profilesRepository, times(1)).findActiveByPostId(any(Long.class));
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
         verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.likesRepository, times(1)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(0)).convert(any(Like.class));
@@ -787,8 +788,8 @@ class PostsServiceTest {
     void testAddLike_PublicPost_RemoveNotExists_Success(){
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
         when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa2));
-        when(this.profilesRepository.findActiveByPostId(any(Long.class))).thenReturn(Optional.of(this.profileJpa2));
-        when(this.profilesRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.profileJpa));
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa2));
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
         
         when(this.likesRepository.findActiveById(any(LikeId.class))).thenReturn(Optional.empty());
 
@@ -798,15 +799,15 @@ class PostsServiceTest {
         verify(this.securityContext, times(1)).getAuthentication();
         verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
         verify(this.postsRepository, times(1)).findActiveById(anyLong());
-        verify(this.profilesRepository, times(1)).findActiveById(any(Long.class));
-        verify(this.profilesRepository, times(1)).findActiveByPostId(any(Long.class));
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
         verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.likesRepository, times(1)).findActiveById(any(LikeId.class));
         verify(this.likeToLikeJpaConverter, times(0)).convert(any(Like.class));
         verify(this.likesRepository, times(0)).save(any(LikeJpa.class));
     }
 
-/*
+
     @Test
     void testFindAllLikesByPostId_Success(){
         List<LikeJpa> likeJpaList = asList(
@@ -818,35 +819,63 @@ class PostsServiceTest {
                 new Like(3L,1L),
                 new Like(4L,1L));
 
-        //when(this.postsRepository.getReferenceById(any(Long.class))).thenReturn(this.savedPostJpa);
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.ofNullable(this.profileJpa));
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa));
         when(this.likesRepository.findAllActiveByPostId(anyLong())).thenReturn(likeJpaList);
         when(this.likeToLikeJpaConverter.convertBack(likeJpaList.get(0))).thenReturn(likeList.get(0));
         when(this.likeToLikeJpaConverter.convertBack(likeJpaList.get(1))).thenReturn(likeList.get(1));
         when(this.likeToLikeJpaConverter.convertBack(likeJpaList.get(2))).thenReturn(likeList.get(2));
 
-        List<Like> returnedLikeList = this.postsService.findAllLikesByPostId(1L);
+        List<Like> returnedLikeList = this.postsService.findAllLikesByPostId(postId, profileId);
 
         assertEquals(3,returnedLikeList.size());
 
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.likesRepository, times(1)).findAllActiveByPostId(anyLong());
         verify(this.likeToLikeJpaConverter, times(3)).convertBack(any(LikeJpa.class));
     }
 
     @Test
-    void testFindAllLikesByPostId_Empty_Success(){
-        List<LikeJpa> likeJpaList = new ArrayList<>();
+    void testFindAllLikesByPostId_ValidatedOnKeycloak_Success(){
+        List<LikeJpa> likeJpaList = asList(
+                new LikeJpa(new LikeId(2L, 1L)),
+                new LikeJpa(new LikeId(3L, 1L)),
+                new LikeJpa(new LikeId(4L, 1L)));
+        List<Like> likeList = asList(
+                new Like(2L,1L),
+                new Like(3L,1L),
+                new Like(4L,1L));
 
-        //when(this.postsRepository.findActiveById(any(Long.class))).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.ofNullable(this.profileJpa));
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(true);
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa));
         when(this.likesRepository.findAllActiveByPostId(anyLong())).thenReturn(likeJpaList);
+        when(this.likeToLikeJpaConverter.convertBack(likeJpaList.get(0))).thenReturn(likeList.get(0));
+        when(this.likeToLikeJpaConverter.convertBack(likeJpaList.get(1))).thenReturn(likeList.get(1));
+        when(this.likeToLikeJpaConverter.convertBack(likeJpaList.get(2))).thenReturn(likeList.get(2));
 
-        List<Like> returnedLikeList = this.postsService.findAllLikesByPostId(1L);
+        List<Like> returnedLikeList = this.postsService.findAllLikesByPostId(postId, profileId);
 
-        assertEquals(0,returnedLikeList.size());
+        assertEquals(3,returnedLikeList.size());
 
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.likesRepository, times(1)).findAllActiveByPostId(anyLong());
-        verify(this.likeToLikeJpaConverter, times(0)).convertBack(any(LikeJpa.class));
+        verify(this.likeToLikeJpaConverter, times(3)).convertBack(any(LikeJpa.class));
     }
 
+    //TODO continua con i failed
+
+/*
     @Test
     void testAddCommentSuccess(){
         String content = "Commento al post";
