@@ -55,6 +55,24 @@ public final class JwtUtilityClass {
     }
 
     public static Boolean checkAccess(ProfileJpa profileJpa, Long selectedUserProfileId, FollowsRepository followsRepository) {
-        return !profileJpa.getIsPrivate() || (Objects.equals(profileJpa.getId(), selectedUserProfileId)) || (followsRepository.findActiveAcceptedById(new FollowsId(selectedUserProfileId, profileJpa.getId())).isPresent());
+        // se sono id uguali oppure se è pubblico
+        /*
+        if (!Objects.equals(profileJpa.getId(), selectedUserProfileId)){
+            log.info("Diversi");
+            if (profileJpa.getIsPrivate()){
+                log.info("Privato");
+                if (followsRepository.findActiveAcceptedById(new FollowsId(selectedUserProfileId, profileJpa.getId())).isEmpty()){
+                    log.info("Non follower");
+                    return false;
+                }
+            }
+
+            log.info("Pubblico ");
+        }
+
+        return true;
+
+         */
+        return (Objects.equals(profileJpa.getId(), selectedUserProfileId)) || !profileJpa.getIsPrivate() || (followsRepository.findActiveAcceptedById(new FollowsId(selectedUserProfileId, profileJpa.getId())).isPresent());
     }
 }

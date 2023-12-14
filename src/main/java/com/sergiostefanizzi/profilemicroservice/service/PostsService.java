@@ -97,7 +97,7 @@ public class PostsService {
         // Se il profilo del post e' pubblico, il post puo' essere visto liberamente
         // Se è privato controllo prima che il profile che ha pubblicato il post appartiene a chi ha inviato la richiesta
         // Se non appartiene, controllo infine se chi ha inviato la richiesta segue il profilo privato che ha pubblicato il post
-        if (!checkAccess(profileJpa, selectedUserProfileId, this.followsRepository)){
+        if (Boolean.FALSE.equals(checkAccess(profileJpa, selectedUserProfileId, this.followsRepository))){
             throw new AccessForbiddenException("Post");
         }
         return this.postToPostJpaConverter.convertBack(
@@ -129,7 +129,7 @@ public class PostsService {
 
         // se il post appartiene a un profilo privato oppure non appartiene a chi ha messo il like
         // controllo che chi mette like segua regolarmente l'autore del post
-        if (!checkAccess(postOwnerProfileJpa, selectedUserProfileId, this.followsRepository)){
+        if (Boolean.FALSE.equals(checkAccess(postOwnerProfileJpa, selectedUserProfileId, this.followsRepository))){
             throw new AccessForbiddenException("Post");
         }
         // Controllo l'esistenza del like, se non esiste lo creo con il like ottenuto dal controller
@@ -152,7 +152,7 @@ public class PostsService {
                 .orElseThrow(() -> new PostNotFoundException(postId));
 
 
-        if (!checkAccess(postOwnerProfileJpa, selectedUserProfileId, this.followsRepository)){
+        if (Boolean.FALSE.equals(checkAccess(postOwnerProfileJpa, selectedUserProfileId, this.followsRepository))){
             throw new AccessForbiddenException("Post");
         }
 
@@ -183,7 +183,7 @@ public class PostsService {
             ProfileJpa postOwnerProfileJpa = this.profilesRepository.findActiveByPostId(postId)
                     .orElseThrow(() -> new PostNotFoundException(postId));
 
-            if (!checkAccess(postOwnerProfileJpa, selectedUserProfileId, this.followsRepository)){
+            if (Boolean.FALSE.equals(checkAccess(postOwnerProfileJpa, selectedUserProfileId, this.followsRepository))){
                 throw new AccessForbiddenException("Post");
             }
 
@@ -234,7 +234,7 @@ public class PostsService {
         ProfileJpa postOwnerProfileJpa = this.profilesRepository.findActiveByPostId(postId)
                         .orElseThrow(() -> new PostNotFoundException(postId));
 
-        if (!checkAccess(postOwnerProfileJpa, selectedUserProfileId, this.followsRepository)){
+        if (Boolean.FALSE.equals(checkAccess(postOwnerProfileJpa, selectedUserProfileId, this.followsRepository))){
             throw new AccessForbiddenException("Post");
         }
 
