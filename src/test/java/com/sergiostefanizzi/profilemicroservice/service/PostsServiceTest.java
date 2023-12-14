@@ -60,9 +60,9 @@ class PostsServiceTest {
     String contentUrl = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Cape_may.jpg";
     String caption = "This is the post caption";
     Post.PostTypeEnum postType = Post.PostTypeEnum.POST;
-    private Long postId = 1L;
+    private final Long postId = 1L;
 
-    private Long profileId = 11L;
+    private final Long profileId = 11L;
     private Post newPost;
     private PostJpa savedPostJpa;
     private PostJpa savedStoryJpa;
@@ -70,8 +70,8 @@ class PostsServiceTest {
     private PostJpa savedPrivatePostJpa;
 
 
-    private ProfileJpa profileJpa = new ProfileJpa("pinco_pallino",false, UUID.randomUUID().toString());
-    private ProfileJpa profileJpa2 = new ProfileJpa("pinco_pallino2",true, UUID.randomUUID().toString());
+    private final ProfileJpa profileJpa = new ProfileJpa("pinco_pallino",false, UUID.randomUUID().toString());
+    private final ProfileJpa profileJpa2 = new ProfileJpa("pinco_pallino2",true, UUID.randomUUID().toString());
     private final PostJpa newPostJpa = new PostJpa(contentUrl, postType);
 
     @BeforeEach
@@ -1457,7 +1457,7 @@ class PostsServiceTest {
         commentListJpa.get(2).setId(3L);
 
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
-        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.ofNullable(this.profileJpa));
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa));
         when(this.commentsRepository.findAllActiveByPostId(anyLong())).thenReturn(commentListJpa);
         when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(0))).thenReturn(commentList.get(0));
         when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(1))).thenReturn(commentList.get(1));
@@ -1510,7 +1510,7 @@ class PostsServiceTest {
 
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
         when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(true);
-        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.ofNullable(this.profileJpa));
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa));
         when(this.commentsRepository.findAllActiveByPostId(anyLong())).thenReturn(commentListJpa);
         when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(0))).thenReturn(commentList.get(0));
         when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(1))).thenReturn(commentList.get(1));
@@ -1563,7 +1563,7 @@ class PostsServiceTest {
         commentListJpa.get(2).setId(3L);
 
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
-        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.ofNullable(this.profileJpa2));
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa2));
         when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.of(new FollowsId(this.profileJpa.getId(), this.profileJpa2.getId())));
         when(this.commentsRepository.findAllActiveByPostId(anyLong())).thenReturn(commentListJpa);
         when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(0))).thenReturn(commentList.get(0));
@@ -1600,7 +1600,7 @@ class PostsServiceTest {
     @Test
     void testFindAllCommentsByPostId_PrivatePost_Failed(){
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
-        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.ofNullable(this.profileJpa2));
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa2));
         when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.empty());
 
         assertThrows(PostAccessForbiddenException.class, () -> this.postsService.findAllCommentsByPostId(postId, profileId));
