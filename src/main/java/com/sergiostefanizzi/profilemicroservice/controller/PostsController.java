@@ -44,8 +44,8 @@ public class PostsController implements PostsApi {
     }
 
     @Override
-    public ResponseEntity<List<Post>> profileFeedByProfileId(Long profileId, Boolean onlyPost) {
-        List<Post> postList = this.postsService.profileFeedByProfileId(profileId, onlyPost);
+    public ResponseEntity<List<Post>> profileFeedByProfileId(Long profileId,Long selectedUserProfileId, Boolean onlyPost) {
+        List<Post> postList = this.postsService.profileFeedByProfileId(profileId, selectedUserProfileId, onlyPost);
         return new ResponseEntity<>(postList, HttpStatus.OK);
     }
 
@@ -67,20 +67,20 @@ public class PostsController implements PostsApi {
     }
 
     @Override
-    public ResponseEntity<Comment> updateCommentById(Long commentId, CommentPatch commentPatch) {
-        Comment updatedComment = this.postsService.updateCommentById(commentId, commentPatch);
+    public ResponseEntity<Comment> updateCommentById(Long commentId, Long selectedUserProfileId, CommentPatch commentPatch) {
+        Comment updatedComment = this.postsService.updateCommentById(commentId, selectedUserProfileId, commentPatch);
         return new ResponseEntity<>(updatedComment, HttpStatus.OK);
     }
 
     @Override
-    public ResponseEntity<Void> deleteCommentById(Long commentId) {
-        this.postsService.deleteCommentById(commentId);
+    public ResponseEntity<Void> deleteCommentById(Long commentId, Long selectedUserProfileId) {
+        this.postsService.deleteCommentById(commentId, selectedUserProfileId);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
     @Override
-    public ResponseEntity<List<Comment>> findAllCommentsByPostId(Long postId) {
-        List<Comment> commentList = this.postsService.findAllCommentsByPostId(postId);
+    public ResponseEntity<List<Comment>> findAllCommentsByPostId(Long postId,  Long selectedUserProfileId) {
+        List<Comment> commentList = this.postsService.findAllCommentsByPostId(postId, selectedUserProfileId);
         return new ResponseEntity<>(commentList, HttpStatus.OK);
     }
 }

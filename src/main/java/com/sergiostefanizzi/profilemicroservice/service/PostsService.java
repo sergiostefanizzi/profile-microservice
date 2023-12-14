@@ -34,11 +34,11 @@ public class PostsService {
     private final CommentToCommentJpaConverter commentToCommentJpaConverter;
     private final KeycloakService keycloakService;
 
-    private void checkPostAccess(ProfileJpa postOwnerProfileJpa, Long postOwnerProfileId, Long selectedUserProfileId, Long postId) {
-        if (postOwnerProfileJpa.getIsPrivate() && (!Objects.equals(postOwnerProfileId, selectedUserProfileId))){
-            FollowsId checkId = this.followsRepository.findActiveAcceptedById(new FollowsId(selectedUserProfileId, postOwnerProfileId))
+    private void checkPostAccess(ProfileJpa postOwnerProfileJpa, Long selectedUserProfileId, Long postId) {
+        if (postOwnerProfileJpa.getIsPrivate() && (!Objects.equals(postOwnerProfileJpa.getId(), selectedUserProfileId))){
+            FollowsId checkId = this.followsRepository.findActiveAcceptedById(new FollowsId(selectedUserProfileId, postOwnerProfileJpa.getId()))
                     .orElseThrow(() ->  new PostAccessForbiddenException(postId));
-            log.info("Id "+checkId.getFollowerId()+"e' segue da ID "+ selectedUserProfileId);
+            log.info("Id "+checkId.getFollowedId()+" e' seguito da ID "+ selectedUserProfileId);
         }
     }
 
@@ -102,12 +102,10 @@ public class PostsService {
 
         PostJpa postJpa = this.postsRepository.getReferenceById(postId);
         ProfileJpa profileJpa = postJpa.getProfile();
-        Long profileId = profileJpa.getId();
-
         // Se il profilo del post e' pubblico, il post puo' essere visto liberamente
         // Se è privato controllo prima che il profile che ha pubblicato il post appartiene a chi ha inviato la richiesta
         // Se non appartiene, controllo infine se chi ha inviato la richiesta segue il profilo privato che ha pubblicato il post
-        checkPostAccess(profileJpa, profileId, selectedUserProfileId, postId);
+        checkPostAccess(profileJpa, selectedUserProfileId, postId);
 
 
         return this.postToPostJpaConverter.convertBack(
@@ -134,11 +132,9 @@ public class PostsService {
                 .orElseThrow(() -> new PostNotFoundException(postId));
 
 
-        Long postOwnerProfileId = postOwnerProfileJpa.getId();
-
         // se il post appartiene a un profilo privato oppure non appartiene a chi ha messo il like
         // controllo che chi mette like segua regolarmente l'autore del post
-        checkPostAccess(postOwnerProfileJpa, postOwnerProfileId, selectedUserProfileId, postId);
+        checkPostAccess(postOwnerProfileJpa, selectedUserProfileId, postId);
 
         // Controllo l'esistenza del like, se non esiste lo creo con il like ottenuto dal controller
         Optional<LikeJpa> optionalLikeJpa = this.likesRepository.findActiveById(new LikeId(selectedUserProfileId, postId));
@@ -153,16 +149,13 @@ public class PostsService {
 
     @Transactional
     public List<Like> findAllLikesByPostId(Long postId, Long selectedUserProfileId) {
-        // Controllo poi l'esistenza del profilo di chi vuole vedere i like
-        ProfileJpa selectedProfileJpa = this.profilesRepository.findActiveById(selectedUserProfileId)
-                .orElseThrow(() -> new ProfileNotFoundException(selectedUserProfileId));
         // Controllo che questo profilo sia all'interno del jwt
         checkProfileList(selectedUserProfileId, this.keycloakService);
 
         ProfileJpa postOwnerProfileJpa = this.profilesRepository.findActiveByPostId(postId)
                 .orElseThrow(() -> new PostNotFoundException(postId));
 
-        checkPostAccess(selectedProfileJpa, postOwnerProfileJpa.getId(), selectedUserProfileId, postId);
+        checkPostAccess(postOwnerProfileJpa, selectedUserProfileId, postId);
 
 
         return this.likesRepository.findAllActiveByPostId(postId)
@@ -171,21 +164,29 @@ public class PostsService {
 
     @Transactional
     public Comment addComment(Comment comment) {
-        // TODO mi serve il JWT
-        // Controllo che chi vuole inserire il comment abbia l'autorizzazione per farlo
-        // sia controllando il profilo
-        // sia controllando che il profilo a cui appartiene il post sia visibile da chi vuole mettere like
+        Long selectedUserProfileId = comment.getProfileId();
+        Long postId = comment.getPostId();
+        //controllo l'esistenza di chi vuole commentare
+        ProfileJpa selectedProfileJpa = this.profilesRepository.findActiveById(selectedUserProfileId)
+                .orElseThrow(() -> new ProfileNotFoundException(selectedUserProfileId));
+        // Controllo che questo profilo sia all'interno del jwt
+        checkProfileList(selectedUserProfileId, this.keycloakService);
+
         // Controllo prima l'esistenza del post
-        PostJpa postJpa = this.postsRepository.findActiveById(comment.getPostId())
-                .orElseThrow(() -> new PostNotFoundException(comment.getPostId()));
+        PostJpa postJpa = this.postsRepository.findActiveById(postId)
+                .orElseThrow(() -> new PostNotFoundException(postId));
+
         if (postJpa.getPostType().equals(Post.PostTypeEnum.POST)){
+
             // Controllo l'esistenza del profilo che vuole commentare il post
-            ProfileJpa profileJpa = this.profilesRepository.findActiveById(comment.getProfileId())
+            ProfileJpa postOwnerProfileJpa = this.profilesRepository.findActiveById(comment.getProfileId())
                     .orElseThrow(() -> new ProfileNotFoundException(comment.getProfileId()));
+
+            checkPostAccess(postOwnerProfileJpa, selectedUserProfileId, postId);
 
             CommentJpa commentJpa = this.commentToCommentJpaConverter.convert(comment);
             assert commentJpa != null;
-            commentJpa.setProfile(profileJpa);
+            commentJpa.setProfile(selectedProfileJpa);
             commentJpa.setPost(postJpa);
             commentJpa.setCreatedAt(LocalDateTime.now());
 
@@ -199,8 +200,11 @@ public class PostsService {
     }
 
     @Transactional
-    public Comment updateCommentById(Long commentId, CommentPatch commentPatch) {
+    public Comment updateCommentById(Long commentId, Long selectedUserProfileId, CommentPatch commentPatch) {
         CommentJpa commentJpa = this.commentsRepository.getReferenceById(commentId);
+
+        checkProfileListAndIds(commentJpa.getProfile().getId(), selectedUserProfileId, this.keycloakService);
+
 
         commentJpa.setContent(commentPatch.getContent());
         commentJpa.setUpdatedAt(LocalDateTime.now());
@@ -211,21 +215,26 @@ public class PostsService {
     }
 
     @Transactional
-    public void deleteCommentById(Long commentId) {
+    public void deleteCommentById(Long commentId, Long selectedUserProfileId) {
         CommentJpa commentJpa = this.commentsRepository.getReferenceById(commentId);
+
+        checkProfileListAndIds(commentJpa.getProfile().getId(), selectedUserProfileId, this.keycloakService);
 
         commentJpa.setDeletedAt(LocalDateTime.now());
 
         this.commentsRepository.save(commentJpa);
     }
     @Transactional
-    public List<Comment> findAllCommentsByPostId(Long postId) {
+    public List<Comment> findAllCommentsByPostId(Long postId, Long selectedUserProfileId) {
+        checkProfileList(selectedUserProfileId, this.keycloakService);
         return this.commentsRepository.findAllActiveByPostId(postId)
                 .stream().map(this.commentToCommentJpaConverter::convertBack).toList();
     }
 
     @Transactional
-    public List<Post> profileFeedByProfileId(Long profileId, Boolean onlyPost) {
+    public List<Post> profileFeedByProfileId(Long profileId, Long selectedUserProfileId, Boolean onlyPost) {
+        checkProfileListAndIds(profileId, selectedUserProfileId, this.keycloakService);
+
         if (onlyPost == null){
             return this.postsRepository.getFeedByProfileId(profileId)
                     .stream().map(this.postToPostJpaConverter::convertBack).toList();
