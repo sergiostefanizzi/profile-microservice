@@ -1613,22 +1613,25 @@ class PostsServiceTest {
         verify(this.commentToCommentJpaConverter, times(0)).convertBack(any(CommentJpa.class));
     }
 
-/*
+
     @Test
     void testProfileFeedByProfileId_Null_OnlyPost_Success(){
         List<PostJpa> postJpaList = createPostJpaList();
 
         List<Post> convertedPostList = createConvertedPostList();
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
         when(this.postsRepository.getFeedByProfileId(anyLong())).thenReturn(postJpaList);
         when(this.postToPostJpaConverter.convertBack(postJpaList.get(0))).thenReturn(convertedPostList.get(0));
         when(this.postToPostJpaConverter.convertBack(postJpaList.get(1))).thenReturn(convertedPostList.get(1));
         when(this.postToPostJpaConverter.convertBack(postJpaList.get(2))).thenReturn(convertedPostList.get(2));
         when(this.postToPostJpaConverter.convertBack(postJpaList.get(3))).thenReturn(convertedPostList.get(3));
 
-        List<Post> postList = this.postsService.profileFeedByProfileId(profileId, null);
+        List<Post> postList = this.postsService.profileFeedByProfileId(profileId, profileId,null);
 
         assertEquals(convertedPostList, postList);
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
         verify(this.postsRepository, times(1)).getFeedByProfileId(anyLong());
         verify(this.postToPostJpaConverter, times(4)).convertBack(any(PostJpa.class));
         verify(this.postsRepository, times(0)).getPostFeedByProfileId(anyLong());
@@ -1643,13 +1646,66 @@ class PostsServiceTest {
 
         List<Post> convertedPostList = createConvertedPostList().stream().filter(post -> post.getPostType().equals(Post.PostTypeEnum.POST)).toList();
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
         when(this.postsRepository.getPostFeedByProfileId(anyLong())).thenReturn(postJpaList);
         when(this.postToPostJpaConverter.convertBack(postJpaList.get(0))).thenReturn(convertedPostList.get(0));
         when(this.postToPostJpaConverter.convertBack(postJpaList.get(1))).thenReturn(convertedPostList.get(1));
 
-        List<Post> postList = this.postsService.profileFeedByProfileId(profileId, true);
+        List<Post> postList = this.postsService.profileFeedByProfileId(profileId, profileId, true);
 
         assertEquals(convertedPostList, postList);
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(0)).getFeedByProfileId(anyLong());
+        verify(this.postToPostJpaConverter, times(2)).convertBack(any(PostJpa.class));
+        verify(this.postsRepository, times(1)).getPostFeedByProfileId(anyLong());
+        verify(this.postsRepository, times(0)).getStoryFeedByProfileId(anyLong());
+
+        log.info(postList.toString());
+    }
+
+
+    @Test
+    void testProfileFeedByProfileId_False_OnlyPost_Success(){
+        List<PostJpa> postJpaList = createPostJpaList().stream().filter(postJpa -> postJpa.getPostType().equals(Post.PostTypeEnum.STORY)).toList();
+
+        List<Post> convertedPostList = createConvertedPostList().stream().filter(post -> post.getPostType().equals(Post.PostTypeEnum.STORY)).toList();
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.postsRepository.getStoryFeedByProfileId(anyLong())).thenReturn(postJpaList);
+        when(this.postToPostJpaConverter.convertBack(postJpaList.get(0))).thenReturn(convertedPostList.get(0));
+        when(this.postToPostJpaConverter.convertBack(postJpaList.get(1))).thenReturn(convertedPostList.get(1));
+
+        List<Post> postList = this.postsService.profileFeedByProfileId(profileId,  profileId,false);
+
+        assertEquals(convertedPostList, postList);
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(0)).getFeedByProfileId(anyLong());
+        verify(this.postToPostJpaConverter, times(2)).convertBack(any(PostJpa.class));
+        verify(this.postsRepository, times(0)).getPostFeedByProfileId(anyLong());
+        verify(this.postsRepository, times(1)).getStoryFeedByProfileId(anyLong());
+
+        log.info(postList.toString());
+    }
+
+    @Test
+    void testProfileFeedByProfileId_True_OnlyPost_ValidatedOnKeycloack_Success(){
+        List<PostJpa> postJpaList = createPostJpaList().stream().filter(postJpa -> postJpa.getPostType().equals(Post.PostTypeEnum.POST)).toList();
+
+        List<Post> convertedPostList = createConvertedPostList().stream().filter(post -> post.getPostType().equals(Post.PostTypeEnum.POST)).toList();
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(true);
+        when(this.postsRepository.getPostFeedByProfileId(anyLong())).thenReturn(postJpaList);
+        when(this.postToPostJpaConverter.convertBack(postJpaList.get(0))).thenReturn(convertedPostList.get(0));
+        when(this.postToPostJpaConverter.convertBack(postJpaList.get(1))).thenReturn(convertedPostList.get(1));
+
+        List<Post> postList = this.postsService.profileFeedByProfileId(profileId, profileId, true);
+
+        assertEquals(convertedPostList, postList);
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
         verify(this.postsRepository, times(0)).getFeedByProfileId(anyLong());
         verify(this.postToPostJpaConverter, times(2)).convertBack(any(PostJpa.class));
         verify(this.postsRepository, times(1)).getPostFeedByProfileId(anyLong());
@@ -1659,24 +1715,18 @@ class PostsServiceTest {
     }
 
     @Test
-    void testProfileFeedByProfileId_False_OnlyPost_Success(){
-        List<PostJpa> postJpaList = createPostJpaList().stream().filter(postJpa -> postJpa.getPostType().equals(Post.PostTypeEnum.STORY)).toList();
+    void testProfileFeedByProfileId_NotInProfileListException_Failed(){
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(false);
 
-        List<Post> convertedPostList = createConvertedPostList().stream().filter(post -> post.getPostType().equals(Post.PostTypeEnum.STORY)).toList();
+        assertThrows(NotInProfileListException.class, () -> this.postsService.profileFeedByProfileId(profileId, profileId, true));
 
-        when(this.postsRepository.getStoryFeedByProfileId(anyLong())).thenReturn(postJpaList);
-        when(this.postToPostJpaConverter.convertBack(postJpaList.get(0))).thenReturn(convertedPostList.get(0));
-        when(this.postToPostJpaConverter.convertBack(postJpaList.get(1))).thenReturn(convertedPostList.get(1));
-
-        List<Post> postList = this.postsService.profileFeedByProfileId(profileId, false);
-
-        assertEquals(convertedPostList, postList);
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
         verify(this.postsRepository, times(0)).getFeedByProfileId(anyLong());
-        verify(this.postToPostJpaConverter, times(2)).convertBack(any(PostJpa.class));
+        verify(this.postToPostJpaConverter, times(0)).convertBack(any(PostJpa.class));
         verify(this.postsRepository, times(0)).getPostFeedByProfileId(anyLong());
-        verify(this.postsRepository, times(1)).getStoryFeedByProfileId(anyLong());
-
-        log.info(postList.toString());
+        verify(this.postsRepository, times(0)).getStoryFeedByProfileId(anyLong());
     }
 
 
@@ -1731,6 +1781,6 @@ class PostsServiceTest {
         return postJpaList;
     }
 
-     */
+
 
 }
