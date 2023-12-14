@@ -118,8 +118,11 @@ public class PostsService {
         Long postId = like.getPostId();
         Long selectedUserProfileId = like.getProfileId();
         // Controllo poi l'esistenza del profilo di chi vuole mettere like
+
         ProfileJpa selectedProfileJpa = this.profilesRepository.findActiveById(selectedUserProfileId)
                 .orElseThrow(() -> new ProfileNotFoundException(selectedUserProfileId));
+
+
 
         // Controllo che chi vuole mettere il like sia presente all'interno del jwt
         checkProfileList(like.getProfileId(), this.keycloakService);
@@ -167,8 +170,11 @@ public class PostsService {
         Long selectedUserProfileId = comment.getProfileId();
         Long postId = comment.getPostId();
         //controllo l'esistenza di chi vuole commentare
+
         ProfileJpa selectedProfileJpa = this.profilesRepository.findActiveById(selectedUserProfileId)
                 .orElseThrow(() -> new ProfileNotFoundException(selectedUserProfileId));
+
+
         // Controllo che questo profilo sia all'interno del jwt
         checkProfileList(selectedUserProfileId, this.keycloakService);
 
@@ -179,8 +185,8 @@ public class PostsService {
         if (postJpa.getPostType().equals(Post.PostTypeEnum.POST)){
 
             // Controllo l'esistenza del profilo che vuole commentare il post
-            ProfileJpa postOwnerProfileJpa = this.profilesRepository.findActiveById(comment.getProfileId())
-                    .orElseThrow(() -> new ProfileNotFoundException(comment.getProfileId()));
+            ProfileJpa postOwnerProfileJpa = this.profilesRepository.findActiveByPostId(postId)
+                    .orElseThrow(() -> new PostNotFoundException(postId));
 
             checkPostAccess(postOwnerProfileJpa, selectedUserProfileId, postId);
 
@@ -227,6 +233,12 @@ public class PostsService {
     @Transactional
     public List<Comment> findAllCommentsByPostId(Long postId, Long selectedUserProfileId) {
         checkProfileList(selectedUserProfileId, this.keycloakService);
+
+        ProfileJpa postOwnerProfileJpa = this.profilesRepository.findActiveByPostId(postId)
+                        .orElseThrow(() -> new PostNotFoundException(postId));
+
+        checkPostAccess(postOwnerProfileJpa, selectedUserProfileId, postId);
+
         return this.commentsRepository.findAllActiveByPostId(postId)
                 .stream().map(this.commentToCommentJpaConverter::convertBack).toList();
     }

@@ -65,6 +65,7 @@ class PostsServiceTest {
     private Long profileId = 11L;
     private Post newPost;
     private PostJpa savedPostJpa;
+    private PostJpa savedStoryJpa;
     private PostJpa savedPostJpa2;
     private PostJpa savedPrivatePostJpa;
 
@@ -89,6 +90,7 @@ class PostsServiceTest {
         this.savedPostJpa.setProfile(profileJpa);
         this.savedPostJpa.setId(1L);
 
+
         this.savedPostJpa2 = new PostJpa(contentUrl, postType);
         this.savedPostJpa2.setCaption(caption);
         this.savedPostJpa2.setProfile(profileJpa);
@@ -99,6 +101,11 @@ class PostsServiceTest {
         this.savedPrivatePostJpa.setProfile(profileJpa2);
         this.savedPrivatePostJpa.setId(3L);
 
+
+        this.savedStoryJpa = new PostJpa(contentUrl, Post.PostTypeEnum.STORY);
+        this.savedStoryJpa.setCaption(caption);
+        this.savedStoryJpa.setProfile(profileJpa);
+        this.savedStoryJpa.setId(4L);
 
 
         Map<String, Object> headers = new HashMap<>();
@@ -956,24 +963,63 @@ class PostsServiceTest {
         verify(this.likesRepository, times(0)).findAllActiveByPostId(anyLong());
         verify(this.likeToLikeJpaConverter, times(0)).convertBack(any(LikeJpa.class));
     }
-/*
+
     @Test
-    void testAddCommentSuccess(){
+    void testAddComment_Success(){
         String content = "Commento al post";
         CommentJpa commentJpa = new CommentJpa(content);
         Long commentId = 1L;
-        Comment comment = new Comment(
+        Comment newComment = new Comment(
                 this.profileJpa.getId(),
                 this.savedPostJpa.getId(),
                 content
         );
-        comment.setId(commentId);
+        newComment.setId(commentId);
 
-        when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa));
         when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa));
         when(this.commentToCommentJpaConverter.convert(any(Comment.class))).thenReturn(commentJpa);
         when(this.commentsRepository.save(any(CommentJpa.class))).thenReturn(commentJpa);
-        when(this.commentToCommentJpaConverter.convertBack(any(CommentJpa.class))).thenReturn(comment);
+        when(this.commentToCommentJpaConverter.convertBack(any(CommentJpa.class))).thenReturn(newComment);
+
+        Comment savedComment = this.postsService.addComment(newComment);
+
+        assertEquals(newComment, savedComment);
+        assertEquals(content, savedComment.getContent());
+        log.info("Comment created at -> "+commentJpa.getCreatedAt());
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.commentToCommentJpaConverter, times(1)).convert(any(Comment.class));
+        verify(this.commentsRepository, times(1)).save(any(CommentJpa.class));
+        verify(this.commentToCommentJpaConverter, times(1)).convertBack(any(CommentJpa.class));
+    }
+
+    @Test
+    void testAddComment_ValidatedOnKeycloak_Success(){
+        String content = "Commento al post";
+        CommentJpa commentJpa = new CommentJpa(content);
+        Long commentId = 1L;
+        Comment newComment = new Comment(
+                this.profileJpa.getId(),
+                this.savedPostJpa.getId(),
+                content
+        );
+        newComment.setId(commentId);
+
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(true);
+        when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa));
+        when(this.commentToCommentJpaConverter.convert(any(Comment.class))).thenReturn(commentJpa);
+        when(this.commentsRepository.save(any(CommentJpa.class))).thenReturn(commentJpa);
+        when(this.commentToCommentJpaConverter.convertBack(any(CommentJpa.class))).thenReturn(newComment);
 
         Comment savedComment = this.postsService.addComment(new Comment(this.profileJpa.getId(), this.savedPostJpa.getId(), content));
 
@@ -983,56 +1029,200 @@ class PostsServiceTest {
         assertEquals(this.savedPostJpa.getId(), savedComment.getPostId());
         assertEquals(content, savedComment.getContent());
         log.info("Comment created at -> "+commentJpa.getCreatedAt());
-        verify(this.postsRepository, times(1)).findActiveById(anyLong());
         verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.commentToCommentJpaConverter, times(1)).convert(any(Comment.class));
         verify(this.commentsRepository, times(1)).save(any(CommentJpa.class));
         verify(this.commentToCommentJpaConverter, times(1)).convertBack(any(CommentJpa.class));
     }
 
     @Test
-    void testAddComment_PostNotFound_Failed(){
-        when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.empty());
+    void testAddComment_PrivatePost_Success(){
+        String content = "Commento al post";
+        CommentJpa commentJpa = new CommentJpa(content);
+        Long commentId = 1L;
+        Comment newComment = new Comment(
+                this.profileJpa.getId(),
+                this.savedPrivatePostJpa.getId(),
+                content
+        );
+        newComment.setId(commentId);
 
-        assertThrows(PostNotFoundException.class, () -> this.postsService.addComment(new Comment(this.profileJpa.getId(), this.savedPostJpa.getId(), "Commento al post")));
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa2));
+        when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.of(new FollowsId(this.profileJpa.getId(), this.profileJpa2.getId())));
+        when(this.commentToCommentJpaConverter.convert(any(Comment.class))).thenReturn(commentJpa);
+        when(this.commentsRepository.save(any(CommentJpa.class))).thenReturn(commentJpa);
+        when(this.commentToCommentJpaConverter.convertBack(any(CommentJpa.class))).thenReturn(newComment);
 
+        Comment savedComment = this.postsService.addComment(newComment);
+
+        assertEquals(newComment, savedComment);
+        assertEquals(content, savedComment.getContent());
+        log.info("Comment created at -> "+commentJpa.getCreatedAt());
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
         verify(this.postsRepository, times(1)).findActiveById(anyLong());
-        verify(this.profilesRepository, times(0)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
+        verify(this.followsRepository, times(1)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.commentToCommentJpaConverter, times(1)).convert(any(Comment.class));
+        verify(this.commentsRepository, times(1)).save(any(CommentJpa.class));
+        verify(this.commentToCommentJpaConverter, times(1)).convertBack(any(CommentJpa.class));
+    }
+
+    @Test
+    void testAddComment_PrivatePost_Failed(){
+        String content = "Commento al post";
+        Long commentId = 1L;
+        Comment newComment = new Comment(
+                this.profileJpa.getId(),
+                this.savedPrivatePostJpa.getId(),
+                content
+        );
+        newComment.setId(commentId);
+
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa2));
+        when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.empty());
+
+        assertThrows(PostAccessForbiddenException.class, () -> this.postsService.addComment(newComment));
+
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
+        verify(this.followsRepository, times(1)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.commentToCommentJpaConverter, times(0)).convert(any(Comment.class));
         verify(this.commentsRepository, times(0)).save(any(CommentJpa.class));
         verify(this.commentToCommentJpaConverter, times(0)).convertBack(any(CommentJpa.class));
     }
 
     @Test
-    void testAddComment_ProfileNotFound_Failed(){
-        when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa));
-        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.empty());
-        assertThrows(ProfileNotFoundException.class, () -> this.postsService.addComment(new Comment(this.profileJpa.getId(), this.savedPostJpa.getId(), "Commento al post")));
+    void testAddComment_SelectedUserProfileNotFound_Failed(){
+        String content = "Commento al post";
+        Long commentId = 1L;
+        Comment newComment = new Comment(
+                this.profileJpa.getId(),
+                this.savedPostJpa.getId(),
+                content
+        );
+        newComment.setId(commentId);
 
-        verify(this.postsRepository, times(1)).findActiveById(anyLong());
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.empty());
+
+
+        assertThrows(ProfileNotFoundException.class, () -> this.postsService.addComment(newComment));
+
+
         verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.securityContext, times(0)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(0)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(0)).findActiveByPostId(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.commentToCommentJpaConverter, times(0)).convert(any(Comment.class));
         verify(this.commentsRepository, times(0)).save(any(CommentJpa.class));
         verify(this.commentToCommentJpaConverter, times(0)).convertBack(any(CommentJpa.class));
+    }
 
+    @Test
+    void testAddComment_PostNotFound_Failed(){
+        String content = "Commento al post";
+        Long commentId = 1L;
+        Comment newComment = new Comment(
+                this.profileJpa.getId(),
+                this.savedPostJpa.getId(),
+                content
+        );
+        newComment.setId(commentId);
+
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.empty());
+
+        assertThrows(PostNotFoundException.class, () -> this.postsService.addComment(newComment));
+
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(0)).findActiveByPostId(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.commentToCommentJpaConverter, times(0)).convert(any(Comment.class));
+        verify(this.commentsRepository, times(0)).save(any(CommentJpa.class));
+        verify(this.commentToCommentJpaConverter, times(0)).convertBack(any(CommentJpa.class));
+    }
+
+    @Test
+    void testAddComment_PostNotFound_DeletedPostOwner_Failed(){
+        String content = "Commento al post";
+        Long commentId = 1L;
+        Comment newComment = new Comment(
+                this.profileJpa.getId(),
+                this.savedPostJpa.getId(),
+                content
+        );
+        newComment.setId(commentId);
+
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedPostJpa));
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.empty());
+
+        assertThrows(PostNotFoundException.class, () -> this.postsService.addComment(newComment));
+
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.postsRepository, times(1)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.commentToCommentJpaConverter, times(0)).convert(any(Comment.class));
+        verify(this.commentsRepository, times(0)).save(any(CommentJpa.class));
+        verify(this.commentToCommentJpaConverter, times(0)).convertBack(any(CommentJpa.class));
     }
 
     @Test
     void testAddComment_CommentOnStory_Failed(){
-        PostJpa savedStoryPostJpa = new PostJpa(contentUrl, Post.PostTypeEnum.STORY);
-        savedStoryPostJpa.setCaption(caption);
-        savedStoryPostJpa.setProfile(profileJpa);
-        savedStoryPostJpa.setId(postId);
-        when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(savedStoryPostJpa));
-        assertThrows(CommentOnStoryException.class, () -> this.postsService.addComment(new Comment(this.profileJpa.getId(), this.savedPostJpa.getId(), "Commento al post")));
+        String content = "Commento al post";
+        Long commentId = 1L;
 
+        Comment newComment = new Comment(
+                this.profileJpa.getId(),
+                this.savedStoryJpa.getId(),
+                content
+        );
+        newComment.setId(commentId);
+
+        when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.postsRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.savedStoryJpa));
+
+        assertThrows(CommentOnStoryException.class, () -> this.postsService.addComment(newComment));
+
+
+        verify(this.profilesRepository, times(1)).findActiveById(anyLong());
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
         verify(this.postsRepository, times(1)).findActiveById(anyLong());
-        verify(this.profilesRepository, times(0)).findActiveById(anyLong());
+        verify(this.profilesRepository, times(0)).findActiveByPostId(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.commentToCommentJpaConverter, times(0)).convert(any(Comment.class));
         verify(this.commentsRepository, times(0)).save(any(CommentJpa.class));
         verify(this.commentToCommentJpaConverter, times(0)).convertBack(any(CommentJpa.class));
-
     }
+
+
 
     @Test
     void testUpdateCommentById_Success(){
@@ -1042,27 +1232,103 @@ class PostsServiceTest {
         Long commentId = 1L;
         CommentJpa commentJpa = new CommentJpa(content);
         commentJpa.setId(commentId);
-        commentJpa.setProfile(profileJpa);
+        commentJpa.setProfile(this.profileJpa);
         commentJpa.setPost(this.savedPostJpa);
 
         Comment convertedComment = new Comment(profileJpa.getId(), this.savedPostJpa.getId(), newContent);
         convertedComment.setId(commentId);
 
         when(this.commentsRepository.getReferenceById(anyLong())).thenReturn(commentJpa);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
         when(this.commentsRepository.save(any(CommentJpa.class))).thenReturn(commentJpa);
         when(this.commentToCommentJpaConverter.convertBack(any(CommentJpa.class))).thenReturn(convertedComment);
 
-        Comment updatedComment = this.postsService.updateCommentById(commentId, commentPatch);
+        Comment updatedComment = this.postsService.updateCommentById(commentId, profileId, commentPatch);
 
-        assertNotNull(updatedComment);
-        assertEquals(commentId, updatedComment.getId());
-        assertEquals(profileJpa.getId(), updatedComment.getProfileId());
-        assertEquals(this.savedPostJpa.getId(), updatedComment.getPostId());
-        assertEquals(newContent, updatedComment.getContent());
-        log.info("Comment's content-> "+commentJpa.getContent());
+        assertEquals(convertedComment, updatedComment);
+        log.info(updatedComment.toString());
         verify(this.commentsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
         verify(this.commentsRepository, times(1)).save(any(CommentJpa.class));
         verify(this.commentToCommentJpaConverter, times(1)).convertBack(any(CommentJpa.class));
+    }
+
+    @Test
+    void testUpdateCommentById_ValidatedOnKeycloak_Success(){
+        String content = "Commento al post";
+        String newContent = "Commento al post modificato";
+        CommentPatch commentPatch = new CommentPatch(newContent);
+        Long commentId = 1L;
+        CommentJpa commentJpa = new CommentJpa(content);
+        commentJpa.setId(commentId);
+        commentJpa.setProfile(this.profileJpa);
+        commentJpa.setPost(this.savedPostJpa);
+
+        Comment convertedComment = new Comment(profileJpa.getId(), this.savedPostJpa.getId(), newContent);
+        convertedComment.setId(commentId);
+
+        when(this.commentsRepository.getReferenceById(anyLong())).thenReturn(commentJpa);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(true);
+        when(this.commentsRepository.save(any(CommentJpa.class))).thenReturn(commentJpa);
+        when(this.commentToCommentJpaConverter.convertBack(any(CommentJpa.class))).thenReturn(convertedComment);
+
+        Comment updatedComment = this.postsService.updateCommentById(commentId, profileId, commentPatch);
+
+        assertEquals(convertedComment, updatedComment);
+        log.info(updatedComment.toString());
+        verify(this.commentsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.commentsRepository, times(1)).save(any(CommentJpa.class));
+        verify(this.commentToCommentJpaConverter, times(1)).convertBack(any(CommentJpa.class));
+    }
+
+    @Test
+    void testUpdateCommentById_NotInsideProfileList_Failed(){
+        String content = "Commento al post";
+        String newContent = "Commento al post modificato";
+        CommentPatch commentPatch = new CommentPatch(newContent);
+        Long commentId = 1L;
+        CommentJpa commentJpa = new CommentJpa(content);
+        commentJpa.setId(commentId);
+        commentJpa.setProfile(this.profileJpa);
+        commentJpa.setPost(this.savedPostJpa);
+
+        when(this.commentsRepository.getReferenceById(anyLong())).thenReturn(commentJpa);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(false);
+
+        assertThrows(NotInProfileListException.class, () -> this.postsService.updateCommentById(commentId, profileId, commentPatch));
+
+        verify(this.commentsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.commentsRepository, times(0)).save(any(CommentJpa.class));
+        verify(this.commentToCommentJpaConverter, times(0)).convertBack(any(CommentJpa.class));
+    }
+
+    @Test
+    void testUpdateCommentById_IdsMismatch_Failed(){
+        String content = "Commento al post";
+        String newContent = "Commento al post modificato";
+        CommentPatch commentPatch = new CommentPatch(newContent);
+        Long commentId = 1L;
+        CommentJpa commentJpa = new CommentJpa(content);
+        commentJpa.setId(commentId);
+        commentJpa.setProfile(this.profileJpa);
+        commentJpa.setPost(this.savedPostJpa);
+
+        when(this.commentsRepository.getReferenceById(anyLong())).thenReturn(commentJpa);
+
+        assertThrows(IdsMismatchException.class, () -> this.postsService.updateCommentById(commentId, Long.MAX_VALUE, commentPatch));
+
+        verify(this.commentsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.securityContext, times(0)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.commentsRepository, times(0)).save(any(CommentJpa.class));
+        verify(this.commentToCommentJpaConverter, times(0)).convertBack(any(CommentJpa.class));
     }
 
 
@@ -1072,34 +1338,103 @@ class PostsServiceTest {
         Long commentId = 1L;
         CommentJpa commentJpa = new CommentJpa(content);
         commentJpa.setId(commentId);
-        commentJpa.setProfile(profileJpa);
+        commentJpa.setProfile(this.profileJpa);
         commentJpa.setPost(this.savedPostJpa);
+        commentJpa.setId(commentId);
+
+        when(this.commentsRepository.getReferenceById(anyLong())).thenReturn(commentJpa);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.commentsRepository.save(any(CommentJpa.class))).thenReturn(commentJpa);
+
+        this.postsService.deleteCommentById(commentId, profileId);
+
+        log.info("Data commento eliminato --> "+commentJpa.getDeletedAt());
+        verify(this.commentsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.commentsRepository, times(1)).save(any(CommentJpa.class));
+    }
+
+    @Test
+    void testDeleteCommentById_ValidatedOnKeycloak_Success(){
+        String content = "Commento al post";
+        Long commentId = 1L;
+        CommentJpa commentJpa = new CommentJpa(content);
+        commentJpa.setId(commentId);
+        commentJpa.setProfile(this.profileJpa);
+        commentJpa.setPost(this.savedPostJpa);
+        commentJpa.setId(commentId);
+
+        when(this.commentsRepository.getReferenceById(anyLong())).thenReturn(commentJpa);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(true);
+        when(this.commentsRepository.save(any(CommentJpa.class))).thenReturn(commentJpa);
+
+        this.postsService.deleteCommentById(commentId, profileId);
+
+        log.info("Data commento eliminato --> "+commentJpa.getDeletedAt());
+        verify(this.commentsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.commentsRepository, times(1)).save(any(CommentJpa.class));
+    }
+
+    @Test
+    void testDeleteCommentById_NotInsideProfileList_Failed(){
+        String content = "Commento al post";
+        Long commentId = 1L;
+        CommentJpa commentJpa = new CommentJpa(content);
+        commentJpa.setId(commentId);
+        commentJpa.setProfile(this.profileJpa);
+        commentJpa.setPost(this.savedPostJpa);
+        commentJpa.setId(commentId);
+
+        when(this.commentsRepository.getReferenceById(anyLong())).thenReturn(commentJpa);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(false);
+
+        assertThrows(NotInProfileListException.class, () -> this.postsService.deleteCommentById(commentId, profileId));
+
+        log.info("Data commento eliminato --> "+commentJpa.getDeletedAt());
+        verify(this.commentsRepository, times(1)).getReferenceById(anyLong());
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.commentsRepository, times(0)).save(any(CommentJpa.class));
+    }
+
+    @Test
+    void testDeleteCommentById_IdsMismatch_Failed(){
+        String content = "Commento al post";
+        Long commentId = 1L;
+        CommentJpa commentJpa = new CommentJpa(content);
+        commentJpa.setId(commentId);
+        commentJpa.setProfile(this.profileJpa);
+        commentJpa.setPost(this.savedPostJpa);
+        commentJpa.setId(commentId);
 
         when(this.commentsRepository.getReferenceById(anyLong())).thenReturn(commentJpa);
 
-        this.postsService.deleteCommentById(commentId);
+        assertThrows(IdsMismatchException.class, () -> this.postsService.deleteCommentById(commentId, Long.MAX_VALUE));
 
         verify(this.commentsRepository, times(1)).getReferenceById(anyLong());
-        verify(this.commentsRepository, times(1)).save(any(CommentJpa.class));
+        verify(this.securityContext, times(0)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.commentsRepository, times(0)).save(any(CommentJpa.class));
     }
 
 
     @Test
     void testFindAllCommentsByPostId_Success(){
         List<ProfileJpa> profileJpaList = asList(
-          new ProfileJpa("pinco_pallino",false,1L),
-          new ProfileJpa("giuseppe_verdi",false,2L),
-          new ProfileJpa("marioRossi",false,3L)
+          this.profileJpa,
+          this.profileJpa2
         );
 
-        profileJpaList.get(0).setId(1L);
-        profileJpaList.get(1).setId(2L);
-        profileJpaList.get(2).setId(3L);
 
         List<Comment> commentList = asList(
-                new Comment(1L, 1L, "Commento1"),
-                new Comment(2L, 1L, "Commento2"),
-                new Comment(3L, 1L, "Commento3")
+                new Comment(this.profileJpa.getId(), this.savedPostJpa.getId(), "Commento1"),
+                new Comment(this.profileJpa2.getId(), this.savedPostJpa.getId(), "Commento2"),
+                new Comment(this.profileJpa.getId(), this.savedPostJpa.getId(), "Commento3")
         );
         commentList.get(0).setId(1L);
         commentList.get(1).setId(2L);
@@ -1110,30 +1445,175 @@ class PostsServiceTest {
                 new CommentJpa("Commento2"),
                 new CommentJpa("Commento3")
         );
+
         commentListJpa.get(0).setPost(this.savedPostJpa);
         commentListJpa.get(1).setPost(this.savedPostJpa);
         commentListJpa.get(2).setPost(this.savedPostJpa);
         commentListJpa.get(0).setProfile(profileJpaList.get(0));
         commentListJpa.get(1).setProfile(profileJpaList.get(1));
-        commentListJpa.get(2).setProfile(profileJpaList.get(2));
+        commentListJpa.get(2).setProfile(profileJpaList.get(0));
         commentListJpa.get(0).setId(1L);
         commentListJpa.get(1).setId(2L);
         commentListJpa.get(2).setId(3L);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.ofNullable(this.profileJpa));
         when(this.commentsRepository.findAllActiveByPostId(anyLong())).thenReturn(commentListJpa);
         when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(0))).thenReturn(commentList.get(0));
         when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(1))).thenReturn(commentList.get(1));
         when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(2))).thenReturn(commentList.get(2));
 
-        List<Comment> returnedCommentList = this.postsService.findAllCommentsByPostId(this.savedPostJpa.getId());
+        List<Comment> returnedCommentList = this.postsService.findAllCommentsByPostId(this.savedPostJpa.getId(), profileId);
 
         assertNotNull(returnedCommentList);
         assertEquals(commentList, returnedCommentList);
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.commentsRepository, times(1)).findAllActiveByPostId(anyLong());
+        verify(this.commentToCommentJpaConverter, times(3)).convertBack(any(CommentJpa.class));
+    }
+
+    @Test
+    void testFindAllCommentsByPostId_ValidatedOnKeycloak_Success(){
+        List<ProfileJpa> profileJpaList = asList(
+                this.profileJpa,
+                this.profileJpa2
+        );
+
+
+        List<Comment> commentList = asList(
+                new Comment(this.profileJpa.getId(), this.savedPostJpa.getId(), "Commento1"),
+                new Comment(this.profileJpa2.getId(), this.savedPostJpa.getId(), "Commento2"),
+                new Comment(this.profileJpa.getId(), this.savedPostJpa.getId(), "Commento3")
+        );
+        commentList.get(0).setId(1L);
+        commentList.get(1).setId(2L);
+        commentList.get(2).setId(3L);
+
+        List<CommentJpa> commentListJpa = asList(
+                new CommentJpa("Commento1"),
+                new CommentJpa("Commento2"),
+                new CommentJpa("Commento3")
+        );
+
+        commentListJpa.get(0).setPost(this.savedPostJpa);
+        commentListJpa.get(1).setPost(this.savedPostJpa);
+        commentListJpa.get(2).setPost(this.savedPostJpa);
+        commentListJpa.get(0).setProfile(profileJpaList.get(0));
+        commentListJpa.get(1).setProfile(profileJpaList.get(1));
+        commentListJpa.get(2).setProfile(profileJpaList.get(0));
+        commentListJpa.get(0).setId(1L);
+        commentListJpa.get(1).setId(2L);
+        commentListJpa.get(2).setId(3L);
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(true);
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.ofNullable(this.profileJpa));
+        when(this.commentsRepository.findAllActiveByPostId(anyLong())).thenReturn(commentListJpa);
+        when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(0))).thenReturn(commentList.get(0));
+        when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(1))).thenReturn(commentList.get(1));
+        when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(2))).thenReturn(commentList.get(2));
+
+        List<Comment> returnedCommentList = this.postsService.findAllCommentsByPostId(this.savedPostJpa.getId(), profileId);
+
+        assertNotNull(returnedCommentList);
+        assertEquals(commentList, returnedCommentList);
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.commentsRepository, times(1)).findAllActiveByPostId(anyLong());
         verify(this.commentToCommentJpaConverter, times(3)).convertBack(any(CommentJpa.class));
     }
 
 
+    @Test
+    void testFindAllCommentsByPostId_PrivatePost_Success(){
+        List<ProfileJpa> profileJpaList = asList(
+                this.profileJpa,
+                this.profileJpa2
+        );
+
+
+        List<Comment> commentList = asList(
+                new Comment(this.profileJpa.getId(), this.savedPostJpa2.getId(), "Commento1"),
+                new Comment(this.profileJpa2.getId(), this.savedPostJpa2.getId(), "Commento2"),
+                new Comment(this.profileJpa.getId(), this.savedPostJpa2.getId(), "Commento3")
+        );
+        commentList.get(0).setId(1L);
+        commentList.get(1).setId(2L);
+        commentList.get(2).setId(3L);
+
+        List<CommentJpa> commentListJpa = asList(
+                new CommentJpa("Commento1"),
+                new CommentJpa("Commento2"),
+                new CommentJpa("Commento3")
+        );
+
+        commentListJpa.get(0).setPost(this.savedPostJpa2);
+        commentListJpa.get(1).setPost(this.savedPostJpa2);
+        commentListJpa.get(2).setPost(this.savedPostJpa2);
+        commentListJpa.get(0).setProfile(profileJpaList.get(0));
+        commentListJpa.get(1).setProfile(profileJpaList.get(1));
+        commentListJpa.get(2).setProfile(profileJpaList.get(0));
+        commentListJpa.get(0).setId(1L);
+        commentListJpa.get(1).setId(2L);
+        commentListJpa.get(2).setId(3L);
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.ofNullable(this.profileJpa2));
+        when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.of(new FollowsId(this.profileJpa.getId(), this.profileJpa2.getId())));
+        when(this.commentsRepository.findAllActiveByPostId(anyLong())).thenReturn(commentListJpa);
+        when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(0))).thenReturn(commentList.get(0));
+        when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(1))).thenReturn(commentList.get(1));
+        when(this.commentToCommentJpaConverter.convertBack(commentListJpa.get(2))).thenReturn(commentList.get(2));
+
+        List<Comment> returnedCommentList = this.postsService.findAllCommentsByPostId(this.savedPostJpa.getId(), profileId);
+
+        assertNotNull(returnedCommentList);
+        assertEquals(commentList, returnedCommentList);
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
+        verify(this.followsRepository, times(1)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.commentsRepository, times(1)).findAllActiveByPostId(anyLong());
+        verify(this.commentToCommentJpaConverter, times(3)).convertBack(any(CommentJpa.class));
+    }
+
+    @Test
+    void testFindAllCommentsByPostId_NotInProfileListException_Failed(){
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(false);
+
+        assertThrows(NotInProfileListException.class, () -> this.postsService.findAllCommentsByPostId(postId, profileId));
+
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(0)).findActiveByPostId(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.commentsRepository, times(0)).findAllActiveByPostId(anyLong());
+        verify(this.commentToCommentJpaConverter, times(0)).convertBack(any(CommentJpa.class));
+    }
+
+    @Test
+    void testFindAllCommentsByPostId_PrivatePost_Failed(){
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.ofNullable(this.profileJpa2));
+        when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.empty());
+
+        assertThrows(PostAccessForbiddenException.class, () -> this.postsService.findAllCommentsByPostId(postId, profileId));
+
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(1)).findActiveByPostId(anyLong());
+        verify(this.followsRepository, times(1)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.commentsRepository, times(0)).findAllActiveByPostId(anyLong());
+        verify(this.commentToCommentJpaConverter, times(0)).convertBack(any(CommentJpa.class));
+    }
+
+/*
     @Test
     void testProfileFeedByProfileId_Null_OnlyPost_Success(){
         List<PostJpa> postJpaList = createPostJpaList();
