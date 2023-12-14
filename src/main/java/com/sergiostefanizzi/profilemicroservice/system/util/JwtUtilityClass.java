@@ -1,8 +1,13 @@
 package com.sergiostefanizzi.profilemicroservice.system.util;
 
+import com.sergiostefanizzi.profilemicroservice.model.FollowsId;
+import com.sergiostefanizzi.profilemicroservice.model.ProfileJpa;
+import com.sergiostefanizzi.profilemicroservice.repository.FollowsRepository;
 import com.sergiostefanizzi.profilemicroservice.service.KeycloakService;
+import com.sergiostefanizzi.profilemicroservice.system.exception.AccessForbiddenException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.IdsMismatchException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.NotInProfileListException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.PostAccessForbiddenException;
 import lombok.RequiredArgsConstructor;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
@@ -47,5 +52,9 @@ public final class JwtUtilityClass {
         if (Boolean.FALSE.equals(isInProfileListJwt(selectedUserProfileId)) && Boolean.FALSE.equals(keycloakService.isInProfileList(getJwtAccountId(), selectedUserProfileId))){
             throw new NotInProfileListException(selectedUserProfileId);
         }
+    }
+
+    public static Boolean checkAccess(ProfileJpa profileJpa, Long selectedUserProfileId, FollowsRepository followsRepository) {
+        return !profileJpa.getIsPrivate() || (Objects.equals(profileJpa.getId(), selectedUserProfileId)) || (followsRepository.findActiveAcceptedById(new FollowsId(selectedUserProfileId, profileJpa.getId())).isPresent());
     }
 }

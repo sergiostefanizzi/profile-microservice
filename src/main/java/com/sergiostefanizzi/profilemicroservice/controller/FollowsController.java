@@ -23,31 +23,26 @@ public class FollowsController implements FollowsApi {
     private final FollowsService followsService;
 
     @Override
-    public Optional<NativeWebRequest> getRequest() {
-        return FollowsApi.super.getRequest();
-    }
-
-    @Override
-    public ResponseEntity<Follows> addFollows(Long profileId, Long followsId, Boolean unfollow) {
-        Follows follows = this.followsService.addFollows(profileId, followsId, unfollow);
+    public ResponseEntity<Follows> addFollows(Long profileId, Long followsId, Long selectedUserProfileId, Boolean unfollow) {
+        Follows follows = this.followsService.addFollows(profileId, followsId, selectedUserProfileId, unfollow);
         return new ResponseEntity<>(follows, HttpStatus.OK);
     }
 
     @Override
-    public ResponseEntity<Follows> acceptFollows(Long profileId, Long followerId, Boolean rejectFollow) {
-        Follows follows = this.followsService.acceptFollows(profileId, followerId, rejectFollow);
+    public ResponseEntity<Follows> acceptFollows(Long profileId, Long followerId, Long selectedUserProfileId, Boolean rejectFollow) {
+        Follows follows = this.followsService.acceptFollows(profileId, followerId, selectedUserProfileId, rejectFollow);
         return new ResponseEntity<>(follows, HttpStatus.OK);
     }
 
     @Override
-    public ResponseEntity<ProfileFollowList> findAllFollowers(Long profileId) {
-        ProfileFollowList profileFollowList = this.followsService.findAllFollowers(profileId);
+    public ResponseEntity<ProfileFollowList> findAllFollowers(Long profileId, Long selectedUserProfileId) {
+        ProfileFollowList profileFollowList = this.followsService.findAllFollowers(profileId, selectedUserProfileId);
         return new ResponseEntity<>(profileFollowList, HttpStatus.OK);
     }
 
     @Override
-    public ResponseEntity<ProfileFollowList> findAllFollowings(Long profileId) {
-        ProfileFollowList profileFollowList = this.followsService.findAllFollowings(profileId);
+    public ResponseEntity<ProfileFollowList> findAllFollowings(Long profileId, Long selectedUserProfileId) {
+        ProfileFollowList profileFollowList = this.followsService.findAllFollowings(profileId, selectedUserProfileId);
         return new ResponseEntity<>(profileFollowList, HttpStatus.OK);
     }
 }

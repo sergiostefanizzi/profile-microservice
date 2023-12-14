@@ -674,11 +674,19 @@ paths:
           schema:
             type: integer
             format: int64
+        - name: selectedUserProfileId
+          in: query
+          description: Request Profile id
+          required: true
+          schema:
+            type: integer
+            format: int64
         - name: unfollow
           in: query
           description: unfollow
           schema:
             type: boolean
+
       responses:
         '200':
           description: Follow Request
@@ -719,6 +727,13 @@ paths:
         - name: followsId
           in: path
           description: Id of the profile that sent the follow request
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: selectedUserProfileId
+          in: query
+          description: Request Profile id
           required: true
           schema:
             type: integer
@@ -765,6 +780,13 @@ paths:
           schema:
             type: integer
             format: int64
+        - name: selectedUserProfileId
+          in: query
+          description: Request Profile id
+          required: true
+          schema:
+            type: integer
+            format: int64
       responses:
         '200':
           description: Followers list returned
@@ -794,6 +816,13 @@ paths:
         - name: profileId
           in: path
           description: Id of the profile
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - name: selectedUserProfileId
+          in: query
+          description: Request Profile id
           required: true
           schema:
             type: integer

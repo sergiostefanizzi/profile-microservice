@@ -34,14 +34,6 @@ public class PostsService {
     private final CommentToCommentJpaConverter commentToCommentJpaConverter;
     private final KeycloakService keycloakService;
 
-    private void checkPostAccess(ProfileJpa postOwnerProfileJpa, Long selectedUserProfileId, Long postId) {
-        if (postOwnerProfileJpa.getIsPrivate() && (!Objects.equals(postOwnerProfileJpa.getId(), selectedUserProfileId))){
-            FollowsId checkId = this.followsRepository.findActiveAcceptedById(new FollowsId(selectedUserProfileId, postOwnerProfileJpa.getId()))
-                    .orElseThrow(() ->  new PostAccessForbiddenException(postId));
-            log.info("Id "+checkId.getFollowedId()+" e' seguito da ID "+ selectedUserProfileId);
-        }
-    }
-
     private void createLike(Like like, ProfileJpa profileJpa, PostJpa postJpa) {
         LikeJpa likeJpa;
         likeJpa = this.likeToLikeJpaConverter.convert(like);
@@ -105,9 +97,9 @@ public class PostsService {
         // Se il profilo del post e' pubblico, il post puo' essere visto liberamente
         // Se è privato controllo prima che il profile che ha pubblicato il post appartiene a chi ha inviato la richiesta
         // Se non appartiene, controllo infine se chi ha inviato la richiesta segue il profilo privato che ha pubblicato il post
-        checkPostAccess(profileJpa, selectedUserProfileId, postId);
-
-
+        if (!checkAccess(profileJpa, selectedUserProfileId, this.followsRepository)){
+            throw new AccessForbiddenException("Post");
+        }
         return this.postToPostJpaConverter.convertBack(
                 postJpa
         );
@@ -137,8 +129,9 @@ public class PostsService {
 
         // se il post appartiene a un profilo privato oppure non appartiene a chi ha messo il like
         // controllo che chi mette like segua regolarmente l'autore del post
-        checkPostAccess(postOwnerProfileJpa, selectedUserProfileId, postId);
-
+        if (!checkAccess(postOwnerProfileJpa, selectedUserProfileId, this.followsRepository)){
+            throw new AccessForbiddenException("Post");
+        }
         // Controllo l'esistenza del like, se non esiste lo creo con il like ottenuto dal controller
         Optional<LikeJpa> optionalLikeJpa = this.likesRepository.findActiveById(new LikeId(selectedUserProfileId, postId));
         if (optionalLikeJpa.isPresent() && Boolean.TRUE.equals(removeLike)){
@@ -158,8 +151,10 @@ public class PostsService {
         ProfileJpa postOwnerProfileJpa = this.profilesRepository.findActiveByPostId(postId)
                 .orElseThrow(() -> new PostNotFoundException(postId));
 
-        checkPostAccess(postOwnerProfileJpa, selectedUserProfileId, postId);
 
+        if (!checkAccess(postOwnerProfileJpa, selectedUserProfileId, this.followsRepository)){
+            throw new AccessForbiddenException("Post");
+        }
 
         return this.likesRepository.findAllActiveByPostId(postId)
                 .stream().map(this.likeToLikeJpaConverter::convertBack).toList();
@@ -188,7 +183,9 @@ public class PostsService {
             ProfileJpa postOwnerProfileJpa = this.profilesRepository.findActiveByPostId(postId)
                     .orElseThrow(() -> new PostNotFoundException(postId));
 
-            checkPostAccess(postOwnerProfileJpa, selectedUserProfileId, postId);
+            if (!checkAccess(postOwnerProfileJpa, selectedUserProfileId, this.followsRepository)){
+                throw new AccessForbiddenException("Post");
+            }
 
             CommentJpa commentJpa = this.commentToCommentJpaConverter.convert(comment);
             assert commentJpa != null;
@@ -237,7 +234,10 @@ public class PostsService {
         ProfileJpa postOwnerProfileJpa = this.profilesRepository.findActiveByPostId(postId)
                         .orElseThrow(() -> new PostNotFoundException(postId));
 
-        checkPostAccess(postOwnerProfileJpa, selectedUserProfileId, postId);
+        if (!checkAccess(postOwnerProfileJpa, selectedUserProfileId, this.followsRepository)){
+            throw new AccessForbiddenException("Post");
+        }
+
 
         return this.commentsRepository.findAllActiveByPostId(postId)
                 .stream().map(this.commentToCommentJpaConverter::convertBack).toList();

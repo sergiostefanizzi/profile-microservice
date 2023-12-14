@@ -516,7 +516,7 @@ class PostsServiceTest {
         when(this.postsRepository.getReferenceById(anyLong())).thenReturn(this.savedPostJpa);
         when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.empty());
 
-        assertThrows(PostAccessForbiddenException.class, () -> this.postsService.find(postId, profileId));
+        assertThrows(AccessForbiddenException.class, () -> this.postsService.find(postId, profileId));
 
         verify(this.securityContext, times(1)).getAuthentication();
         verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
@@ -649,7 +649,7 @@ class PostsServiceTest {
         when(this.profilesRepository.findActiveById(anyLong())).thenReturn(Optional.of(this.profileJpa));
         when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.empty());
 
-        assertThrows(PostAccessForbiddenException.class, () -> this.postsService.addLike(false, like));
+        assertThrows(AccessForbiddenException.class, () -> this.postsService.addLike(false, like));
 
         verify(this.securityContext, times(1)).getAuthentication();
         verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
@@ -921,7 +921,7 @@ class PostsServiceTest {
         when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.empty());
 
 
-        assertThrows(PostAccessForbiddenException.class, () -> this.postsService.findAllLikesByPostId(postId, profileId));
+        assertThrows(AccessForbiddenException.class, () -> this.postsService.findAllLikesByPostId(postId, profileId));
 
         verify(this.securityContext, times(1)).getAuthentication();
         verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
@@ -1094,7 +1094,7 @@ class PostsServiceTest {
         when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa2));
         when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.empty());
 
-        assertThrows(PostAccessForbiddenException.class, () -> this.postsService.addComment(newComment));
+        assertThrows(AccessForbiddenException.class, () -> this.postsService.addComment(newComment));
 
         verify(this.profilesRepository, times(1)).findActiveById(anyLong());
         verify(this.securityContext, times(1)).getAuthentication();
@@ -1603,7 +1603,7 @@ class PostsServiceTest {
         when(this.profilesRepository.findActiveByPostId(anyLong())).thenReturn(Optional.of(this.profileJpa2));
         when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.empty());
 
-        assertThrows(PostAccessForbiddenException.class, () -> this.postsService.findAllCommentsByPostId(postId, profileId));
+        assertThrows(AccessForbiddenException.class, () -> this.postsService.findAllCommentsByPostId(postId, profileId));
 
         verify(this.securityContext, times(1)).getAuthentication();
         verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
