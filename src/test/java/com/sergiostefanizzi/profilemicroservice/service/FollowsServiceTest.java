@@ -588,8 +588,6 @@ class FollowsServiceTest {
         Long profileId = this.publicProfileJpa.getId();
         Long followedId = this.privateProfileJpa.getId();
 
-
-
         assertThrows(IdsMismatchException.class, () -> this.followsService.acceptFollows(followedId, profileId, Long.MAX_VALUE, false));
 
         verify(this.securityContext, times(0)).getAuthentication();
@@ -614,7 +612,6 @@ class FollowsServiceTest {
 
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
         when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.publicProfileJpa);
-        //when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.of(new FollowsId(this.publicProfileJpa.getId(), this.privateProfileJpa.getId())));
         when(this.followsRepository.findActiveFollowers(any(ProfileJpa.class))).thenReturn(asList(
                 this.publicProfileJpa2,
                 this.privateProfileJpa
@@ -629,6 +626,40 @@ class FollowsServiceTest {
         assertEquals(returnedProfileFollowList,profileFollowList);
         verify(this.securityContext, times(1)).getAuthentication();
         verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.followsRepository, times(1)).findActiveFollowers(any(ProfileJpa.class));
+        verify(this.profileToProfileJpaConverter, times(2)).convertBack(any(ProfileJpa.class));
+    }
+
+    @Test
+    void testFindAllFollowers_ValidatedOnKeycloak_Success(){
+        Profile publicProfile = new Profile(this.publicProfileJpa2.getProfileName(),this.publicProfileJpa2.getIsPrivate());
+        publicProfile.setAccountId(this.publicProfileJpa2.getAccountId());
+        publicProfile.setId(this.publicProfileJpa2.getId());
+        Profile privateProfile = new Profile(this.privateProfileJpa.getProfileName(),this.privateProfileJpa.getIsPrivate());
+        privateProfile.setAccountId(this.privateProfileJpa.getAccountId());
+        privateProfile.setId(this.privateProfileJpa.getId());
+        List<Profile> followerList = asList(publicProfile, privateProfile);
+        ProfileFollowList returnedProfileFollowList = new ProfileFollowList(followerList, followerList.size());
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(true);
+        when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.publicProfileJpa);
+        when(this.followsRepository.findActiveFollowers(any(ProfileJpa.class))).thenReturn(asList(
+                this.publicProfileJpa2,
+                this.privateProfileJpa
+        ));
+        when(this.profileToProfileJpaConverter.convertBack(this.publicProfileJpa2)).thenReturn(publicProfile);
+        when(this.profileToProfileJpaConverter.convertBack(this.privateProfileJpa)).thenReturn(privateProfile);
+
+        ProfileFollowList profileFollowList = this.followsService.findAllFollowers(this.publicProfileJpa.getId(), publicProfileJpa.getId());
+
+        log.info(profileFollowList.toString());
+
+        assertEquals(returnedProfileFollowList,profileFollowList);
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
         verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
         verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.followsRepository, times(1)).findActiveFollowers(any(ProfileJpa.class));
@@ -702,77 +733,177 @@ class FollowsServiceTest {
         verify(this.followsRepository, times(1)).findActiveFollowers(any(ProfileJpa.class));
         verify(this.profileToProfileJpaConverter, times(2)).convertBack(any(ProfileJpa.class));
     }
-/*
+
     @Test
-    void testFindAllFollowers_NoFollowers_Success(){
-        List<Profile> followerList = Collections.emptyList();
-        ProfileFollowList returnedProfileFollowList = new ProfileFollowList(followerList, 0);
+    void testFindAllFollowers_NotInProfileList_Failed(){
+        Long profileId = this.publicProfileJpa.getId();
+        Long selectedUserProfileId = this.privateProfileJpa.getId();
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(false);
 
-        when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.publicProfileJpa);
-        when(this.followsRepository.findActiveFollowers(any(ProfileJpa.class))).thenReturn(Collections.emptyList());
+        assertThrows(NotInProfileListException.class, () -> this.followsService.findAllFollowers(profileId, selectedUserProfileId));
 
-        ProfileFollowList profileFollowList = this.followsService.findAllFollowers(this.publicProfileJpa.getId());
-
-        log.info(profileFollowList.toString());
-
-        assertEquals(returnedProfileFollowList,profileFollowList);
-        verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
-        verify(this.followsRepository, times(1)).findActiveFollowers(any(ProfileJpa.class));
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(0)).getReferenceById(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.followsRepository, times(0)).findActiveFollowers(any(ProfileJpa.class));
         verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
     }
-
-    //TODO Ritorno il numero di followers ma non la lista dei profili dati che non ho accesso a tale profilo
 
 
     @Test
     void testFindAllFollowings_Success(){
-        Profile publicProfile2 = new Profile("pinco_pallino",false,2L);
-        publicProfile2.setId(2L);
-        Profile privateProfile = new Profile("pinco_pallino2",false,3L);
-        privateProfile.setId(3L);
-        List<Profile> followerList = asList(publicProfile2, privateProfile);
+        Profile publicProfile = new Profile(this.publicProfileJpa2.getProfileName(),this.publicProfileJpa2.getIsPrivate());
+        publicProfile.setAccountId(this.publicProfileJpa2.getAccountId());
+        publicProfile.setId(this.publicProfileJpa2.getId());
+        Profile privateProfile = new Profile(this.privateProfileJpa.getProfileName(),this.privateProfileJpa.getIsPrivate());
+        privateProfile.setAccountId(this.privateProfileJpa.getAccountId());
+        privateProfile.setId(this.privateProfileJpa.getId());
+        List<Profile> followerList = asList(publicProfile, privateProfile);
         ProfileFollowList returnedProfileFollowList = new ProfileFollowList(followerList, followerList.size());
 
-
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
         when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.publicProfileJpa);
         when(this.followsRepository.findActiveFollowings(any(ProfileJpa.class))).thenReturn(asList(
                 this.publicProfileJpa2,
                 this.privateProfileJpa
         ));
-        when(this.profileToProfileJpaConverter.convertBack(this.publicProfileJpa2)).thenReturn(publicProfile2);
+        when(this.profileToProfileJpaConverter.convertBack(this.publicProfileJpa2)).thenReturn(publicProfile);
         when(this.profileToProfileJpaConverter.convertBack(this.privateProfileJpa)).thenReturn(privateProfile);
 
-        ProfileFollowList profileFollowList = this.followsService.findAllFollowings(this.publicProfileJpa.getId());
+        ProfileFollowList profileFollowList = this.followsService.findAllFollowings(this.publicProfileJpa.getId(), publicProfileJpa.getId());
 
         log.info(profileFollowList.toString());
 
         assertEquals(returnedProfileFollowList,profileFollowList);
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
         verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.followsRepository, times(1)).findActiveFollowings(any(ProfileJpa.class));
         verify(this.profileToProfileJpaConverter, times(2)).convertBack(any(ProfileJpa.class));
     }
 
     @Test
-    void testFindAllFollowings_NoFollowings_Success(){
-        List<Profile> followerList = Collections.emptyList();
-        ProfileFollowList returnedProfileFollowList = new ProfileFollowList(followerList, 0);
+    void testFindAllFollowings_ValidatedOnKeycloak_Success(){
+        Profile publicProfile = new Profile(this.publicProfileJpa2.getProfileName(),this.publicProfileJpa2.getIsPrivate());
+        publicProfile.setAccountId(this.publicProfileJpa2.getAccountId());
+        publicProfile.setId(this.publicProfileJpa2.getId());
+        Profile privateProfile = new Profile(this.privateProfileJpa.getProfileName(),this.privateProfileJpa.getIsPrivate());
+        privateProfile.setAccountId(this.privateProfileJpa.getAccountId());
+        privateProfile.setId(this.privateProfileJpa.getId());
+        List<Profile> followerList = asList(publicProfile, privateProfile);
+        ProfileFollowList returnedProfileFollowList = new ProfileFollowList(followerList, followerList.size());
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(true);
         when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.publicProfileJpa);
-        when(this.followsRepository.findActiveFollowings(any(ProfileJpa.class))).thenReturn(Collections.emptyList());
+        when(this.followsRepository.findActiveFollowings(any(ProfileJpa.class))).thenReturn(asList(
+                this.publicProfileJpa2,
+                this.privateProfileJpa
+        ));
+        when(this.profileToProfileJpaConverter.convertBack(this.publicProfileJpa2)).thenReturn(publicProfile);
+        when(this.profileToProfileJpaConverter.convertBack(this.privateProfileJpa)).thenReturn(privateProfile);
 
-        ProfileFollowList profileFollowList = this.followsService.findAllFollowings(this.publicProfileJpa.getId());
+        ProfileFollowList profileFollowList = this.followsService.findAllFollowings(this.publicProfileJpa.getId(), publicProfileJpa.getId());
 
         log.info(profileFollowList.toString());
 
         assertEquals(returnedProfileFollowList,profileFollowList);
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
         verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
         verify(this.followsRepository, times(1)).findActiveFollowings(any(ProfileJpa.class));
+        verify(this.profileToProfileJpaConverter, times(2)).convertBack(any(ProfileJpa.class));
+    }
+
+    @Test
+    void testFindAllFollowings_FollowedPrivateProfile_Success(){
+        Profile publicProfile = new Profile(this.publicProfileJpa2.getProfileName(),this.publicProfileJpa2.getIsPrivate());
+        publicProfile.setAccountId(this.publicProfileJpa2.getAccountId());
+        publicProfile.setId(this.publicProfileJpa2.getId());
+        Profile privateProfile = new Profile(this.privateProfileJpa.getProfileName(),this.privateProfileJpa.getIsPrivate());
+        privateProfile.setAccountId(this.privateProfileJpa.getAccountId());
+        privateProfile.setId(this.privateProfileJpa.getId());
+        List<Profile> followerList = asList(publicProfile, privateProfile);
+        ProfileFollowList returnedProfileFollowList = new ProfileFollowList(followerList, followerList.size());
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.privateProfileJpa);
+        when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.of(new FollowsId(this.publicProfileJpa.getId(), this.privateProfileJpa.getId())));
+        when(this.followsRepository.findActiveFollowings(any(ProfileJpa.class))).thenReturn(asList(
+                this.publicProfileJpa2,
+                this.privateProfileJpa
+        ));
+        when(this.profileToProfileJpaConverter.convertBack(this.publicProfileJpa2)).thenReturn(publicProfile);
+        when(this.profileToProfileJpaConverter.convertBack(this.privateProfileJpa)).thenReturn(privateProfile);
+
+        ProfileFollowList profileFollowList = this.followsService.findAllFollowings(this.privateProfileJpa.getId(), publicProfileJpa.getId());
+
+        log.info(profileFollowList.toString());
+
+        assertEquals(returnedProfileFollowList,profileFollowList);
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
+        verify(this.followsRepository, times(1)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.followsRepository, times(1)).findActiveFollowings(any(ProfileJpa.class));
+        verify(this.profileToProfileJpaConverter, times(2)).convertBack(any(ProfileJpa.class));
+    }
+
+    @Test
+    void testFindAllFollowings_NotFollowedPrivateProfile_Success(){
+        Profile publicProfile = new Profile(this.publicProfileJpa2.getProfileName(),this.publicProfileJpa2.getIsPrivate());
+        publicProfile.setAccountId(this.publicProfileJpa2.getAccountId());
+        publicProfile.setId(this.publicProfileJpa2.getId());
+        Profile privateProfile = new Profile(this.privateProfileJpa.getProfileName(),this.privateProfileJpa.getIsPrivate());
+        privateProfile.setAccountId(this.privateProfileJpa.getAccountId());
+        privateProfile.setId(this.privateProfileJpa.getId());
+        List<Profile> followerList = asList(publicProfile, privateProfile);
+        ProfileFollowList returnedProfileFollowList = new ProfileFollowList(List.of(), followerList.size());
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenWithProfileList);
+        when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(this.privateProfileJpa);
+        when(this.followsRepository.findActiveAcceptedById(any(FollowsId.class))).thenReturn(Optional.empty());
+        when(this.followsRepository.findActiveFollowings(any(ProfileJpa.class))).thenReturn(asList(
+                this.publicProfileJpa2,
+                this.privateProfileJpa
+        ));
+        when(this.profileToProfileJpaConverter.convertBack(this.publicProfileJpa2)).thenReturn(publicProfile);
+        when(this.profileToProfileJpaConverter.convertBack(this.privateProfileJpa)).thenReturn(privateProfile);
+
+        ProfileFollowList profileFollowList = this.followsService.findAllFollowings(this.privateProfileJpa.getId(), publicProfileJpa.getId());
+
+        log.info(profileFollowList.toString());
+
+        assertEquals(returnedProfileFollowList,profileFollowList);
+        verify(this.securityContext, times(1)).getAuthentication();
+        verify(this.keycloakService, times(0)).isInProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(1)).getReferenceById(anyLong());
+        verify(this.followsRepository, times(1)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.followsRepository, times(1)).findActiveFollowings(any(ProfileJpa.class));
+        verify(this.profileToProfileJpaConverter, times(2)).convertBack(any(ProfileJpa.class));
+    }
+
+    @Test
+    void testFindAllFollowings_NotInProfileList_Failed(){
+        Long profileId = this.publicProfileJpa.getId();
+        Long selectedUserProfileId = this.privateProfileJpa.getId();
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.isInProfileList(anyString(), anyLong())).thenReturn(false);
+
+        assertThrows(NotInProfileListException.class, () -> this.followsService.findAllFollowings(profileId, selectedUserProfileId));
+
+        verify(this.securityContext, times(2)).getAuthentication();
+        verify(this.keycloakService, times(1)).isInProfileList(anyString(), anyLong());
+        verify(this.profilesRepository, times(0)).getReferenceById(anyLong());
+        verify(this.followsRepository, times(0)).findActiveAcceptedById(any(FollowsId.class));
+        verify(this.followsRepository, times(0)).findActiveFollowings(any(ProfileJpa.class));
         verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
     }
 
-
-     */
-    //TODO Ritorno il numero di followers ma non la lista dei profili dati che non ho accesso a tale profilo
 
 
 }
