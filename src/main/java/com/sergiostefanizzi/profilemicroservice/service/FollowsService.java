@@ -82,11 +82,7 @@ public class FollowsService {
         checkProfileListAndIds(profileId, selectedUserProfileId, this.keycloakService);
         // Controllo che la risorsa non sia già stata creata
         Optional<FollowsJpa> optionalFollowsRequestJpa = this.followsRepository.findById(new FollowsId(profileId, profileToFollowId));
-        if (optionalFollowsRequestJpa.isPresent()) {
-            followsRequestJpa = updateOldFollowRequest(isUnfollow, optionalFollowsRequestJpa.get());
-        } else {
-            followsRequestJpa = createNewFollowRequest(profileId, profileToFollowId, isUnfollow);
-        }
+        followsRequestJpa = optionalFollowsRequestJpa.map(followsJpa -> updateOldFollowRequest(isUnfollow, followsJpa)).orElseGet(() -> createNewFollowRequest(profileId, profileToFollowId, isUnfollow));
         return this.followsToFollowsJpaConverter.convertBack(
                 this.followsRepository.save(followsRequestJpa));
     }

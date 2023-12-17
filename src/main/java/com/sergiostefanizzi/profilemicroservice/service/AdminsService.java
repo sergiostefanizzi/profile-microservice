@@ -44,7 +44,7 @@ public class AdminsService {
     @Transactional
     public List<Profile> findAllProfiles(Boolean removedProfile) {
         List<ProfileJpa> profileList;
-        if (removedProfile){
+        if (Boolean.TRUE.equals(removedProfile)){
             profileList = this.profilesRepository.findAll();
         }else {
             profileList = this.profilesRepository.findAllActiveProfiles();
