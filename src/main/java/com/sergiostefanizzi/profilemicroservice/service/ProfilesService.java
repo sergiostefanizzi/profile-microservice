@@ -6,6 +6,7 @@ import com.sergiostefanizzi.profilemicroservice.model.converter.ProfileToProfile
 import com.sergiostefanizzi.profilemicroservice.repository.FollowsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
+import com.sergiostefanizzi.profilemicroservice.system.exception.EmailNotValidatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import jakarta.transaction.Transactional;
@@ -40,6 +41,11 @@ public class ProfilesService {
             throw new ProfileAlreadyCreatedException(profile.getProfileName());
         }
         String accountId = getJwtAccountId();
+
+        if (!this.keycloakService.checksEmailValidated(accountId)){
+            throw new EmailNotValidatedException(accountId);
+        }
+
         profile.setAccountId(accountId);
 
         ProfileJpa newProfileJpa = this.profileToProfileJpaConverter.convert(profile);

@@ -45,6 +45,7 @@ class ProfilesIT {
     private Profile savedProfile4;
     private Profile savedProfile5;
     private Profile savedProfile6;
+    private Profile newProfileEmailNotValidated;
     private Profile newProfile;
     String profileName = "giuseppe_verdi";
     Boolean isPrivate = false;
@@ -102,6 +103,11 @@ class ProfilesIT {
         this.savedProfile6.setPictureUrl(pictureUrl);
         this.savedProfile6.setAccountId("b8f8ea8f-5d16-43a2-83d1-6e851296921d");
 
+        this.newProfileEmailNotValidated = new Profile("pinco_palla_NV", false);
+        this.newProfileEmailNotValidated.setBio("Profilo di Pinco Palla NV");
+        this.newProfileEmailNotValidated.setPictureUrl(pictureUrl);
+        this.newProfileEmailNotValidated.setAccountId("8a890b77-300d-4b6e-bf55-325a4f862690");
+
 
         this.profileMap.put(this.newProfile.getProfileName(), List.of("giuseppe.verdi@gmail.com"));
         this.profileMap.put(this.newProfile.getProfileName()+"2", List.of("giuseppe.verdi@gmail.com"));
@@ -111,6 +117,7 @@ class ProfilesIT {
         this.profileMap.put(this.savedProfile4.getProfileName(), List.of("pinco.palla@gmail.com",this.savedProfile4.getAccountId()));
         this.profileMap.put(this.savedProfile5.getProfileName(), List.of("tony.stark@gmail.com",this.savedProfile5.getAccountId()));
         this.profileMap.put(this.savedProfile6.getProfileName(), List.of("matt.murdock@gmail.com",this.savedProfile6.getAccountId()));
+        this.profileMap.put(this.newProfileEmailNotValidated.getProfileName(), List.of("pinco.to.validate@gmail.com",this.newProfileEmailNotValidated.getAccountId()));
     }
 
     @AfterEach
@@ -375,6 +382,27 @@ class ProfilesIT {
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
     }
 
+    @Test
+    void testAddProfile_EmailNotValidated_Then_400() throws Exception {
+        // messaggio d'errore che mi aspetto d'ottenere
+        String error = "Account's email with id "+this.newProfileEmailNotValidated.getAccountId()+" is not validated";
+        String accessToken = getAccessToken(this.profileMap.get(this.newProfileEmailNotValidated.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setBearerAuth(accessToken);
+
+        ResponseEntity<String> response = this.testRestTemplate.exchange(this.baseUrl,
+                HttpMethod.POST,
+                new HttpEntity<>(this.newProfileEmailNotValidated, headers),
+                String.class);
+
+        assertEquals(HttpStatus.BAD_REQUEST, response.getStatusCode());
+        assertNotNull(response.getBody());
+
+        JsonNode node = this.objectMapper.readTree(response.getBody());
+        // In questo caso l'errore NON è un array di dimensione 1
+        assertEquals(error ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        log.info("Error -> "+node.get("error"));
+    }
 
     @Test
     void testAddProfile_ProfileNameExists_Then_409() throws Exception {

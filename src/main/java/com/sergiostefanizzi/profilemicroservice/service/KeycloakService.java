@@ -18,9 +18,21 @@ import java.util.Map;
 @RequiredArgsConstructor
 @Slf4j
 public class KeycloakService {
-    @Autowired
-    private Keycloak keycloak;
+    private final Keycloak keycloak;
     private final String REALM_NAME = "social-accounts";
+
+    public Boolean checksEmailValidated(String accountId) {
+        try{
+            UserRepresentation user = this.keycloak.realm(REALM_NAME)
+                    .users()
+                    .get(accountId)
+                    .toRepresentation();
+            return user.isEmailVerified();
+        }catch (NotFoundException ex){
+            log.info(ex.getMessage());
+            return false;
+        }
+    }
 
     public Boolean updateProfileList(String accountId, Long profileId) {
         UserResource userResource;

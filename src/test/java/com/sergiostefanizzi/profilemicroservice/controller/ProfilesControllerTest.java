@@ -10,10 +10,7 @@ import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
 import com.sergiostefanizzi.profilemicroservice.service.KeycloakService;
 import com.sergiostefanizzi.profilemicroservice.service.ProfilesService;
-import com.sergiostefanizzi.profilemicroservice.system.exception.IdsMismatchException;
-import com.sergiostefanizzi.profilemicroservice.system.exception.NotInProfileListException;
-import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileAlreadyCreatedException;
-import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.*;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -353,6 +350,22 @@ class ProfilesControllerTest {
     }
 
     @Test
+    void testAddProfile_EmailNotValidated_Then_400() throws Exception {
+        when(this.profilesService.save(this.newProfile)).thenThrow(
+                new EmailNotValidatedException(this.newProfile.getAccountId())
+        );
+
+        this.mockMvc.perform(post("/profiles")
+                        .accept(MediaType.APPLICATION_JSON)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(newProfileJson))
+                .andExpect(status().isBadRequest())
+                .andExpect(result -> assertTrue(
+                        result.getResolvedException() instanceof EmailNotValidatedException))
+                .andExpect(jsonPath("$.error").value("Account's email with id "+this.newProfile.getAccountId()+" is not validated"));
+    }
+
+    @Test
     void testAddProfile_ProfileNameExists_Then_409() throws Exception {
         when(this.profilesService.save(this.newProfile)).thenThrow(
                 new ProfileAlreadyCreatedException(this.newProfile.getProfileName())
@@ -367,6 +380,8 @@ class ProfilesControllerTest {
                         result.getResolvedException() instanceof ProfileAlreadyCreatedException))
                 .andExpect(jsonPath("$.error").value("Conflict! Profile with name "+profileName+" already created!"));
     }
+
+
 
     @Test
     void testDeleteProfileById_Then_204() throws Exception{

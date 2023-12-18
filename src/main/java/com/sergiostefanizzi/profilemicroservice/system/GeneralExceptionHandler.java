@@ -71,6 +71,15 @@ public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
     }
 
+    @ExceptionHandler(EmailNotValidatedException.class)
+    public ResponseEntity<Object> handleEmailNotValidatedException(EmailNotValidatedException ex, WebRequest request){
+        log.error(ex.getMessage(),ex);
+        String error = "Account's email with id "+ex.getMessage()+" is not validated";
+        Map<String, String> body = new HashMap<>();
+        body.put("error", error);
+        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.BAD_REQUEST, request);
+    }
+
     @ExceptionHandler(UnfollowOnCreationException.class)
     public ResponseEntity<Object> handleUnfollowOnCreationException(UnfollowOnCreationException ex, WebRequest request){
         log.error(ex.getMessage(),ex);
