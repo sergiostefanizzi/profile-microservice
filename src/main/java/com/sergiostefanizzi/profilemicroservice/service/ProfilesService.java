@@ -42,10 +42,6 @@ public class ProfilesService {
         }
         String accountId = getJwtAccountId();
 
-        if (!this.keycloakService.checksEmailValidated(accountId)){
-            throw new EmailNotValidatedException(accountId);
-        }
-
         profile.setAccountId(accountId);
 
         ProfileJpa newProfileJpa = this.profileToProfileJpaConverter.convert(profile);

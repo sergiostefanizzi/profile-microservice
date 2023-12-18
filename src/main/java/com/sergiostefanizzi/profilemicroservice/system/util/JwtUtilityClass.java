@@ -57,4 +57,5 @@ public final class JwtUtilityClass {
     public static Boolean checkAccess(ProfileJpa profileJpa, Long selectedUserProfileId, FollowsRepository followsRepository) {
         return (Objects.equals(profileJpa.getId(), selectedUserProfileId)) || !profileJpa.getIsPrivate() || (followsRepository.findActiveAcceptedById(new FollowsId(selectedUserProfileId, profileJpa.getId())).isPresent());
     }
+
 }

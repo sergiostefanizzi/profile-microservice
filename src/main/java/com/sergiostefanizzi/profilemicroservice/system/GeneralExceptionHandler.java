@@ -71,6 +71,15 @@ public class GeneralExceptionHandler extends ResponseEntityExceptionHandler {
         return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
     }
 
+    @ExceptionHandler(AccountNotFoundException.class)
+    public ResponseEntity<Object> handleAccountNotFoundException(AccountNotFoundException ex, WebRequest request){
+        log.error(ex.getMessage(),ex);
+        String error = "Account with id "+ex.getMessage()+" not found!";
+        Map<String, String> body = new HashMap<>();
+        body.put("error", error);
+        return handleExceptionInternal(ex, body, new HttpHeaders(), HttpStatus.NOT_FOUND, request);
+    }
+
     @ExceptionHandler(EmailNotValidatedException.class)
     public ResponseEntity<Object> handleEmailNotValidatedException(EmailNotValidatedException ex, WebRequest request){
         log.error(ex.getMessage(),ex);

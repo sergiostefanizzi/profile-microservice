@@ -128,7 +128,7 @@ class ProfilesServiceTest {
 
     // SAVE A PROFILE
     @Test
-    void testSaveSuccess() {
+    void testSave_Success() {
         // Jpa del nuovo profilo nel db
         ProfileJpa newProfileJpa = new ProfileJpa(profileName, isPrivate, accountId);
         newProfileJpa.setBio(bio);
@@ -144,7 +144,6 @@ class ProfilesServiceTest {
 
         when(this.profilesRepository.checkActiveByProfileName(anyString())).thenReturn(Optional.empty());
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
-        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.profileToProfileJpaConverter.convert(any(Profile.class))).thenReturn(newProfileJpa);
         when(this.profilesRepository.save(any(ProfileJpa.class))).thenReturn(newProfileJpa);
         when(this.keycloakService.updateProfileList(anyString(), anyLong())).thenReturn(true);
@@ -164,7 +163,6 @@ class ProfilesServiceTest {
 
         verify(this.profilesRepository, times(1)).checkActiveByProfileName(anyString());
         verify(this.securityContext, times(1)).getAuthentication();
-        verify(this.keycloakService, times(1)).checksEmailValidated(anyString());
         verify(this.profileToProfileJpaConverter, times(1)).convert(any(Profile.class));
         verify(this.profilesRepository, times(1)).save(any(ProfileJpa.class));
         verify(this.keycloakService, times(1)).updateProfileList(anyString(), anyLong());
@@ -175,22 +173,6 @@ class ProfilesServiceTest {
         log.info(String.valueOf(savedProfile));
     }
 
-    @Test
-    void testSave_EmailNotValidated_Failed() {
-        when(this.profilesRepository.checkActiveByProfileName(anyString())).thenReturn(Optional.empty());
-        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
-        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(false);
-
-        assertThrows(EmailNotValidatedException.class, () -> this.profilesService.save(this.newProfile));
-
-        verify(this.profilesRepository, times(1)).checkActiveByProfileName(anyString());
-        verify(this.securityContext, times(1)).getAuthentication();
-        verify(this.keycloakService, times(1)).checksEmailValidated(anyString());
-        verify(this.profileToProfileJpaConverter, times(0)).convert(any(Profile.class));
-        verify(this.profilesRepository, times(0)).save(any(ProfileJpa.class));
-        verify(this.keycloakService, times(0)).updateProfileList(anyString(), anyLong());
-        verify(this.profileToProfileJpaConverter, times(0)).convertBack(any(ProfileJpa.class));
-    }
 
     @Test
     void testSave_ProfileNameExists_Failed() {
@@ -202,7 +184,6 @@ class ProfilesServiceTest {
 
         verify(this.profilesRepository, times(1)).checkActiveByProfileName(anyString());
         verify(this.securityContext, times(0)).getAuthentication();
-        verify(this.keycloakService, times(0)).checksEmailValidated(anyString());
         verify(this.profileToProfileJpaConverter, times(0)).convert(any(Profile.class));
         verify(this.profilesRepository, times(0)).save(any(ProfileJpa.class));
         verify(this.keycloakService, times(0)).updateProfileList(anyString(), anyLong());
@@ -211,7 +192,7 @@ class ProfilesServiceTest {
 
     // REMOVE A PROFILE
     @Test
-    void testRemoveSuccess(){
+    void testRemove_Success(){
         when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
         when(this.profilesRepository.getReferenceById(anyLong())).thenReturn(savedProfileJpa);
         when(this.keycloakService.removeFromProfileList(anyString(), anyLong())).thenReturn(true);

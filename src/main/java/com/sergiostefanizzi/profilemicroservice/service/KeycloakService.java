@@ -34,6 +34,19 @@ public class KeycloakService {
         }
     }
 
+    public Boolean checkActiveById(String accountId) {
+        try{
+            UserRepresentation user = this.keycloak.realm(REALM_NAME)
+                    .users()
+                    .get(accountId)
+                    .toRepresentation();
+            return user.isEnabled();
+        }catch (NotFoundException ex){
+            log.info(ex.getMessage());
+            return false;
+        }
+    }
+
     public Boolean updateProfileList(String accountId, Long profileId) {
         UserResource userResource;
         try{

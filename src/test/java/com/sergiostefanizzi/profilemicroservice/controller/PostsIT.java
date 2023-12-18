@@ -972,7 +972,7 @@ class PostsIT {
 
     @Test
     void testFindPostById_PrivateProfile_Then_403() throws Exception{
-        String error = "Cannot access post with id "+this.savedPost3.getId();
+        String error = "Post access forbidden";
         String accessToken = getAccessToken(this.profileMap.get(this.savedProfile4.getProfileName()).get(0), this.testRestTemplate, this.objectMapper);
         HttpHeaders headers = new HttpHeaders();
         headers.setBearerAuth(accessToken);
@@ -1203,7 +1203,7 @@ class PostsIT {
         assertNotNull(response.getBody());
         JsonNode node = this.objectMapper.readTree(response.getBody());
         // In questo caso l'errore NON è un array di dimensione 1
-        assertEquals("Cannot access post with id "+this.savedPost3.getId() ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
+        assertEquals("Post access forbidden" ,node.get("error").asText()); // asText() perche' mi dava una stringa tra doppi apici e non riuscivo a fare il confronto
         log.info("Error -> "+node.get("error"));
     }
 

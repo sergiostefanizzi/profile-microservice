@@ -25,6 +25,9 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
@@ -33,6 +36,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -61,9 +65,10 @@ class ProfilesControllerTest {
     private CommentsRepository commentsRepository;
     @MockBean
     private AlertsRepository alertsRepository;
-    // TODO togliere keycloakService dopo aver fatto tutti i test degli interceptor
-    //@MockBean
-    //private KeycloakService keycloakService;
+    @MockBean
+    private KeycloakService keycloakService;
+    @MockBean
+    private SecurityContext securityContext;
 
     @Autowired
     private MockMvc mockMvc;
@@ -71,6 +76,8 @@ class ProfilesControllerTest {
     private ObjectMapper objectMapper;
     private Profile newProfile;
     private Profile savedProfile;
+    private JwtAuthenticationToken jwtAuthenticationToken;
+    private JwtAuthenticationToken jwtAuthenticationTokenMissingProfileId;
     String profileName = "giuseppe_verdi";
     Boolean isPrivate = false;
     Boolean updatedIsPrivate = true;
@@ -90,6 +97,8 @@ class ProfilesControllerTest {
 
     @BeforeEach
     void setUp() throws Exception{
+        SecurityContextHolder.setContext(securityContext);
+
         this.newProfile = new Profile(profileName,isPrivate);
         this.newProfile.setAccountId(accountId);
         this.newProfile.setBio(bio);
@@ -102,6 +111,24 @@ class ProfilesControllerTest {
         this.savedProfile.setBio(bio);
         this.savedProfile.setPictureUrl(pictureUrl);
         this.savedProfile.setId(profileId);
+
+        Map<String, Object> headers = new HashMap<>();
+        headers.put("alg","HS256");
+        headers.put("typ","JWT");
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("sub", this.accountId);
+        claims.put("profileList", List.of(this.savedProfile.getId()));
+        this.jwtAuthenticationToken = new JwtAuthenticationToken(new Jwt("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+                Instant.now(),
+                Instant.MAX,
+                headers,
+                claims));
+        claims.put("profileList", List.of());
+        this.jwtAuthenticationTokenMissingProfileId = new JwtAuthenticationToken(new Jwt("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+                Instant.now(),
+                Instant.MAX,
+                headers,
+                claims));
     }
 
 
@@ -143,6 +170,9 @@ class ProfilesControllerTest {
 
     @Test
     void testAddProfile_Then_201() throws Exception {
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenMissingProfileId);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.profilesService.save(Mockito.any(Profile.class))).thenReturn(this.savedProfile);
 
         MvcResult result = this.mockMvc.perform(post("/profiles")
@@ -175,6 +205,9 @@ class ProfilesControllerTest {
 
         newProfileJson = this.objectMapper.writeValueAsString(this.newProfile);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenMissingProfileId);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.profilesService.save(Mockito.any(Profile.class))).thenReturn(this.savedProfile);
 
         MvcResult result = this.mockMvc.perform(post("/profiles")
@@ -208,6 +241,9 @@ class ProfilesControllerTest {
 
         newProfileJson = this.objectMapper.writeValueAsString(this.newProfile);
         log.info("New Account Json "+newProfileJson);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenMissingProfileId);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
 
         MvcResult result = this.mockMvc.perform(post("/profiles")
                 .accept(MediaType.APPLICATION_JSON)
@@ -237,6 +273,10 @@ class ProfilesControllerTest {
         newProfileJson = this.objectMapper.writeValueAsString(this.newProfile);
         log.info("New Account Json "+newProfileJson);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenMissingProfileId);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
+
         MvcResult result = this.mockMvc.perform(post("/profiles")
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -263,6 +303,10 @@ class ProfilesControllerTest {
         newProfileJson = this.objectMapper.writeValueAsString(this.newProfile);
         log.info("New Account Json "+newProfileJson);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenMissingProfileId);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
+
         MvcResult result = this.mockMvc.perform(post("/profiles")
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -288,6 +332,10 @@ class ProfilesControllerTest {
 
         newProfileJson = this.objectMapper.writeValueAsString(this.newProfile);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenMissingProfileId);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
+
         MvcResult result = this.mockMvc.perform(post("/profiles")
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -310,6 +358,10 @@ class ProfilesControllerTest {
         String error = "pictureUrl must be a valid URL";
         this.newProfile.setPictureUrl(pictureUrlXSS);
         newProfileJson = this.objectMapper.writeValueAsString(this.newProfile);
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenMissingProfileId);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
 
         MvcResult result = this.mockMvc.perform(post("/profiles")
                         .accept(MediaType.APPLICATION_JSON)
@@ -335,6 +387,10 @@ class ProfilesControllerTest {
         ((ObjectNode) jsonNode).put("is_private", "FalseString");
         newProfileJson = this.objectMapper.writeValueAsString(jsonNode);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenMissingProfileId);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
+
         MvcResult result = this.mockMvc.perform(post("/profiles")
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -355,6 +411,10 @@ class ProfilesControllerTest {
                 new EmailNotValidatedException(this.newProfile.getAccountId())
         );
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenMissingProfileId);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
+
         this.mockMvc.perform(post("/profiles")
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -371,6 +431,11 @@ class ProfilesControllerTest {
                 new ProfileAlreadyCreatedException(this.newProfile.getProfileName())
         );
         log.info("New Account Json "+newProfileJson);
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationTokenMissingProfileId);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
+
         this.mockMvc.perform(post("/profiles")
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -385,6 +450,9 @@ class ProfilesControllerTest {
 
     @Test
     void testDeleteProfileById_Then_204() throws Exception{
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(profileId));
         doNothing().when(this.profilesService).remove(anyLong(), anyLong());
 
@@ -395,6 +463,9 @@ class ProfilesControllerTest {
 
     @Test
     void testDeleteProfileById_IdsMismatch_Then_403() throws Exception{
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(profileId));
         doThrow(new IdsMismatchException()).when(this.profilesService).remove(anyLong(), anyLong());
 
@@ -413,6 +484,9 @@ class ProfilesControllerTest {
     }
     @Test
     void testDeleteProfileById_Then_403() throws Exception{
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(profileId));
         doThrow(new NotInProfileListException(profileId)).when(this.profilesService).remove(anyLong(), anyLong());
 
@@ -435,6 +509,9 @@ class ProfilesControllerTest {
     @Test
     void testDeleteProfileById_Then_404() throws Exception {
         Long invalidProfileId = Long.MAX_VALUE;
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         doThrow(new ProfileNotFoundException(invalidProfileId)).when(this.profilesService).remove(anyLong(), anyLong());
 
         MvcResult result = this.mockMvc.perform(delete("/profiles/{profileId}",invalidProfileId)
@@ -470,6 +547,9 @@ class ProfilesControllerTest {
         // Aggiorno il profilo che verra' restituito dal service con i nuovi valori
         Profile updatedProfile = getUpdatedProfile(profilePatch);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(profileId));
         when(this.profilesService.update(anyLong(), anyLong(), any())).thenReturn(updatedProfile);
 
@@ -514,6 +594,9 @@ class ProfilesControllerTest {
 
         String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(profileId));
 
         MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",profileId)
@@ -551,6 +634,9 @@ class ProfilesControllerTest {
 
         String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(profileId));
 
         MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",profileId)
@@ -587,6 +673,9 @@ class ProfilesControllerTest {
         ((ObjectNode) jsonNode).put("is_private", "FalseString");
         profilePatchJson = this.objectMapper.writeValueAsString(jsonNode);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(profileId));
 
         MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",profileId)
@@ -615,6 +704,9 @@ class ProfilesControllerTest {
 
         String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(profileId));
         doThrow(new IdsMismatchException()).when(this.profilesService).update(anyLong(), anyLong(), any());
 
@@ -645,6 +737,9 @@ class ProfilesControllerTest {
 
         String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(profileId));
         doThrow(new NotInProfileListException(profileId)).when(this.profilesService).update(anyLong(), anyLong(), any());
 
@@ -676,6 +771,9 @@ class ProfilesControllerTest {
 
         String profilePatchJson = this.objectMapper.writeValueAsString(profilePatch);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.empty());
 
         MvcResult result = this.mockMvc.perform(patch("/profiles/{profileId}",invalidProfileId)
@@ -703,6 +801,9 @@ class ProfilesControllerTest {
         savedProfile2.setPictureUrl(pictureUrl);
         savedProfile2.setId(13L);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.profilesService.findByProfileName(anyString())).thenReturn(asList(this.savedProfile, savedProfile2));
 
         MvcResult result = this.mockMvc.perform(get("/profiles/search")
@@ -767,6 +868,9 @@ class ProfilesControllerTest {
 
         FullProfile convertedFullProfile = getFullProfile(targetProfileId, convertedProfile);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(targetProfileId));
         when(this.profilesService.findFull(anyLong(), anyLong())).thenReturn(convertedFullProfile);
 
@@ -792,6 +896,9 @@ class ProfilesControllerTest {
 
     @Test
     void testFindFull_ProfileId_NotValid_Then_400() throws Exception{
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}","IdNotLong")
                         .queryParam("selectedUserProfileId", String.valueOf(profileId))
                         .contentType(MediaType.APPLICATION_JSON))
@@ -809,6 +916,9 @@ class ProfilesControllerTest {
     @Test
     void testFindFull_SelectedUserProfileId_NotValid_Then_400() throws Exception{
         Long targetProfileId = 1L;
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(targetProfileId));
         MvcResult result = this.mockMvc.perform(get("/profiles/{profileId}",targetProfileId)
                         .queryParam("selectedUserProfileId", "IdNotLong")
@@ -826,6 +936,9 @@ class ProfilesControllerTest {
 
     @Test
     void testFindFull_Then_403() throws Exception{
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.of(profileId));
         when(this.profilesService.findFull(anyLong(), anyLong())).thenThrow(new NotInProfileListException(Long.MAX_VALUE));
 
@@ -846,6 +959,9 @@ class ProfilesControllerTest {
 
     @Test
     void testFindFull_Then_404() throws Exception{
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.profilesRepository.checkActiveById(anyLong())).thenReturn(Optional.empty());
 
 
