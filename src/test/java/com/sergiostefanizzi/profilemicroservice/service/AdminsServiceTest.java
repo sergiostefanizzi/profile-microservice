@@ -18,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.time.*;
 import java.util.List;
+import java.util.UUID;
 
 import static java.util.Arrays.asList;
 import static org.junit.jupiter.api.Assertions.*;
@@ -29,7 +30,6 @@ import static org.mockito.Mockito.*;
 @ActiveProfiles("test")
 @Slf4j
 public class AdminsServiceTest {
-    /*
     @InjectMocks
     private AdminsService adminsService;
     @Mock
@@ -41,7 +41,7 @@ public class AdminsServiceTest {
     @Mock
     private AlertToAlertJpaConverter alertToAlertJpaConverter;
     private Long profileId = 1L;
-    private Long accountId = 1L;
+    private String accountId = UUID.randomUUID().toString();
     private Long alertId = 1L;
     private Long adminAccountId = 3L;
     private String profileName = "pinco_pallino";
@@ -319,7 +319,7 @@ public class AdminsServiceTest {
         alertOwner.setId(id);
         alertOwner.setCreatedAt(LocalDateTime.MIN);
 
-        ProfileJpa postOwner = new ProfileJpa(postOwnerName, false, 2L);
+        ProfileJpa postOwner = new ProfileJpa(postOwnerName, false, UUID.randomUUID().toString());
         postOwner.setId(id+1L);
         postOwner.setCreatedAt(LocalDateTime.MIN);
 
@@ -352,25 +352,26 @@ public class AdminsServiceTest {
     }
 
     private static List<ProfileJpa> createAllProfileJpaList() {
-        ProfileJpa profileJpa1 = createProfileJpa("pinco_pallino", 1L, 1L, false);
-        ProfileJpa profileJpa2 = createProfileJpa("marioBros", 2L, 2L, false);
-        ProfileJpa profileJpa3 = createProfileJpa("zelda", 3L, 3L, true);
+        ProfileJpa profileJpa1 = createProfileJpa("pinco_pallino", UUID.randomUUID().toString(), 1L, false);
+        ProfileJpa profileJpa2 = createProfileJpa("marioBros", UUID.randomUUID().toString(), 2L, false);
+        ProfileJpa profileJpa3 = createProfileJpa("zelda", UUID.randomUUID().toString(), 3L, true);
         return asList(profileJpa1, profileJpa2, profileJpa3);
     }
 
     private static List<ProfileJpa> createAllActiveProfileJpaList() {
-        ProfileJpa profileJpa1 = createProfileJpa("pinco_pallino", 1L, 1L, false);
-        ProfileJpa profileJpa2 = createProfileJpa("marioBros", 2L, 2L, false);
+        ProfileJpa profileJpa1 = createProfileJpa("pinco_pallino", UUID.randomUUID().toString(), 1L, false);
+        ProfileJpa profileJpa2 = createProfileJpa("marioBros", UUID.randomUUID().toString(), 2L, false);
         return asList(profileJpa1, profileJpa2);
     }
 
-    private static Profile createProfile(String profileName, Long accountId, Long profileId) {
-        Profile profile1 = new Profile(profileName, false, accountId);
+    private static Profile createProfile(String profileName, String accountId, Long profileId) {
+        Profile profile1 = new Profile(profileName, false);
+        profile1.setAccountId(accountId);
         profile1.setId(profileId);
         return profile1;
     }
 
-    private static ProfileJpa createProfileJpa(String profileName, Long accountId, Long profileId, Boolean removed) {
+    private static ProfileJpa createProfileJpa(String profileName, String accountId, Long profileId, Boolean removed) {
         ProfileJpa profileJpa = new ProfileJpa(profileName,false, accountId);
         profileJpa.setId(profileId);
         if (removed){
@@ -381,6 +382,4 @@ public class AdminsServiceTest {
         }
         return profileJpa;
     }
-
-     */
 }

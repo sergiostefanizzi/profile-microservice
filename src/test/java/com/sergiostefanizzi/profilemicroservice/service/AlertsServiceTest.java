@@ -30,7 +30,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 @ActiveProfiles("test")
 @Slf4j
-public class AlertsServiceTest {
+class AlertsServiceTest {
 
     @InjectMocks
     private AlertsService alertsService;
@@ -50,28 +50,21 @@ public class AlertsServiceTest {
     private SecurityContext securityContext;
     @Mock
     private KeycloakService keycloakService;
-    private String profileName = "pinco_pallino";
-    private String profileNamePostOwner = "giuseppeVerdi";
-    private Boolean profileIsPrivate = false;
-    private Long profileId = 1L;
-    private Long profileIdPostOwner = 2L;
     private final String accountId1 = UUID.randomUUID().toString();
-    private final String accountIdPostOwner = UUID.randomUUID().toString();;
-    private Long postId = 1L;
-    private Long commentId = 1L;
+    private final String accountIdPostOwner = UUID.randomUUID().toString();
+    private final Long postId = 1L;
+    private final Long commentId = 1L;
 
     private ProfileJpa alertOwner;
     private Alert postAlertToCreate;
-    private Alert privatePostAlertToCreate;
     private Alert commentAlertToCreate;
-    private String alertReason = "Motivo della segnalazione";
+    private final String alertReason = "Motivo della segnalazione";
     private PostJpa postJpa;
     private PostJpa privatePostJpa;
     private CommentJpa commentJpa;
-    private String contentUrl = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Cape_may.jpg";
-    private Post.PostTypeEnum postType = Post.PostTypeEnum.POST;
+    private final Post.PostTypeEnum postType = Post.PostTypeEnum.POST;
     private AlertJpa alertJpa;
-    private Long alertId = 1L;
+    private final Long alertId = 1L;
     private JwtAuthenticationToken jwtAuthenticationToken;
     private JwtAuthenticationToken jwtAuthenticationTokenWithProfileList;
 
@@ -80,11 +73,16 @@ public class AlertsServiceTest {
     void setUp() {
         SecurityContextHolder.setContext(securityContext);
 
+        Boolean profileIsPrivate = false;
+        String profileName = "pinco_pallino";
         this.alertOwner = new ProfileJpa(profileName, profileIsPrivate, this.accountId1);
+        Long profileId = 1L;
         this.alertOwner.setId(profileId);
         this.alertOwner.setCreatedAt(LocalDateTime.MIN);
 
+        String profileNamePostOwner = "giuseppeVerdi";
         ProfileJpa postOwner = new ProfileJpa(profileNamePostOwner, profileIsPrivate, accountIdPostOwner);
+        Long profileIdPostOwner = 2L;
         postOwner.setId(profileIdPostOwner);
         postOwner.setCreatedAt(LocalDateTime.MIN);
 
@@ -95,12 +93,11 @@ public class AlertsServiceTest {
         this.postAlertToCreate = new Alert(profileId, alertReason);
         this.postAlertToCreate.setPostId(postId);
 
-        this.privatePostAlertToCreate = new Alert(profileId, alertReason);
-        this.privatePostAlertToCreate.setPostId(postId);
 
         this.commentAlertToCreate = new Alert(profileId, alertReason);
         this.commentAlertToCreate.setCommentId(commentId);
 
+        String contentUrl = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Cape_may.jpg";
         this.postJpa = new PostJpa(contentUrl, postType);
         this.postJpa.setId(postId);
         this.postJpa.setCreatedAt(LocalDateTime.MIN);
