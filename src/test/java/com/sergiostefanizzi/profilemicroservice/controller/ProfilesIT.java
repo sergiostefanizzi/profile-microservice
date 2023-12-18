@@ -245,8 +245,8 @@ class ProfilesIT {
         // itero gli errori ottenuti dalla risposta per confrontarli con quelli che mi aspetto di ottenere
         assertEquals(errors.size() ,node.get("error").size());
         for (JsonNode objNode : node.get("error")) {
-            assertTrue(errors.contains(objNode.asText()));
             log.info("Error -> "+objNode.asText());
+            assertTrue(errors.contains(objNode.asText()));
         }
     }
 
