@@ -32,7 +32,7 @@ public class ProfileInterceptor implements HandlerInterceptor {
 
         String accountId = getJwtAccountId();
 
-        if (this.keycloakService.checkActiveById(accountId)){
+        if (Boolean.TRUE.equals(this.keycloakService.checkActiveById(accountId))){
             if (Boolean.FALSE.equals(this.keycloakService.checksEmailValidated(accountId))){
                 throw new EmailNotValidatedException(accountId);
             }

@@ -3,7 +3,10 @@ package com.sergiostefanizzi.profilemicroservice.system.util;
 import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
+import com.sergiostefanizzi.profilemicroservice.service.KeycloakService;
+import com.sergiostefanizzi.profilemicroservice.system.exception.AccountNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.CommentNotFoundException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.EmailNotValidatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.PostNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -18,19 +21,29 @@ import org.springframework.web.servlet.ModelAndView;
 import java.time.LocalDateTime;
 import java.util.Map;
 
+import static com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass.getJwtAccountId;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class CommentsInterceptor implements HandlerInterceptor {
-    @Autowired
-    private CommentsRepository commentsRepository;
-    @Autowired
-    private PostsRepository postsRepository;
-    @Autowired
-    private ProfilesRepository profilesRepository;
+    private final CommentsRepository commentsRepository;
+    private final PostsRepository postsRepository;
+    private final ProfilesRepository profilesRepository;
+    private final KeycloakService keycloakService;
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         log.info("\n\tComment Interceptor -> "+request.getRequestURI());
+
+        String accountId = getJwtAccountId();
+        if (Boolean.TRUE.equals(this.keycloakService.checkActiveById(accountId))){
+            if (Boolean.FALSE.equals(this.keycloakService.checksEmailValidated(accountId))){
+                throw new EmailNotValidatedException(accountId);
+            }
+        }else {
+            throw new AccountNotFoundException(accountId);
+        }
+
         // Esco se e' un metodo post
         String requestMethod = request.getMethod();
         Map pathVariables = (Map) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);

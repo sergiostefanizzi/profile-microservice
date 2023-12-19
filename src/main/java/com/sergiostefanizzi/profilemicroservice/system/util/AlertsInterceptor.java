@@ -1,7 +1,10 @@
 package com.sergiostefanizzi.profilemicroservice.system.util;
 
 import com.sergiostefanizzi.profilemicroservice.repository.AlertsRepository;
+import com.sergiostefanizzi.profilemicroservice.service.KeycloakService;
+import com.sergiostefanizzi.profilemicroservice.system.exception.AccountNotFoundException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.AlertNotFoundException;
+import com.sergiostefanizzi.profilemicroservice.system.exception.EmailNotValidatedException;
 import com.sergiostefanizzi.profilemicroservice.system.exception.ProfileNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -15,15 +18,26 @@ import org.springframework.web.servlet.ModelAndView;
 
 import java.util.Map;
 
+import static com.sergiostefanizzi.profilemicroservice.system.util.JwtUtilityClass.getJwtAccountId;
+
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class AlertsInterceptor implements HandlerInterceptor {
-    @Autowired
-    private AlertsRepository alertsRepository;
+    private final AlertsRepository alertsRepository;
+    private final KeycloakService keycloakService;
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         log.info("\n\tAlerts Interceptor -> "+request.getRequestURI());
+
+        String accountId = getJwtAccountId();
+        if (Boolean.TRUE.equals(this.keycloakService.checkActiveById(accountId))){
+            if (Boolean.FALSE.equals(this.keycloakService.checksEmailValidated(accountId))){
+                throw new EmailNotValidatedException(accountId);
+            }
+        }else {
+            throw new AccountNotFoundException(accountId);
+        }
 
         Map pathVariables = (Map) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
 
