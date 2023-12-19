@@ -9,6 +9,7 @@ import com.sergiostefanizzi.profilemicroservice.repository.AlertsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
+import com.sergiostefanizzi.profilemicroservice.service.KeycloakService;
 import com.sergiostefanizzi.profilemicroservice.service.PostsService;
 import com.sergiostefanizzi.profilemicroservice.service.ProfilesService;
 import com.sergiostefanizzi.profilemicroservice.system.exception.*;
@@ -27,6 +28,10 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
@@ -36,10 +41,9 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 
+import java.time.Instant;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 import static java.util.Arrays.asList;
 import static org.hamcrest.Matchers.*;
@@ -70,12 +74,18 @@ class PostsControllerTest {
     private MockMvc mockMvc;
     @Autowired
     private ObjectMapper objectMapper;
+    @MockBean
+    private KeycloakService keycloakService;
+    @MockBean
+    private SecurityContext securityContext;
+    private JwtAuthenticationToken jwtAuthenticationToken;
     String contentUrl = "https://upload.wikimedia.org/wikipedia/commons/9/9a/Cape_may.jpg";
     String contentUrlXSS = "http://www.example.com?d=<script type=\"javascript\" src=\"http://www.google.it\"/>"; //Cross site scripting XSS
     String caption = "This is the post caption";
     Post.PostTypeEnum postType = Post.PostTypeEnum.POST;
     Long postId = 1L;
     Long profileId = 1L;
+    String accountId = UUID.randomUUID().toString();
     private Post newPost;
     private Post savedPost;
     private Like newLike;
@@ -86,6 +96,8 @@ class PostsControllerTest {
 
     @BeforeEach
     void setUp() throws JsonProcessingException {
+        SecurityContextHolder.setContext(securityContext);
+
         this.newPost = new Post(contentUrl, postType, profileId);
         this.newPost.setCaption(caption);
 
@@ -96,6 +108,18 @@ class PostsControllerTest {
         this.savedPost.setId(postId);
 
         errors = new ArrayList<>();
+
+        Map<String, Object> headers = new HashMap<>();
+        headers.put("alg","HS256");
+        headers.put("typ","JWT");
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("sub", this.accountId);
+        claims.put("profileList", List.of(profileId));
+        this.jwtAuthenticationToken = new JwtAuthenticationToken(new Jwt("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiIxMjM0NTY3ODkwIiwibmFtZSI6IkpvaG4gRG9lIiwiaWF0IjoxNTE2MjM5MDIyfQ.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c",
+                Instant.now(),
+                Instant.MAX,
+                headers,
+                claims));
     }
 
 
@@ -106,7 +130,10 @@ class PostsControllerTest {
 
     @Test
     void testAddPost_Then_201() throws Exception {
-        when(this.postsService.save(this.newPost)).thenReturn(this.savedPost);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
+        when(this.postsService.save(ArgumentMatchers.any(Post.class))).thenReturn(this.savedPost);
 
         MvcResult result = this.mockMvc.perform(post("/posts")
                         .accept(MediaType.APPLICATION_JSON)
@@ -134,6 +161,9 @@ class PostsControllerTest {
         this.savedPost.setCaption(null);
         newPostJson = this.objectMapper.writeValueAsString(this.newPost);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsService.save(this.newPost)).thenReturn(this.savedPost);
 
         //La caption non dovrebbe essere presenze, e quindi ci saranno solo quattro campi
@@ -170,6 +200,10 @@ class PostsControllerTest {
 
         newPostJson = this.objectMapper.writeValueAsString(this.newPost);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
+
         MvcResult result = this.mockMvc.perform(post("/posts")
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -196,6 +230,10 @@ class PostsControllerTest {
         newPostJson = this.objectMapper.writeValueAsString(this.newPost);
         log.info("JSON\n" + newPostJson);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
+
         MvcResult result = this.mockMvc.perform(post("/posts")
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -219,6 +257,10 @@ class PostsControllerTest {
         this.newPost.setContentUrl("https://upload.wikimedia.o/ ra-%%$^&& iuyi" + RandomStringUtils.randomAlphabetic(2048));
         newPostJson = this.objectMapper.writeValueAsString(this.newPost);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
+
         MvcResult result = this.mockMvc.perform(post("/posts")
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -239,6 +281,10 @@ class PostsControllerTest {
     void testAddPost_InvalidContentUrlXSS_Then_400() throws Exception {
         this.newPost.setContentUrl(contentUrlXSS);
         newPostJson = this.objectMapper.writeValueAsString(this.newPost);
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
 
         MvcResult result = this.mockMvc.perform(post("/posts")
                         .accept(MediaType.APPLICATION_JSON)
@@ -262,6 +308,10 @@ class PostsControllerTest {
         ((ObjectNode) jsonNode).put("post_type", "NOTVALID");
         newPostJson = this.objectMapper.writeValueAsString(jsonNode);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
+
         MvcResult result = this.mockMvc.perform(post("/posts")
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -283,6 +333,10 @@ class PostsControllerTest {
         ((ObjectNode) jsonNode).put("profile_id", "IdNotLong");
         newPostJson = this.objectMapper.writeValueAsString(jsonNode);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
+
         MvcResult result = this.mockMvc.perform(post("/posts")
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -299,6 +353,9 @@ class PostsControllerTest {
 
     @Test
     void testAddPost_Then_403() throws Exception {
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         doThrow(new NotInProfileListException(invalidProfileId)).when(this.postsService).save(this.newPost);
 
         MvcResult result = this.mockMvc.perform(post("/posts")
@@ -319,6 +376,9 @@ class PostsControllerTest {
 
     @Test
     void testDeletePostById_Then_204() throws Exception {
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveForDeleteById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
 

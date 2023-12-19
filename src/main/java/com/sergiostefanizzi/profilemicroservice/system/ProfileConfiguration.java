@@ -2,37 +2,26 @@ package com.sergiostefanizzi.profilemicroservice.system;
 
 import com.sergiostefanizzi.profilemicroservice.system.util.*;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
+@RequiredArgsConstructor
 public class ProfileConfiguration implements WebMvcConfigurer {
-    /*
-    @Bean
-    @Scope(scopeName = "request", proxyMode = ScopedProxyMode.TARGET_CLASS)
-    ProfileContext profileContext(){
-        ProfileContext context = new ProfileContext();
-        ProfileJpa p = new ProfileJpa();
-        p.setId(1L);
-        context.setProfileJpa(p);
-        return context;
-    }
+    private final ProfileInterceptor profileInterceptor;
 
-     */
-    @Autowired
-    private ProfileInterceptor profileInterceptor;
-    @Autowired
-    private FollowsInterceptor followsInterceptor;
-    @Autowired
-    private PostsInterceptor postsInterceptor;
-    @Autowired
-    private CommentsInterceptor commentsInterceptor;
-    @Autowired
-    private AdminsProfileInterceptor adminsProfileInterceptor;
-    @Autowired
-    private AlertsInterceptor alertsInterceptor;
+    private final FollowsInterceptor followsInterceptor;
+
+    private final PostsInterceptor postsInterceptor;
+
+    private final CommentsInterceptor commentsInterceptor;
+
+    private final AdminsProfileInterceptor adminsProfileInterceptor;
+
+    private final AlertsInterceptor alertsInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
@@ -44,9 +33,9 @@ public class ProfileConfiguration implements WebMvcConfigurer {
                 .excludePathPatterns("/alerts");
         registry.addInterceptor(this.followsInterceptor)
                 .addPathPatterns("/profiles/*/f*/**")
-            .excludePathPatterns("/alerts");
+                .excludePathPatterns("/alerts");
         registry.addInterceptor(this.postsInterceptor)
-                .addPathPatterns("/posts/*")
+                .addPathPatterns("/posts/**")
                 .addPathPatterns("/posts/likes/*")
                 .excludePathPatterns("/posts/feed/*")
                 .excludePathPatterns("/posts/comments/*")
