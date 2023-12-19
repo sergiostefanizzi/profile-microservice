@@ -209,7 +209,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(newPostJson))
                 .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(res.getResolvedException() instanceof MethodArgumentNotValidException))
+                .andExpect(res -> assertInstanceOf(MethodArgumentNotValidException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").isArray())
                 .andExpect(jsonPath("$.error", hasSize(3)))
                 .andExpect(jsonPath("$.error[0]").value(in(errors)))
@@ -239,7 +239,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(newPostJson))
                 .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(res.getResolvedException() instanceof MethodArgumentNotValidException))
+                .andExpect(res -> assertInstanceOf(MethodArgumentNotValidException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").isArray())
                 .andExpect(jsonPath("$.error", hasSize(1)))
                 .andExpect(jsonPath("$.error[0]").value(in(errors)))
@@ -266,7 +266,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(newPostJson))
                 .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(res.getResolvedException() instanceof MethodArgumentNotValidException))
+                .andExpect(res -> assertInstanceOf(MethodArgumentNotValidException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").isArray())
                 .andExpect(jsonPath("$.error", hasSize(2)))
                 .andExpect(jsonPath("$.error[0]").value(in(errors)))
@@ -291,7 +291,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(newPostJson))
                 .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(res.getResolvedException() instanceof MethodArgumentNotValidException))
+                .andExpect(res -> assertInstanceOf(MethodArgumentNotValidException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").isArray())
                 .andExpect(jsonPath("$.error", hasSize(1)))
                 .andExpect(jsonPath("$.error[0]").value("contentUrl must be a valid URL"))
@@ -317,9 +317,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(newPostJson))
                 .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof HttpMessageNotReadableException
-                ))
+                .andExpect(res -> assertInstanceOf(HttpMessageNotReadableException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Message is not readable"))
                 .andReturn();
         String resultAsString = result.getResponse().getContentAsString();
@@ -342,9 +340,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(newPostJson))
                 .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof HttpMessageNotReadableException
-                ))
+                .andExpect(res -> assertInstanceOf(HttpMessageNotReadableException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Message is not readable")).andReturn();
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n" + resultAsString);
@@ -363,9 +359,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(newPostJson))
                 .andExpect(status().isForbidden())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof NotInProfileListException
-                ))
+                .andExpect(res -> assertInstanceOf(NotInProfileListException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Profile " + invalidProfileId + " is not inside the profile list!"))
                 .andReturn();
         // Visualizzo l'errore
@@ -391,12 +385,13 @@ class PostsControllerTest {
 
     @Test
     void testDeletePostById_Then_400() throws Exception {
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         MvcResult result = this.mockMvc.perform(delete("/posts/IdNotLong")
                         .queryParam("selectedUserProfileId", String.valueOf(profileId)))
                 .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof NumberFormatException
-                ))
+                .andExpect(res -> assertInstanceOf(NumberFormatException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("ID is not valid!")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -406,14 +401,15 @@ class PostsControllerTest {
 
     @Test
     void testDeletePostById_QueryParamNotValid_Then_400() throws Exception {
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveForDeleteById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         MvcResult result = this.mockMvc.perform(delete("/posts/{postId}", postId)
                         .queryParam("selectedUserProfileId", "IdNotLong"))
                 .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
-                ))
+                .andExpect(res -> assertInstanceOf(MethodArgumentTypeMismatchException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Type mismatch")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -423,13 +419,14 @@ class PostsControllerTest {
 
     @Test
     void testDeletePostById_MissingQueryParam_Then_400() throws Exception {
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveForDeleteById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         MvcResult result = this.mockMvc.perform(delete("/posts/{postId}", postId))
                 .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof MissingServletRequestParameterException
-                ))
+                .andExpect(res -> assertInstanceOf(MissingServletRequestParameterException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Required request parameter 'selectedUserProfileId' for method parameter type Long is not present")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -440,6 +437,9 @@ class PostsControllerTest {
 
     @Test
     void testDeletePostById_Then_403() throws Exception {
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveForDeleteById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         doThrow(new NotInProfileListException(profileId)).when(this.postsService).remove(anyLong(), anyLong());
@@ -447,9 +447,7 @@ class PostsControllerTest {
         MvcResult result = this.mockMvc.perform(delete("/posts/{postId}",postId)
                 .queryParam("selectedUserProfileId", String.valueOf(profileId)))
                 .andExpect(status().isForbidden())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof NotInProfileListException
-                ))
+                .andExpect(res -> assertInstanceOf(NotInProfileListException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Profile " + profileId + " is not inside the profile list!"))
                 .andReturn();
         // Visualizzo l'errore
@@ -460,15 +458,16 @@ class PostsControllerTest {
 
     @Test
     void testDeletePostById_IdsMismatch_Then_403() throws Exception {
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveForDeleteById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         doThrow(new IdsMismatchException()).when(this.postsService).remove(anyLong(), anyLong());
         MvcResult result = this.mockMvc.perform(delete("/posts/{postId}",postId)
                         .queryParam("selectedUserProfileId", String.valueOf(Long.MAX_VALUE)))
                 .andExpect(status().isForbidden())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof IdsMismatchException
-                ))
+                .andExpect(res -> assertInstanceOf(IdsMismatchException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Ids mismatch"))
                 .andReturn();
         // Visualizzo l'errore
@@ -479,14 +478,15 @@ class PostsControllerTest {
 
     @Test
     void testDeletePostById_Then_404() throws Exception {
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveForDeleteById(anyLong())).thenReturn(Optional.empty());
 
         MvcResult result = this.mockMvc.perform(delete("/posts/{postId}",postId)
                         .queryParam("selectedUserProfileId", String.valueOf(profileId)))
                 .andExpect(status().isNotFound())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof PostNotFoundException
-                ))
+                .andExpect(res -> assertInstanceOf(PostNotFoundException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Post " + profileId + " not found!"))
                 .andReturn();
         // Visualizzo l'errore
@@ -497,14 +497,15 @@ class PostsControllerTest {
 
     @Test
     void testDeletePostById_DeletedProfile_Then_404() throws Exception {
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.empty());
 
         MvcResult result = this.mockMvc.perform(delete("/posts/{postId}",postId)
                         .queryParam("selectedUserProfileId", String.valueOf(profileId)))
                 .andExpect(status().isNotFound())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof PostNotFoundException
-                ))
+                .andExpect(res -> assertInstanceOf(PostNotFoundException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Post " + profileId + " not found!"))
                 .andReturn();
         // Visualizzo l'errore
@@ -525,6 +526,9 @@ class PostsControllerTest {
         // Aggiorno il post che verra' restituito dal service con il nuovo valore
         this.savedPost.setCaption(newCaption);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         when(this.postsService.update(anyLong(), anyLong(), ArgumentMatchers.any(PostPatch.class))).thenReturn(this.savedPost);
@@ -562,6 +566,9 @@ class PostsControllerTest {
         // Aggiorno il post che verra' restituito dal service con il nuovo valore
         this.savedPost.setCaption(newCaption);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
 
         MvcResult result = this.mockMvc.perform(patch("/posts/IdNotLong")
                 .queryParam("selectedUserProfileId", String.valueOf(profileId))
@@ -569,9 +576,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(postPatchJson))
                 .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof NumberFormatException
-                ))
+                .andExpect(res -> assertInstanceOf(NumberFormatException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("ID is not valid!")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -592,6 +597,9 @@ class PostsControllerTest {
         // Aggiorno il post che verra' restituito dal service con il nuovo valore
         this.savedPost.setCaption(newCaption);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
 
@@ -600,9 +608,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(postPatchJson))
                 .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof MissingServletRequestParameterException
-                ))
+                .andExpect(res -> assertInstanceOf(MissingServletRequestParameterException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Required request parameter 'selectedUserProfileId' for method parameter type Long is not present")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -621,6 +627,9 @@ class PostsControllerTest {
         // Aggiorno il post che verra' restituito dal service con il nuovo valore
         this.savedPost.setCaption(newCaption);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
 
@@ -630,9 +639,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(postPatchJson))
                 .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
-                ))
+                .andExpect(res -> assertInstanceOf(MethodArgumentTypeMismatchException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Type mismatch")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -642,6 +649,9 @@ class PostsControllerTest {
 
     @Test
     void testUpdatePost_CaptionLength_Then_400() throws Exception{
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
 
@@ -656,8 +666,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(postPatchJson))
                 .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof MethodArgumentNotValidException)
+                .andExpect(res -> assertInstanceOf(MethodArgumentNotValidException.class, res.getResolvedException())
                 )
                 .andExpect(jsonPath("$.error").isArray())
                 .andExpect(jsonPath("$.error", hasSize(1)))
@@ -678,6 +687,9 @@ class PostsControllerTest {
         // Aggiorno il post che verra' restituito dal service con il nuovo valore
         this.savedPost.setCaption(newCaption);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         when(this.postsService.update(anyLong(), anyLong(), ArgumentMatchers.any(PostPatch.class))).thenThrow(new NotInProfileListException(profileId));
@@ -688,9 +700,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(postPatchJson))
                 .andExpect(status().isForbidden())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof NotInProfileListException
-                ))
+                .andExpect(res -> assertInstanceOf(NotInProfileListException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Profile " + profileId + " is not inside the profile list!")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -709,6 +719,9 @@ class PostsControllerTest {
         // Aggiorno il post che verra' restituito dal service con il nuovo valore
         this.savedPost.setCaption(newCaption);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         when(this.postsService.update(anyLong(), anyLong(), ArgumentMatchers.any(PostPatch.class))).thenThrow(new NotInProfileListException(invalidProfileId));
@@ -719,9 +732,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(postPatchJson))
                 .andExpect(status().isForbidden())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof NotInProfileListException
-                ))
+                .andExpect(res -> assertInstanceOf(NotInProfileListException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Profile " + invalidProfileId + " is not inside the profile list!")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -739,6 +750,9 @@ class PostsControllerTest {
 
         String postPatchJson = this.objectMapper.writeValueAsString(postPatch);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.empty());
 
 
@@ -748,9 +762,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(postPatchJson))
                 .andExpect(status().isNotFound())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof PostNotFoundException
-                ))
+                .andExpect(res -> assertInstanceOf(PostNotFoundException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Post "+invalidPostId+" not found!"))
                 .andReturn();
         // Visualizzo l'errore
@@ -767,6 +779,9 @@ class PostsControllerTest {
 
         String postPatchJson = this.objectMapper.writeValueAsString(postPatch);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(invalidPostId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.empty());
 
@@ -777,9 +792,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(postPatchJson))
                 .andExpect(status().isNotFound())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof PostNotFoundException
-                ))
+                .andExpect(res -> assertInstanceOf(PostNotFoundException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Post "+invalidPostId+" not found!"))
                 .andReturn();
         // Visualizzo l'errore
@@ -790,6 +803,9 @@ class PostsControllerTest {
 
     @Test
     void testFindPostById_Then_200() throws Exception{
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         when(this.postsService.find(anyLong(), anyLong())).thenReturn(this.savedPost);
@@ -815,13 +831,14 @@ class PostsControllerTest {
 
     @Test
     void testFindPostById_Then_400() throws Exception{
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         MvcResult result = this.mockMvc.perform(get("/posts/{postId}","IdNotLong")
                         .queryParam("selectedUserProfileId", String.valueOf(profileId))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof NumberFormatException
-                ))
+                .andExpect(res -> assertInstanceOf(NumberFormatException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("ID is not valid!")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -831,15 +848,16 @@ class PostsControllerTest {
 
     @Test
     void testFindPostById_QueryParamNotValid_Then_400() throws Exception{
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         MvcResult result = this.mockMvc.perform(get("/posts/{postId}",postId)
                         .queryParam("selectedUserProfileId", "IdNotLong")
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof MethodArgumentTypeMismatchException
-                ))
+                .andExpect(res -> assertInstanceOf(MethodArgumentTypeMismatchException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Type mismatch")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -849,14 +867,15 @@ class PostsControllerTest {
 
     @Test
     void testFindPostById_MissingQueryParam_Then_400() throws Exception{
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         MvcResult result = this.mockMvc.perform(get("/posts/{postId}",postId)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof MissingServletRequestParameterException
-                ))
+                .andExpect(res -> assertInstanceOf(MissingServletRequestParameterException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Required request parameter 'selectedUserProfileId' for method parameter type Long is not present")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -865,17 +884,18 @@ class PostsControllerTest {
     }
     @Test
     void testFindPostById_PrivateProfile_Then_403() throws Exception{
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
-        when(this.postsService.find(anyLong(), anyLong())).thenThrow(new PostAccessForbiddenException(postId));
+        when(this.postsService.find(anyLong(), anyLong())).thenThrow(new AccessForbiddenException("Post"));
         MvcResult result = this.mockMvc.perform(get("/posts/{postId}",postId)
                         .queryParam("selectedUserProfileId", String.valueOf(invalidProfileId))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof PostAccessForbiddenException
-                ))
-                .andExpect(jsonPath("$.error").value("Cannot access post with id "+postId))
+                .andExpect(res -> assertInstanceOf(AccessForbiddenException.class, res.getResolvedException()))
+                .andExpect(jsonPath("$.error").value("Post access forbidden"))
                 .andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -884,6 +904,9 @@ class PostsControllerTest {
     }
     @Test
     void testFindPostById_Then_403() throws Exception{
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         when(this.postsService.find(anyLong(), anyLong())).thenThrow(new NotInProfileListException(invalidProfileId));
@@ -891,9 +914,7 @@ class PostsControllerTest {
                         .queryParam("selectedUserProfileId", String.valueOf(invalidProfileId))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof NotInProfileListException
-                ))
+                .andExpect(res -> assertInstanceOf(NotInProfileListException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Profile " + invalidProfileId + " is not inside the profile list!"))
                 .andReturn();
         // Visualizzo l'errore
@@ -904,15 +925,16 @@ class PostsControllerTest {
 
     @Test
     void testFindPostById_Then_404() throws Exception{
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.empty());
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
         MvcResult result = this.mockMvc.perform(get("/posts/{postId}",postId)
                         .queryParam("selectedUserProfileId", String.valueOf(profileId))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof PostNotFoundException
-                ))
+                .andExpect(res -> assertInstanceOf(PostNotFoundException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Post " + postId + " not found!"))
                 .andReturn();
         // Visualizzo l'errore
@@ -923,15 +945,16 @@ class PostsControllerTest {
 
     @Test
     void testFindPostById_DeletedProfile_Then_404() throws Exception{
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.empty());
         MvcResult result = this.mockMvc.perform(get("/posts/{postId}",postId)
                         .queryParam("selectedUserProfileId", String.valueOf(profileId))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof PostNotFoundException
-                ))
+                .andExpect(res -> assertInstanceOf(PostNotFoundException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Post " + postId + " not found!"))
                 .andReturn();
         // Visualizzo l'errore
@@ -946,6 +969,9 @@ class PostsControllerTest {
         this.newLike = new Like(profileId, postId);
         String newLikeJson = this.objectMapper.writeValueAsString(this.newLike);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         doNothing().when(this.postsService).addLike(false, this.newLike);
 
         this.mockMvc.perform(put("/posts/likes?removeLike={removeLike}",false)
@@ -960,6 +986,9 @@ class PostsControllerTest {
         this.newLike = new Like(profileId, postId);
         String newLikeJson = this.objectMapper.writeValueAsString(this.newLike);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         doNothing().when(this.postsService).addLike(true, this.newLike);
 
         this.mockMvc.perform(put("/posts/likes?removeLike={removeLike}",true)
@@ -974,6 +1003,9 @@ class PostsControllerTest {
         this.newLike = new Like(profileId, postId);
         String newLikeJson = this.objectMapper.writeValueAsString(this.newLike);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         doNothing().when(this.postsService).addLike(false, this.newLike);
 
 
@@ -982,9 +1014,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(newLikeJson))
                 .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof MissingServletRequestParameterException
-                ))
+                .andExpect(res -> assertInstanceOf(MissingServletRequestParameterException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Required request parameter 'removeLike' for method parameter type Boolean is not present")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -1002,6 +1032,9 @@ class PostsControllerTest {
         ((ObjectNode) jsonNode).put("post_id", "IdNotLong");
         newLikeJson = this.objectMapper.writeValueAsString(jsonNode);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         doNothing().when(this.postsService).addLike(false, this.newLike);
 
         MvcResult result = this.mockMvc.perform(put("/posts/likes?removeLike={removeLike}",false)
@@ -1009,9 +1042,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(newLikeJson))
                 .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof HttpMessageNotReadableException
-                ))
+                .andExpect(res -> assertInstanceOf(HttpMessageNotReadableException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Message is not readable")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -1024,6 +1055,9 @@ class PostsControllerTest {
         this.newLike = new Like(profileId, invalidPostId);
         String newLikeJson = this.objectMapper.writeValueAsString(this.newLike);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         doThrow(new NotInProfileListException(profileId)).when(this.postsService).addLike(false, this.newLike);
 
         MvcResult result = this.mockMvc.perform(put("/posts/likes?removeLike={removeLike}",false)
@@ -1031,9 +1065,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(newLikeJson))
                 .andExpect(status().isForbidden())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof NotInProfileListException
-                ))
+                .andExpect(res -> assertInstanceOf(NotInProfileListException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Profile " + profileId + " is not inside the profile list!")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -1046,17 +1078,18 @@ class PostsControllerTest {
         this.newLike = new Like(profileId, invalidPostId);
         String newLikeJson = this.objectMapper.writeValueAsString(this.newLike);
 
-        doThrow(new PostAccessForbiddenException(postId)).when(this.postsService).addLike(false, this.newLike);
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
+        doThrow(new AccessForbiddenException("Post")).when(this.postsService).addLike(false, this.newLike);
 
         MvcResult result = this.mockMvc.perform(put("/posts/likes?removeLike={removeLike}",false)
                         .accept(MediaType.APPLICATION_JSON)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(newLikeJson))
                 .andExpect(status().isForbidden())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof PostAccessForbiddenException
-                ))
-                .andExpect(jsonPath("$.error").value("Cannot access post with id "+postId)).andReturn();
+                .andExpect(res -> assertInstanceOf(AccessForbiddenException.class, res.getResolvedException()))
+                .andExpect(jsonPath("$.error").value("Post access forbidden")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n"+resultAsString);
@@ -1067,6 +1100,9 @@ class PostsControllerTest {
         this.newLike = new Like(profileId, invalidPostId);
         String newLikeJson = this.objectMapper.writeValueAsString(this.newLike);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         doThrow(new PostNotFoundException(invalidPostId)).when(this.postsService).addLike(false, this.newLike);
 
         MvcResult result = this.mockMvc.perform(put("/posts/likes?removeLike={removeLike}",false)
@@ -1074,9 +1110,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(newLikeJson))
                 .andExpect(status().isNotFound())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof PostNotFoundException
-                ))
+                .andExpect(res -> assertInstanceOf(PostNotFoundException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Post " + invalidPostId + " not found!")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -1089,6 +1123,9 @@ class PostsControllerTest {
         this.newLike = new Like(invalidProfileId, postId);
         String newLikeJson = this.objectMapper.writeValueAsString(this.newLike);
 
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         doThrow(new ProfileNotFoundException(invalidProfileId)).when(this.postsService).addLike(false, this.newLike);
 
         MvcResult result = this.mockMvc.perform(put("/posts/likes?removeLike={removeLike}",false)
@@ -1096,9 +1133,7 @@ class PostsControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(newLikeJson))
                 .andExpect(status().isNotFound())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof ProfileNotFoundException
-                ))
+                .andExpect(res -> assertInstanceOf(ProfileNotFoundException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value("Profile " + invalidProfileId + " not found!")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
