@@ -1140,7 +1140,7 @@ class PostsControllerTest {
         log.info("Errors\n"+resultAsString);
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
-/*
+
     @Test
     void testFindAllLikesByPostId_Then_200() throws Exception {
         List<Like> likeList = asList(
@@ -1148,12 +1148,17 @@ class PostsControllerTest {
                 new Like(2L,postId),
                 new Like(3L,postId)
         );
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
-        when(this.postsService.findAllLikesByPostId(postId)).thenReturn(likeList);
+        when(this.postsService.findAllLikesByPostId(anyLong(), anyLong())).thenReturn(likeList);
 
         MvcResult result = this.mockMvc.perform(get("/posts/likes/{postId}",postId)
-                        .contentType(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .queryParam("selectedUserProfileId", String.valueOf(profileId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(likeList.size())))
                 .andExpect(jsonPath("$[0].profile_id").value(likeList.get(0).getProfileId()))
@@ -1174,12 +1179,18 @@ class PostsControllerTest {
     @Test
     void testFindAllLikesByPostId_Empty_Then_200() throws Exception {
         List<Like> likeList = new ArrayList<>();
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
-        when(this.postsService.findAllLikesByPostId(postId)).thenReturn(likeList);
+        when(this.postsService.findAllLikesByPostId(anyLong(), anyLong())).thenReturn(likeList);
 
         MvcResult result = this.mockMvc.perform(get("/posts/likes/{postId}",postId)
-                        .contentType(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .queryParam("selectedUserProfileId", String.valueOf(profileId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(likeList.size())))
                 .andReturn();
@@ -1194,12 +1205,15 @@ class PostsControllerTest {
     @Test
     void testFindAllLikesByPostId_Then_400() throws Exception {
         errors.add("ID is not valid!");
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
+
         MvcResult result = this.mockMvc.perform(get("/posts/likes/{postId}","IdNotLong")
-                        .contentType(MediaType.APPLICATION_JSON))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .queryParam("selectedUserProfileId", String.valueOf(profileId)))
                 .andExpect(status().isBadRequest())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof NumberFormatException
-                ))
+                .andExpect(res -> assertInstanceOf(NumberFormatException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -1210,16 +1224,20 @@ class PostsControllerTest {
     // TODO 401, 403
 
     @Test
-    void testFindAllLikesByPostId_PostNotFound_Then_404() throws Exception {
-        errors.add("Post "+invalidPostId+" not found!");
+    void testFindAllLikesByPostId_PostNotFound_Then_403() throws Exception {
+        errors.add("Post access forbidden");
 
-        when(this.postsService.findAllLikesByPostId(invalidPostId)).thenThrow(new PostNotFoundException(invalidPostId));
-        MvcResult result = this.mockMvc.perform(get("/posts/likes/{postId}",invalidPostId)
-                        .contentType(MediaType.APPLICATION_JSON))
-                .andExpect(status().isNotFound())
-                .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof PostNotFoundException
-                ))
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
+        when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
+        when(this.postsService.findAllLikesByPostId(anyLong(), anyLong())).thenThrow(new AccessForbiddenException("Post"));
+        MvcResult result = this.mockMvc.perform(get("/posts/likes/{postId}",postId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .queryParam("selectedUserProfileId", String.valueOf(profileId)))
+                .andExpect(status().isForbidden())
+                .andExpect(res -> assertInstanceOf(AccessForbiddenException.class, res.getResolvedException()))
                 .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -1227,6 +1245,27 @@ class PostsControllerTest {
         log.info("Resolved Error ---> "+result.getResolvedException());
     }
 
+    @Test
+    void testFindAllLikesByPostId_PostNotFound_Then_404() throws Exception {
+        errors.add("Post "+invalidPostId+" not found!");
+
+        when(this.securityContext.getAuthentication()).thenReturn(this.jwtAuthenticationToken);
+        when(this.keycloakService.checkActiveById(anyString())).thenReturn(true);
+        when(this.keycloakService.checksEmailValidated(anyString())).thenReturn(true);
+        when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(invalidPostId));
+        when(this.postsService.findAllLikesByPostId(anyLong(), anyLong())).thenThrow(new PostNotFoundException(invalidPostId));
+        MvcResult result = this.mockMvc.perform(get("/posts/likes/{postId}",invalidPostId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .queryParam("selectedUserProfileId", String.valueOf(profileId)))
+                .andExpect(status().isNotFound())
+                .andExpect(res -> assertInstanceOf(PostNotFoundException.class, res.getResolvedException()))
+                .andExpect(jsonPath("$.error").value(errors.get(0))).andReturn();
+        // Visualizzo l'errore
+        String resultAsString = result.getResponse().getContentAsString();
+        log.info("Errors\n"+resultAsString);
+        log.info("Resolved Error ---> "+result.getResolvedException());
+    }
+/*
     @Test
     void testAddComment_Then_201() throws Exception {
         String content = "Commento al post";
