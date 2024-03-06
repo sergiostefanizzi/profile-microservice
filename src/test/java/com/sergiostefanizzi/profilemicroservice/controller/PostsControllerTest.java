@@ -9,6 +9,7 @@ import com.sergiostefanizzi.profilemicroservice.repository.AlertsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.CommentsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.PostsRepository;
 import com.sergiostefanizzi.profilemicroservice.repository.ProfilesRepository;
+import com.sergiostefanizzi.profilemicroservice.service.KeycloakService;
 import com.sergiostefanizzi.profilemicroservice.service.PostsService;
 import com.sergiostefanizzi.profilemicroservice.service.ProfilesService;
 import com.sergiostefanizzi.profilemicroservice.system.exception.*;
@@ -27,6 +28,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.core.context.SecurityContext;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.test.web.servlet.MockMvc;
@@ -66,6 +68,10 @@ class PostsControllerTest {
     private CommentsRepository commentsRepository;
     @MockBean
     private AlertsRepository alertsRepository;
+    @MockBean
+    private KeycloakService keycloakService;
+    @MockBean
+    private SecurityContext securityContext;
     @Autowired
     private MockMvc mockMvc;
     @Autowired
@@ -807,15 +813,15 @@ class PostsControllerTest {
     void testFindPostById_PrivateProfile_Then_403() throws Exception{
         when(this.postsRepository.checkActiveById(anyLong())).thenReturn(Optional.of(postId));
         when(this.profilesRepository.checkActiveByPostId(anyLong())).thenReturn(Optional.of(profileId));
-        when(this.postsService.find(anyLong(), anyLong())).thenThrow(new PostAccessForbiddenException(postId));
+        when(this.postsService.find(anyLong(), anyLong())).thenThrow(new AccessForbiddenException("Post"));
         MvcResult result = this.mockMvc.perform(get("/posts/{postId}",postId)
                         .queryParam("selectedUserProfileId", String.valueOf(invalidProfileId))
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden())
                 .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof PostAccessForbiddenException
+                        res.getResolvedException() instanceof AccessForbiddenException
                 ))
-                .andExpect(jsonPath("$.error").value("Cannot access post with id "+postId))
+                .andExpect(jsonPath("$.error").value("Post access forbidden"))
                 .andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
@@ -986,7 +992,7 @@ class PostsControllerTest {
         this.newLike = new Like(profileId, invalidPostId);
         String newLikeJson = this.objectMapper.writeValueAsString(this.newLike);
 
-        doThrow(new PostAccessForbiddenException(postId)).when(this.postsService).addLike(false, this.newLike);
+        doThrow(new AccessForbiddenException("Post")).when(this.postsService).addLike(false, this.newLike);
 
         MvcResult result = this.mockMvc.perform(put("/posts/likes?removeLike={removeLike}",false)
                         .accept(MediaType.APPLICATION_JSON)
@@ -994,9 +1000,9 @@ class PostsControllerTest {
                         .content(newLikeJson))
                 .andExpect(status().isForbidden())
                 .andExpect(res -> assertTrue(
-                        res.getResolvedException() instanceof PostAccessForbiddenException
+                        res.getResolvedException() instanceof AccessForbiddenException
                 ))
-                .andExpect(jsonPath("$.error").value("Cannot access post with id "+postId)).andReturn();
+                .andExpect(jsonPath("$.error").value("Post access forbidden")).andReturn();
         // Visualizzo l'errore
         String resultAsString = result.getResponse().getContentAsString();
         log.info("Errors\n"+resultAsString);
