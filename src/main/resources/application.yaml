@@ -1,0 +1,46 @@
+server:
+  port: 8084
+spring:
+  h2:
+    console:
+      enable: true
+  datasource:
+    generate-unique-name: false
+    name: 'social-profile'
+    url: ${spring.datasource.url}
+  jpa:
+    defer-datasource-initialization: ${spring.jpa.defer}
+    hibernate:
+      ddl-auto: ${spring.datasource.jpa.ddl}
+      dialect: 'org.hibernate.dialect.H2Dialect'
+  sql:
+    init:
+      mode: ${spring.sql.init.mode}
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8082/realms/social-accounts
+          jwk-set-uri: http://localhost:8082/realms/social-accounts/protocol/openid-connect/certs
+logging:
+  level:
+    org:
+      hibernate:
+        SQL: 'DEBUG'
+        type:
+          descriptor:
+            sql:
+              BasicBinder: ${log.hibernate.level}
+      springframework:
+        jdbc: ${log.spring.level}
+        security: 'TRACE'
+      apache:
+        http: 'DEBUG'
+      httpclient:
+        wire: 'DEBUG'
+
+jwt:
+  auth:
+    converter:
+      resource-id: profiles-micro
+      principle-attribute: preferred_username
